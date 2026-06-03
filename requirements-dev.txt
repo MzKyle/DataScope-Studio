@@ -1,0 +1,6 @@
+-e packages/datascope-core
+-e packages/datascope-cli
+-e services/api
+pytest>=8.0,<9
+httpx>=0.27,<1
+

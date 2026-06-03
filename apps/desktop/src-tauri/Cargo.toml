@@ -1,0 +1,12 @@
+[package]
+name = "datascope-studio"
+version = "1.0.0"
+description = "DataScope Studio desktop shell"
+authors = ["DataScope Studio"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
