@@ -5,10 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "dev:tauri": "bash scripts/dev-tauri.sh",
+    "dev:tauri": "bash scripts/run-desktop.sh",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri:dev": "WEBKIT_DISABLE_COMPOSITING_MODE=1 WEBKIT_DISABLE_DMABUF_RENDERER=1 tauri dev",
+    "tauri:dev": "bash scripts/run-desktop.sh",
+    "tauri:dev:safe": "DATASCOPE_SAFE_GRAPHICS=1 bash scripts/run-desktop.sh",
     "tauri:build": "tauri build"
   },
   "dependencies": {

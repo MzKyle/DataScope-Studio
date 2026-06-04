@@ -8,6 +8,7 @@ version = "1.0.0"
 description = "Core adapters, mapping, workspace, and Rerun integration for DataScope Studio."
 requires-python = ">=3.10"
 dependencies = [
+  "numpy>=1.24,<3",
   "pandas>=2.0,<3",
   "mcap>=1.3,<2",
   "Pillow>=8.0,<13",

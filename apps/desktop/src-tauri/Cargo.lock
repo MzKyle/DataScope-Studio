@@ -501,6 +501,7 @@ dependencies = [
 name = "datascope-studio"
 version = "1.0.0"
 dependencies = [
+ "serde",
  "tauri",
  "tauri-build",
 ]

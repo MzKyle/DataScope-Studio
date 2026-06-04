@@ -10,7 +10,8 @@ from PIL import Image
 from datascope_core.cv_schema import (
     CvFrame,
     find_sidecar,
-    load_sidecar,
+    load_annotations,
+    load_predictions,
     merge_classes,
     resolve_image_path,
     sidecar_frame_map,
@@ -31,8 +32,8 @@ class ImageFolderAdapter:
         if not images:
             raise ValueError(f"No supported images found in directory: {path}")
 
-        annotations = load_sidecar(root, "annotations.json")
-        predictions = load_sidecar(root, "predictions.json")
+        annotations = load_annotations(root)
+        predictions = load_predictions(root)
         classes = merge_classes(annotations, predictions)
         sampled_dimensions = {
             str(image.relative_to(root)): _image_dimensions(image)
@@ -49,6 +50,9 @@ class ImageFolderAdapter:
                     "annotations": str(find_sidecar(root, "annotations.json") or ""),
                     "predictions": str(find_sidecar(root, "predictions.json") or ""),
                 },
+                "template_keypoint_sidecars": [
+                    str(sidecar.relative_to(root)) for sidecar in sorted(root.rglob("*_template.json"))
+                ],
                 "annotation_frame_count": len(annotations.frames) if annotations else 0,
                 "prediction_frame_count": len(predictions.frames) if predictions else 0,
                 "annotation_keypoint_count": _keypoint_count(annotations.frames if annotations else []),
@@ -63,8 +67,8 @@ class ImageFolderAdapter:
 
     def infer_streams(self, source: SourceInfo) -> list[StreamInfo]:
         root = Path(source.path)
-        annotations = load_sidecar(root, "annotations.json")
-        predictions = load_sidecar(root, "predictions.json")
+        annotations = load_annotations(root)
+        predictions = load_predictions(root)
         streams = [
             StreamInfo(
                 stream_id="stream_camera_image",
@@ -165,8 +169,8 @@ class ImageFolderAdapter:
     def preview(self, source: SourceInfo, stream_id: str, limit: int = 100) -> dict[str, Any]:
         root = Path(source.path)
         images = supported_image_paths(root)
-        annotations = load_sidecar(root, "annotations.json")
-        predictions = load_sidecar(root, "predictions.json")
+        annotations = load_annotations(root)
+        predictions = load_predictions(root)
         annotation_map = sidecar_frame_map(root, annotations)
         prediction_map = sidecar_frame_map(root, predictions)
         rows = []
@@ -211,8 +215,8 @@ class ImageFolderAdapter:
 
         root = Path(request.source.path)
         images = supported_image_paths(root)
-        annotations = load_sidecar(root, "annotations.json")
-        predictions = load_sidecar(root, "predictions.json")
+        annotations = load_annotations(root)
+        predictions = load_predictions(root)
         annotation_map = sidecar_frame_map(root, annotations)
         prediction_map = sidecar_frame_map(root, predictions)
         classes = merge_classes(annotations, predictions)

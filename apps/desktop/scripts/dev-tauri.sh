@@ -5,16 +5,27 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 REPO_ROOT="$(cd "$APP_DIR/../.." && pwd)"
 API_URL="http://127.0.0.1:8000/api/health"
+FRONTEND_URL="http://127.0.0.1:1420/"
 API_PID=""
+FRONTEND_PID=""
+PYTHON_BIN="$REPO_ROOT/.venv/bin/python"
+if [[ ! -x "$PYTHON_BIN" ]]; then
+  PYTHON_BIN="$(command -v python3 || true)"
+fi
 
 cleanup_stale_desktop_processes() {
   pkill -f "$APP_DIR/node_modules/.bin/vite" >/dev/null 2>&1 || true
   pkill -f "$APP_DIR/src-tauri/target/debug/datascope-studio" >/dev/null 2>&1 || true
   pkill -f "target/debug/datascope-studio" >/dev/null 2>&1 || true
+  pkill -f "http.server 1420" >/dev/null 2>&1 || true
 }
 
 api_ready() {
   curl -fsS --max-time 2 "$API_URL" >/dev/null 2>&1
+}
+
+frontend_ready() {
+  curl -fsS --max-time 2 "$FRONTEND_URL" >/dev/null 2>&1
 }
 
 api_port_pids() {
@@ -52,6 +63,9 @@ cleanup() {
   if [[ -n "$API_PID" ]]; then
     kill "$API_PID" >/dev/null 2>&1 || true
   fi
+  if [[ -n "$FRONTEND_PID" ]]; then
+    kill "$FRONTEND_PID" >/dev/null 2>&1 || true
+  fi
 }
 trap cleanup EXIT INT TERM
 
@@ -74,15 +88,15 @@ else
 fi
 
 if ! api_ready; then
-  if [[ ! -x "$REPO_ROOT/.venv/bin/python" ]]; then
-    echo "Missing Python venv at $REPO_ROOT/.venv" >&2
+  if [[ -z "$PYTHON_BIN" ]]; then
+    echo "Missing Python. Create the project venv or install python3." >&2
     echo "Run the backend setup commands in RUNNING.md first." >&2
     exit 1
   fi
   echo "Starting DataScope API at $API_URL"
   (
     cd "$REPO_ROOT"
-    "$REPO_ROOT/.venv/bin/python" -m uvicorn datascope_api.main:app --host 127.0.0.1 --port 8000
+    "$PYTHON_BIN" -m uvicorn datascope_api.main:app --host 127.0.0.1 --port 8000
   ) &
   API_PID="$!"
   for _ in {1..30}; do
@@ -102,4 +116,21 @@ fi
 
 cd "$APP_DIR"
 npm run build
-vite preview --host 127.0.0.1 --port 1420 --strictPort
+cd "$APP_DIR/dist"
+"$PYTHON_BIN" -m http.server 1420 --bind 127.0.0.1 &
+FRONTEND_PID="$!"
+
+for _ in {1..30}; do
+  if frontend_ready; then
+    break
+  fi
+  sleep 1
+done
+
+if ! frontend_ready; then
+  echo "Frontend server did not become ready at $FRONTEND_URL" >&2
+  exit 1
+fi
+
+echo "DataScope frontend ready at $FRONTEND_URL"
+wait "$FRONTEND_PID"

@@ -9,7 +9,12 @@ from typing import Any
 import pandas as pd
 
 from datascope_core.adapters.jsonl_adapter import _read_jsonl
-from datascope_core.cv_schema import load_sidecar, sidecar_frame_map, supported_image_paths
+from datascope_core.adapters.point_cloud_adapter import (
+    _cloud_time,
+    _read_point_cloud_stats,
+    supported_point_cloud_paths,
+)
+from datascope_core.cv_schema import load_annotations, load_predictions, sidecar_frame_map, supported_image_paths
 from datascope_core.models import MappingSpec, SourceInfo
 
 
@@ -89,6 +94,8 @@ def build_query_rows(recording_id: str, source: SourceInfo, spec: MappingSpec) -
         return _cv_rows(recording_id, source)
     if source.source_type == "mcap":
         return _mcap_rows(recording_id, source)
+    if source.source_type == "point_cloud":
+        return _point_cloud_rows(recording_id, source)
     return []
 
 
@@ -239,8 +246,8 @@ def _tabular_rows(
 def _cv_rows(recording_id: str, source: SourceInfo) -> list[QueryRow]:
     root = Path(source.path)
     images = supported_image_paths(root)
-    annotations = load_sidecar(root, "annotations.json")
-    predictions = load_sidecar(root, "predictions.json")
+    annotations = load_annotations(root)
+    predictions = load_predictions(root)
     annotation_map = sidecar_frame_map(root, annotations)
     prediction_map = sidecar_frame_map(root, predictions)
     rows: list[QueryRow] = []
@@ -287,6 +294,20 @@ def _mcap_rows(recording_id: str, source: SourceInfo) -> list[QueryRow]:
         }
         rows.append(QueryRow(recording_id, source.source_id, None, entity_path, "mcap", "topic_summary", value))
         rows.append(QueryRow(recording_id, source.source_id, None, entity_path, "mcap", "message_count", value["message_count"]))
+    return rows
+
+
+def _point_cloud_rows(recording_id: str, source: SourceInfo) -> list[QueryRow]:
+    root = Path(source.path)
+    clouds = supported_point_cloud_paths(root)
+    rows: list[QueryRow] = []
+    for index, cloud in enumerate(clouds):
+        timestamp = _cloud_time(index, cloud)
+        stats = _read_point_cloud_stats(cloud, include_bounds=False)
+        file_value = str(cloud.relative_to(root)) if root.is_dir() else cloud.name
+        rows.append(QueryRow(recording_id, source.source_id, timestamp, "/sensors/lidar/points", "points3d", "file", file_value))
+        rows.append(QueryRow(recording_id, source.source_id, timestamp, "/sensors/lidar/points", "points3d", "point_count", stats.point_count))
+        rows.append(QueryRow(recording_id, source.source_id, timestamp, "/sensors/lidar/points", "points3d", "format", stats.file_format))
     return rows
 
 

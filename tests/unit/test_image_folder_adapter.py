@@ -39,6 +39,40 @@ def test_cv_mapping_and_template_are_selected_for_image_boxes(tmp_path: Path) ->
     assert matches[0]["template_id"] == "cv_detection"
 
 
+def test_image_folder_infers_template_json_keypoints(tmp_path: Path) -> None:
+    image_dir = tmp_path / "captures"
+    image_dir.mkdir()
+    Image.new("RGB", (128, 96), (80, 120, 180)).save(image_dir / "scan3d_custom_001.png")
+    (image_dir / "scan3d_custom_001_template.json").write_text(
+        json.dumps(
+            {
+                "image_path": str(image_dir / "scan3d_custom_001.png"),
+                "points": [
+                    {"x": 10, "y": 20, "type": "A"},
+                    {"x": 14, "y": 24, "type": "A"},
+                    {"x": 40, "y": 52, "type": "B"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    adapter = ImageFolderAdapter()
+
+    source = adapter.inspect(str(image_dir), source_id="source_template_points")
+    streams = adapter.infer_streams(source)
+    preview = adapter.preview(source, "stream_gt_keypoints")
+
+    assert source.metadata["annotation_frame_count"] == 1
+    assert source.metadata["annotation_keypoint_count"] == 3
+    assert source.metadata["classes"] == [
+        {"id": 1, "label": "A", "color": None},
+        {"id": 2, "label": "B", "color": None},
+    ]
+    assert "scan3d_custom_001_template.json" in source.metadata["template_keypoint_sidecars"]
+    assert any(stream.semantic_type == "points2d" for stream in streams)
+    assert preview["rows"][0]["annotation_keypoints"] == 3
+
+
 def _make_cv_fixture(tmp_path: Path) -> Path:
     image_dir = tmp_path / "dataset" / "images"
     image_dir.mkdir(parents=True)
@@ -78,4 +112,3 @@ def _make_cv_fixture(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     return image_dir
-

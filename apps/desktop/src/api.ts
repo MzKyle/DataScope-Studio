@@ -1,3 +1,5 @@
+import { invoke } from "@tauri-apps/api/core";
+
 import type {
   BuildResult,
   BatchResult,
@@ -17,10 +19,58 @@ import type {
 } from "./types";
 
 const API_BASE = import.meta.env.VITE_DATASCOPE_API ?? "http://127.0.0.1:8000";
+const NETWORK_RETRIES = 2;
+
+type TauriInternalsWindow = Window & {
+  __TAURI_INTERNALS__?: unknown;
+};
+
+type ApiCommandResponse = {
+  status: number;
+  body: string;
+};
+
+function delay(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+async function fetchWithRetry(url: string, init: RequestInit): Promise<Response> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= NETWORK_RETRIES; attempt += 1) {
+    try {
+      return await fetch(url, init);
+    } catch (err) {
+      lastError = err;
+      if (attempt < NETWORK_RETRIES) await delay(180 * (attempt + 1));
+    }
+  }
+  throw lastError;
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+  const headers = new Headers(init?.headers);
+  if (init?.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  if (isTauriRuntime()) {
+    const body = typeof init?.body === "string" ? init.body : undefined;
+    const result = await invoke<ApiCommandResponse>("api_request", {
+      request: {
+        method: init?.method ?? "GET",
+        path,
+        body
+      }
+    });
+    const parsedBody = parseBody(result.body);
+    if (result.status < 200 || result.status >= 300) {
+      const message =
+        parsedBody?.error?.message ?? parsedBody?.detail?.error?.message ?? `HTTP ${result.status}`;
+      throw new Error(message);
+    }
+    return parsedBody as T;
+  }
+  const response = await fetchWithRetry(`${API_BASE}${path}`, {
+    headers,
     ...init
   });
   const body = await response.json().catch(() => ({}));
@@ -29,6 +79,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error(message);
   }
   return body as T;
+}
+
+function isTauriRuntime() {
+  return Boolean((window as TauriInternalsWindow).__TAURI_INTERNALS__);
+}
+
+function parseBody(body: string) {
+  if (!body) return {};
+  return JSON.parse(body);
 }
 
 export const api = {

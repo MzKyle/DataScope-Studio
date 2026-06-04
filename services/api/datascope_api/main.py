@@ -95,7 +95,14 @@ def create_app() -> FastAPI:
     app = FastAPI(title="DataScope Studio API", version="1.0.0")
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:1420", "http://127.0.0.1:1420", "tauri://localhost"],
+        allow_origins=[
+            "http://localhost:1420",
+            "http://127.0.0.1:1420",
+            "tauri://localhost",
+            "http://tauri.localhost",
+            "https://tauri.localhost",
+            "null",
+        ],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

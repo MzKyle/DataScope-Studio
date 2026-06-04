@@ -8,6 +8,7 @@ from typing import Any, Protocol
 JOB_STATUSES = {"pending", "running", "succeeded", "failed"}
 TIME_COLUMN_CANDIDATES = {"timestamp", "time", "t", "datetime"}
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
+POINT_CLOUD_EXTENSIONS = {".ply", ".pcd", ".npy", ".npz"}
 
 
 @dataclass(slots=True)
@@ -74,7 +75,12 @@ def detect_source_type(path: str | Path) -> str:
             for child in source_path.rglob("*")
         ):
             return "image_folder"
-        raise ValueError(f"Unsupported directory source, no supported images found: {path}")
+        if any(
+            child.is_file() and child.suffix.lower() in POINT_CLOUD_EXTENSIONS
+            for child in source_path.rglob("*")
+        ):
+            return "point_cloud"
+        raise ValueError(f"Unsupported directory source, no supported images or point clouds found: {path}")
 
     suffix = source_path.suffix.lower()
     if suffix == ".csv":
@@ -83,4 +89,6 @@ def detect_source_type(path: str | Path) -> str:
         return "jsonl"
     if suffix == ".mcap":
         return "mcap"
+    if suffix in POINT_CLOUD_EXTENSIONS:
+        return "point_cloud"
     raise ValueError(f"Unsupported source type for path: {path}")

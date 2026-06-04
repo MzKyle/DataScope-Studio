@@ -88,6 +88,36 @@ def load_sidecar(root: str | Path, name: str) -> CvSidecar | None:
     return parse_cv_sidecar(payload, sidecar_path, "predictions" if name == "predictions.json" else "annotations")
 
 
+def load_annotations(root: str | Path) -> CvSidecar | None:
+    return load_sidecar(root, "annotations.json") or load_template_keypoint_sidecar(root)
+
+
+def load_predictions(root: str | Path) -> CvSidecar | None:
+    return load_sidecar(root, "predictions.json")
+
+
+def load_template_keypoint_sidecar(root: str | Path) -> CvSidecar | None:
+    root_path = Path(root)
+    class_ids: dict[str, int] = {}
+    frames: list[CvFrame] = []
+    for sidecar_path in sorted(root_path.rglob("*_template.json")):
+        frame = _parse_template_keypoint_frame(root_path, sidecar_path, class_ids)
+        if frame is not None:
+            frames.append(frame)
+    if not frames:
+        return None
+    classes = [
+        CvClass(id=class_id, label=label, color=None)
+        for label, class_id in sorted(class_ids.items(), key=lambda item: item[1])
+    ]
+    return CvSidecar(
+        path=root_path / "<inferred_template_keypoints>",
+        kind="annotations",
+        classes=classes,
+        frames=frames,
+    )
+
+
 def parse_cv_sidecar(payload: dict[str, Any], path: str | Path, kind: str) -> CvSidecar:
     if not isinstance(payload, dict):
         raise ValueError(f"{path} must contain a JSON object")
@@ -132,6 +162,63 @@ def merge_classes(*sidecars: CvSidecar | None) -> list[CvClass]:
         for class_info in sidecar.classes:
             merged[class_info.id] = class_info
     return [merged[key] for key in sorted(merged)]
+
+
+def _parse_template_keypoint_frame(
+    root: Path,
+    sidecar_path: Path,
+    class_ids: dict[str, int],
+) -> CvFrame | None:
+    try:
+        with open(sidecar_path, "r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    points_payload = payload.get("points")
+    if not isinstance(points_payload, list) or not points_payload:
+        return None
+    image_path = _template_image_path(root, sidecar_path, payload)
+    grouped: dict[str, list[list[float]]] = {}
+    for point in points_payload:
+        if not isinstance(point, dict):
+            continue
+        x = point.get("x")
+        y = point.get("y")
+        if not isinstance(x, (int, float)) or not isinstance(y, (int, float)):
+            continue
+        label = str(point.get("type") or point.get("label") or "point")
+        grouped.setdefault(label, []).append([float(x), float(y)])
+    if not grouped:
+        return None
+    keypoints = []
+    for label, points in sorted(grouped.items()):
+        class_id = class_ids.setdefault(label, len(class_ids) + 1)
+        keypoints.append(CvKeypoints(points=points, class_id=class_id, label=label))
+    return CvFrame(image=_frame_image_value(root, image_path), keypoints=keypoints)
+
+
+def _template_image_path(root: Path, sidecar_path: Path, payload: dict[str, Any]) -> Path:
+    image_value = payload.get("image_path") or payload.get("image")
+    if isinstance(image_value, str) and image_value:
+        candidate = Path(image_value)
+        if candidate.is_absolute():
+            return candidate
+        return root / candidate
+    base_name = sidecar_path.name.removesuffix("_template.json")
+    for extension in IMAGE_EXTENSIONS:
+        candidate = sidecar_path.with_name(f"{base_name}{extension}")
+        if candidate.exists():
+            return candidate
+    return sidecar_path.with_name(f"{base_name}.png")
+
+
+def _frame_image_value(root: Path, image_path: Path) -> str:
+    try:
+        return str(image_path.resolve().relative_to(root.resolve()))
+    except ValueError:
+        return str(image_path)
 
 
 def _parse_class(item: Any, path: str | Path) -> CvClass:

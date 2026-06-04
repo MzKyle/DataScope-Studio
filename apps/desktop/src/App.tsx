@@ -1,21 +1,36 @@
-import { useEffect, useMemo, useState } from "react";
+import { memo, type DragEvent, type ReactNode, useEffect, useMemo, useState } from "react";
 import {
+  Activity,
+  AlertCircle,
+  CheckCircle2,
+  Command,
   Database,
   Download,
   ExternalLink,
   FileSearch,
+  FolderOpen,
   FolderPlus,
   Image,
+  LayoutDashboard,
   ListChecks,
   Play,
   RefreshCcw,
   Save,
   Search,
+  Settings,
   Tags,
-  Upload
+  Upload,
+  Zap
 } from "lucide-react";
 
 import { api } from "./api";
+import {
+  createTranslator,
+  getInitialLanguage,
+  languageOptions,
+  saveLanguage,
+  type Language
+} from "./i18n";
 import type {
   BatchResult,
   BuildResult,
@@ -32,6 +47,9 @@ import type {
   TemplateMatch,
   TemplateRegistryItem
 } from "./types";
+
+const supportedFormats = ["CSV", "JSONL", "Images", "PLY", "PCD", "NPZ", "MCAP", "ROS2"];
+const thresholdTemplates = new Set(["low_battery", "detection_failure"]);
 
 function App() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -69,13 +87,32 @@ function App() {
   const [tagInput, setTagInput] = useState("");
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
+  const [activeSection, setActiveSection] = useState("dashboard");
+  const [dragActive, setDragActive] = useState(false);
+  const [language, setLanguage] = useState<Language>(getInitialLanguage);
+  const t = useMemo(() => createTranslator(language), [language]);
 
   const selectedProject = useMemo(
     () => projects.find((project) => project.id === selectedProjectId) ?? null,
     [projects, selectedProjectId]
   );
 
+  const templateOptions = useMemo(
+    () =>
+      templates.length
+        ? templates
+        : [{ template_id: "sensor_monitor", name: t("sensorMonitor"), score: 1 }],
+    [templates, t]
+  );
+
+  const latestRecording = recordings[0] ?? null;
+  const latestJob = jobs[0] ?? null;
+  const recentRecordings = useMemo(() => recordings.slice(0, 4), [recordings]);
+  const visibleJobs = useMemo(() => jobs.slice(0, 8), [jobs]);
+  const isBusy = Boolean(busy);
+
   useEffect(() => {
+    window.scrollTo(0, 0);
     refreshProjects();
     refreshExtensionData();
   }, []);
@@ -85,6 +122,10 @@ function App() {
       refreshProjectData(selectedProjectId);
     }
   }, [selectedProjectId]);
+
+  useEffect(() => {
+    saveLanguage(language);
+  }, [language]);
 
   async function run<T>(label: string, task: () => Promise<T>): Promise<T | null> {
     setBusy(label);
@@ -100,7 +141,7 @@ function App() {
   }
 
   async function refreshProjects() {
-    const result = await run("Refreshing projects", () => api.projects());
+    const result = await run(t("busyRefreshingProjects"), () => api.projects());
     if (result) {
       setProjects(result);
       if (!selectedProjectId && result[0]) {
@@ -111,28 +152,43 @@ function App() {
 
   async function refreshProjectData(projectId = selectedProjectId) {
     if (!projectId) return;
-    const recordingRows = await run("Refreshing recordings", () => api.recordings(projectId));
-    if (recordingRows) setRecordings(recordingRows);
-    const jobRows = await run("Refreshing jobs", () => api.jobs(projectId));
-    if (jobRows) setJobs(jobRows);
-    const templatesRows = await run("Loading query templates", () => api.queryTemplates(projectId));
-    if (templatesRows) {
-      setQueryTemplates(templatesRows);
-      if (!templatesRows.some((template) => template.template_id === selectedQueryTemplate)) {
-        setSelectedQueryTemplate(templatesRows[0]?.template_id ?? "low_battery");
+    const result = await run(t("busyRefreshingWorkspace"), async () => {
+      const [recordingRows, jobRows, templatesRows] = await Promise.all([
+        api.recordings(projectId),
+        api.jobs(projectId),
+        api.queryTemplates(projectId)
+      ]);
+      return { recordingRows, jobRows, templatesRows };
+    });
+    if (result) {
+      setRecordings(result.recordingRows);
+      setJobs(result.jobRows);
+      setQueryTemplates(result.templatesRows);
+      if (!result.templatesRows.some((template) => template.template_id === selectedQueryTemplate)) {
+        setSelectedQueryTemplate(result.templatesRows[0]?.template_id ?? "low_battery");
       }
     }
   }
 
   async function refreshExtensionData() {
-    const pluginRows = await run("Loading plugins", () => api.plugins());
-    if (pluginRows) setPlugins(pluginRows);
-    const templateRows = await run("Loading templates", () => api.templates());
-    if (templateRows) setTemplateRegistry(templateRows);
+    const result = await run(t("busyLoadingRegistry"), async () => {
+      const [pluginRows, templateRows] = await Promise.all([api.plugins(), api.templates()]);
+      return { pluginRows, templateRows };
+    });
+    if (result) {
+      setPlugins(result.pluginRows);
+      setTemplateRegistry(result.templateRows);
+    }
+  }
+
+  async function refreshAll() {
+    await refreshProjects();
+    if (selectedProjectId) await refreshProjectData(selectedProjectId);
+    await refreshExtensionData();
   }
 
   async function createProject() {
-    const result = await run("Creating project", () => api.createProject(projectName));
+    const result = await run(t("busyCreatingProject"), () => api.createProject(projectName));
     if (result) {
       setProjects((current) => [result, ...current]);
       setSelectedProjectId(result.id);
@@ -140,45 +196,77 @@ function App() {
   }
 
   async function importAndInspect() {
-    if (!selectedProjectId || !sourcePath) {
-      setError("Select a project and enter a CSV, JSONL, image folder, or MCAP path.");
+    const nextSourcePath = normalizeSourcePathInput(sourcePath);
+    if (!nextSourcePath) {
+      setError(t("errorMissingSourcePath"));
       return;
     }
-    const added = await run("Adding source", () => api.addSource(selectedProjectId, sourcePath));
-    if (!added) return;
-    setSource(added);
-    const inspection = await run("Inspecting source", () => api.inspect(added.id));
-    if (!inspection) return;
-    setStreams(inspection.streams);
-    const templateMatches = await run("Suggesting templates", () => api.suggestTemplates(added.id));
-    const nextTemplateId = templateMatches?.[0]?.template_id ?? "sensor_monitor";
-    setTemplates(templateMatches ?? []);
-    setSelectedTemplateId(nextTemplateId);
-    const suggested = await run("Suggesting mapping", () =>
-      api.suggestMappingForTemplate(added.id, nextTemplateId)
-    );
-    if (suggested) {
-      setMapping(suggested);
-      const firstStream = inspection.streams[0];
-      if (firstStream) {
-        const preview = await run("Loading preview", () => api.preview(added.id, firstStream.stream_id));
-        if (preview) setPreviewRows(preview.rows);
+    if (nextSourcePath !== sourcePath) {
+      setSourcePath(nextSourcePath);
+    }
+    const result = await run(t("busyInspectingSource"), async () => {
+      let projectRows = projects;
+      let projectForImport = selectedProject;
+      let projectIdForImport = selectedProjectId;
+      if (!projectIdForImport) {
+        const fallbackName = projectName.trim() || "Sensor Run";
+        if (!projectRows.length) {
+          projectRows = await api.projects();
+        }
+        projectForImport =
+          projectRows.find((project) => project.name === fallbackName) ??
+          (await api.createProject(fallbackName));
+        projectRows = upsertProject(projectRows, projectForImport);
+        projectIdForImport = projectForImport.id;
       }
+
+      const added = await api.addSource(projectIdForImport, nextSourcePath);
+      const inspection = await api.inspect(added.id);
+      const templateMatches = await api.suggestTemplates(added.id);
+      const nextTemplateId = templateMatches[0]?.template_id ?? "sensor_monitor";
+      const suggested = await api.suggestMappingForTemplate(added.id, nextTemplateId);
+      const firstStream = inspection.streams[0];
+      const preview = firstStream ? await api.preview(added.id, firstStream.stream_id) : null;
+      return {
+        added,
+        project: projectForImport,
+        projectRows,
+        streams: inspection.streams,
+        templateMatches,
+        nextTemplateId,
+        suggested,
+        previewRows: preview?.rows ?? []
+      };
+    });
+    if (result) {
+      setProjects(result.projectRows);
+      if (result.project) {
+        setSelectedProjectId(result.project.id);
+      }
+      setSource(result.added);
+      setStreams(result.streams);
+      setTemplates(result.templateMatches);
+      setSelectedTemplateId(result.nextTemplateId);
+      setMapping(result.suggested);
+      setPreviewRows(result.previewRows);
+      setSavedMappingId("");
+      setBuildResult(null);
+      setActiveSection("import");
     }
   }
 
   async function saveMapping() {
     if (!source || !mapping) return;
-    const saved = await run("Saving mapping", () => api.saveMapping(source.id, mapping.mapping));
+    const saved = await run(t("busySavingMapping"), () => api.saveMapping(source.id, mapping.mapping));
     if (saved) setSavedMappingId(saved.id);
   }
 
   async function buildRecording() {
     if (!selectedProject || !source || !savedMappingId) {
-      setError("Save the mapping before building a recording.");
+      setError(t("errorSaveMappingFirst"));
       return;
     }
-    const result = await run("Building recording", () =>
+    const result = await run(t("busyBuildingRecording"), () =>
       api.build(selectedProject.id, source.id, savedMappingId, outputName, selectedTemplateId)
     );
     if (result) {
@@ -189,7 +277,7 @@ function App() {
 
   async function openInRerun() {
     if (!buildResult) return;
-    await run("Opening Rerun", () =>
+    await run(t("busyOpeningRerun"), () =>
       api.open(buildResult.recording_path, buildResult.blueprint_path)
     );
   }
@@ -206,7 +294,7 @@ function App() {
     setSelectedTemplateId(templateId);
     setSavedMappingId("");
     if (!source) return;
-    const suggested = await run("Suggesting mapping", () =>
+    const suggested = await run(t("busySuggestingMapping"), () =>
       api.suggestMappingForTemplate(source.id, templateId)
     );
     if (suggested) setMapping(suggested);
@@ -215,7 +303,7 @@ function App() {
   async function addTagToRecording(recordingId: string) {
     const tag = tagInput.trim();
     if (!tag) return;
-    const updated = await run("Updating tag", () =>
+    const updated = await run(t("busyUpdatingTag"), () =>
       api.patchRecording(recordingId, { add_tags: [tag] })
     );
     if (updated) {
@@ -229,7 +317,7 @@ function App() {
     const params = thresholdTemplates.has(selectedQueryTemplate)
       ? { threshold: Number(queryThreshold) }
       : {};
-    const result = await run("Running query", () =>
+    const result = await run(t("busyRunningQuery"), () =>
       api.query(
         selectedProjectId,
         selectedQueryTemplate,
@@ -245,7 +333,7 @@ function App() {
     const params = thresholdTemplates.has(selectedQueryTemplate)
       ? { threshold: Number(queryThreshold) }
       : {};
-    const result = await run("Exporting query", () =>
+    const result = await run(t("busyExportingQuery"), () =>
       api.exportQuery(
         selectedProjectId,
         selectedQueryTemplate,
@@ -259,7 +347,7 @@ function App() {
 
   async function installPlugin() {
     if (!pluginPath.trim()) return;
-    const result = await run("Installing plugin", () => api.installPlugin(pluginPath.trim()));
+    const result = await run(t("busyInstallingPlugin"), () => api.installPlugin(pluginPath.trim()));
     if (result) {
       setPluginPath("");
       refreshExtensionData();
@@ -268,7 +356,7 @@ function App() {
 
   async function installTemplate() {
     if (!templatePath.trim()) return;
-    const result = await run("Installing template", () => api.installTemplate(templatePath.trim()));
+    const result = await run(t("busyInstallingTemplate"), () => api.installTemplate(templatePath.trim()));
     if (result) {
       setTemplatePath("");
       refreshExtensionData();
@@ -281,7 +369,7 @@ function App() {
       .split("\n")
       .map((value) => value.trim())
       .filter(Boolean);
-    const result = await run("Running batch import", () =>
+    const result = await run(t("busyRunningBatch"), () =>
       api.batchImport(selectedProjectId, patterns, selectedTemplateId, batchOutputPrefix)
     );
     if (result) {
@@ -300,7 +388,7 @@ function App() {
       .split(/[,\s]+/)
       .map((value) => value.trim())
       .filter(Boolean);
-    const result = await run("Comparing recordings", () =>
+    const result = await run(t("busyComparing"), () =>
       api.compare(selectedProjectId, recordingIds, metricKeys, "summary")
     );
     if (result) setCompareResult(result);
@@ -308,530 +396,737 @@ function App() {
 
   async function exportProject() {
     if (!selectedProjectId) return;
-    const result = await run("Exporting project", () => api.exportProject(selectedProjectId));
+    const result = await run(t("busyExportingProject"), () => api.exportProject(selectedProjectId));
     if (result) setProjectExport(result);
+  }
+
+  function goToSection(sectionId: string) {
+    setActiveSection(sectionId);
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }
+
+  function handleDragOver(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    setDragActive(true);
+  }
+
+  function handleDragLeave(event: DragEvent<HTMLDivElement>) {
+    if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+    setDragActive(false);
+  }
+
+  function handleDrop(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    setDragActive(false);
+    const droppedFile = event.dataTransfer.files?.[0] as
+      | (File & { path?: string; webkitRelativePath?: string })
+      | undefined;
+    const uriList = event.dataTransfer.getData("text/uri-list");
+    const textPath = event.dataTransfer.getData("text/plain");
+    const droppedPath =
+      droppedFile?.path ??
+      droppedFile?.webkitRelativePath ??
+      normalizeDroppedPath(uriList || textPath);
+    if (droppedPath) setSourcePath(normalizeSourcePathInput(droppedPath));
   }
 
   return (
     <main className="app-shell">
-      <aside className="sidebar">
-        <div className="brand">
-          <Database size={24} />
-          <div>
-            <h1>DataScope Studio</h1>
-            <span>V1.0 Local Catalog</span>
-          </div>
+      <header className="topbar">
+        <div className="brand-mark" aria-hidden="true">
+          <Database size={20} />
         </div>
+        <div className="topbar-title">
+          <h1>DataScope Studio</h1>
+          <span>{t("localCatalog")}</span>
+        </div>
+        <div className="topbar-spacer" />
+        <StatusBadge tone={error ? "danger" : "success"} label={error ? t("needsAttention") : t("online")} />
+        {busy && <span className="busy-indicator">{busy}</span>}
+        <button className="icon-button" onClick={refreshAll} title={t("refreshWorkspace")}>
+          <RefreshCcw size={16} />
+        </button>
+        <button className="icon-button" onClick={() => goToSection("settings")} title={t("settings")}>
+          <Settings size={16} />
+        </button>
+      </header>
 
-        <section className="panel">
-          <div className="panel-title">
-            <span>Projects</span>
-            <button className="icon-button" onClick={refreshProjects} title="Refresh projects">
-              <RefreshCcw size={16} />
-            </button>
-          </div>
-          <div className="inline-form">
-            <input value={projectName} onChange={(event) => setProjectName(event.target.value)} />
-            <button onClick={createProject} title="Create project">
-              <FolderPlus size={16} />
-            </button>
-          </div>
-          <select
-            value={selectedProjectId}
-            onChange={(event) => setSelectedProjectId(event.target.value)}
-          >
-            <option value="">Select project</option>
-            {projects.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-          </select>
-          {selectedProject && <p className="path-line">{selectedProject.workspace_path}</p>}
-          <button onClick={() => refreshProjectData()} title="Refresh recordings and queries">
-            <ListChecks size={16} />
-            Refresh Runs
-          </button>
-          <button onClick={exportProject} title="Export project package">
-            <Download size={16} />
-            Export Project
-          </button>
-          {projectExport && <p className="path-line">Package: {projectExport.path}</p>}
-        </section>
+      <div className="app-frame">
+        <aside className="sidebar">
+          <nav className="sidebar-nav" aria-label="Primary">
+            <NavButton
+              active={activeSection === "dashboard"}
+              icon={<LayoutDashboard size={17} />}
+              label={t("dashboard")}
+              onClick={() => goToSection("dashboard")}
+            />
+            <NavButton
+              active={activeSection === "import"}
+              icon={<Upload size={17} />}
+              label={t("import")}
+              onClick={() => goToSection("import")}
+            />
+            <NavButton
+              active={activeSection === "recordings"}
+              icon={<ListChecks size={17} />}
+              label={t("recordings")}
+              onClick={() => goToSection("recordings")}
+            />
+            <NavButton
+              active={activeSection === "templates"}
+              icon={<Image size={17} />}
+              label={t("templates")}
+              onClick={() => goToSection("templates")}
+            />
+            <NavButton
+              active={activeSection === "settings"}
+              icon={<Settings size={17} />}
+              label={t("settings")}
+              onClick={() => goToSection("settings")}
+            />
+          </nav>
 
-        <section className="panel">
-          <div className="panel-title">Import Data</div>
-          <input
-            placeholder="/path/to/run.csv, run.jsonl, images/, or run.mcap"
-            value={sourcePath}
-            onChange={(event) => setSourcePath(event.target.value)}
-          />
-          <button className="primary" onClick={importAndInspect}>
-            <Upload size={16} />
-            Inspect Source
-          </button>
-        </section>
-
-        <section className="panel">
-          <div className="panel-title">Batch Import</div>
-          <textarea
-            placeholder="/path/to/*.csv&#10;/path/to/images"
-            value={batchPattern}
-            onChange={(event) => setBatchPattern(event.target.value)}
-          />
-          <input
-            value={batchOutputPrefix}
-            onChange={(event) => setBatchOutputPrefix(event.target.value)}
-          />
-          <button onClick={runBatchImport}>
-            <Upload size={16} />
-            Run Batch
-          </button>
-          {batchResult && (
-            <p className="path-line">
-              {batchResult.id}: {batchResult.succeeded}/{batchResult.total} succeeded
-            </p>
-          )}
-        </section>
-
-        <section className="panel">
-          <div className="panel-title">
-            <span>Extensions</span>
-            <button className="icon-button" onClick={refreshExtensionData} title="Refresh extensions">
-              <RefreshCcw size={16} />
-            </button>
-          </div>
-          <input
-            placeholder="/path/to/plugin"
-            value={pluginPath}
-            onChange={(event) => setPluginPath(event.target.value)}
-          />
-          <button onClick={installPlugin}>
-            <Save size={16} />
-            Install Plugin
-          </button>
-          <input
-            placeholder="/path/to/template.yaml"
-            value={templatePath}
-            onChange={(event) => setTemplatePath(event.target.value)}
-          />
-          <button onClick={installTemplate}>
-            <Save size={16} />
-            Install Template
-          </button>
-          <p className="path-line">
-            {plugins.length} plugins / {templateRegistry.length} templates
-          </p>
-        </section>
-
-        {(busy || error) && (
-          <section className="status-panel">
-            {busy && <span>{busy}</span>}
-            {error && <strong>{error}</strong>}
-          </section>
-        )}
-      </aside>
-
-      <section className="workspace">
-        <header className="workspace-header">
-          <div>
-            <h2>Import Wizard</h2>
-            <p>Select Source &gt; Inspect &gt; Confirm Mapping &gt; Convert &gt; Open</p>
-          </div>
-          <div className="template-control">
-            <Image size={16} />
+          <section className="sidebar-card">
+            <div className="sidebar-card-title">
+              <span>{t("workspace")}</span>
+              <button className="mini-button" onClick={refreshProjects} title={t("busyRefreshingProjects")}>
+                <RefreshCcw size={14} />
+              </button>
+            </div>
+            <label className="field-label" htmlFor="project-select">
+              {t("currentProject")}
+            </label>
             <select
-              value={selectedTemplateId}
-              onChange={(event) => changeTemplate(event.target.value)}
+              id="project-select"
+              value={selectedProjectId}
+              onChange={(event) => setSelectedProjectId(event.target.value)}
             >
-              {(templates.length ? templates : [{ template_id: "sensor_monitor", name: "Sensor Monitor", score: 1 }]).map(
-                (template) => (
-                  <option key={template.template_id} value={template.template_id}>
-                    {template.name} ({Math.round(template.score * 100)}%)
-                  </option>
-                )
-              )}
-            </select>
-          </div>
-        </header>
-
-        <div className="grid">
-          <section className="surface">
-            <div className="section-heading">
-              <FileSearch size={18} />
-              <h3>Schema Inspector</h3>
-            </div>
-            {source ? (
-              <>
-                <dl className="meta-grid">
-                  <div>
-                    <dt>Type</dt>
-                    <dd>{source.type}</dd>
-                  </div>
-                  <div>
-                    <dt>Status</dt>
-                    <dd>{source.status}</dd>
-                  </div>
-                  <div>
-                    <dt>Size</dt>
-                    <dd>{source.size_bytes.toLocaleString()} bytes</dd>
-                  </div>
-                  <div>
-                    <dt>Streams</dt>
-                    <dd>{streams.length}</dd>
-                  </div>
-                </dl>
-                <StreamTable streams={streams} />
-              </>
-            ) : (
-              <EmptyState text="Create or select a project, then inspect a CSV, JSONL, image folder, or MCAP file." />
-            )}
-          </section>
-
-          <section className="surface">
-            <div className="section-heading">
-              <Save size={18} />
-              <h3>Mapping Editor</h3>
-            </div>
-            {mapping ? (
-              <>
-                <div className="mapping-meta">
-                  <span>{mapping.mapping.app_id}</span>
-                  <span>{mapping.mapping.timelines.primary.source_field}</span>
-                </div>
-                <div className="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Fields</th>
-                        <th>Type</th>
-                        <th>Entity Path</th>
-                        <th>Archetype</th>
-                        <th>Confidence</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {mapping.mapping.streams.map((stream, index) => (
-                        <tr key={stream.stream_id}>
-                          <td>{stream.source_fields.join(", ")}</td>
-                          <td>{stream.semantic_type}</td>
-                          <td>
-                            <input
-                              value={stream.entity_path}
-                              onChange={(event) =>
-                                updateMappingStream(index, "entity_path", event.target.value)
-                              }
-                            />
-                          </td>
-                          <td>
-                            <input
-                              value={stream.archetype}
-                              onChange={(event) =>
-                                updateMappingStream(index, "archetype", event.target.value)
-                              }
-                            />
-                          </td>
-                          <td>{Math.round(stream.confidence * 100)}%</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="actions">
-                  <button onClick={saveMapping}>
-                    <Save size={16} />
-                    Save Mapping
-                  </button>
-                  {savedMappingId && <span className="success">Saved {savedMappingId}</span>}
-                </div>
-              </>
-            ) : (
-              <EmptyState text="Inspect a source to generate an editable mapping." />
-            )}
-          </section>
-        </div>
-
-        <section className="surface">
-          <div className="section-heading">
-            <Play size={18} />
-            <h3>Conversion Job</h3>
-          </div>
-          <div className="build-row">
-            <input value={outputName} onChange={(event) => setOutputName(event.target.value)} />
-            <button className="primary" onClick={buildRecording}>
-              <Play size={16} />
-              Build .rrd + .rbl
-            </button>
-            <button disabled={!buildResult} onClick={openInRerun}>
-              <ExternalLink size={16} />
-              Open in Rerun
-            </button>
-          </div>
-          {buildResult && (
-            <dl className="artifact-list">
-              <div>
-                <dt>Recording</dt>
-                <dd>{buildResult.recording_path}</dd>
-              </div>
-              <div>
-                <dt>Blueprint</dt>
-                <dd>{buildResult.blueprint_path}</dd>
-              </div>
-              <div>
-                <dt>Job</dt>
-                <dd>
-                  {buildResult.job_id} / {buildResult.status}
-                </dd>
-              </div>
-            </dl>
-          )}
-        </section>
-
-        <section className="surface">
-          <div className="section-heading">
-            <FileSearch size={18} />
-            <h3>Preview</h3>
-          </div>
-          {previewRows.length ? (
-            <pre className="preview">{JSON.stringify(previewRows.slice(0, 8), null, 2)}</pre>
-          ) : (
-            <EmptyState text="Preview rows will appear after inspection." />
-          )}
-        </section>
-
-        <div className="grid">
-          <section className="surface">
-            <div className="section-heading">
-              <ListChecks size={18} />
-              <h3>Recording Browser</h3>
-            </div>
-            {recordings.length ? (
-              <>
-                <div className="tag-row">
-                  <input
-                    placeholder="tag or key:value"
-                    value={tagInput}
-                    onChange={(event) => setTagInput(event.target.value)}
-                  />
-                </div>
-                <div className="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Run</th>
-                        <th>Template</th>
-                        <th>Source</th>
-                        <th>Tags</th>
-                        <th>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {recordings.map((recording) => (
-                        <tr key={recording.id}>
-                          <td>
-                            <strong>{recording.run_name}</strong>
-                            <span className="subline">{recording.id}</span>
-                          </td>
-                          <td>{recording.blueprint_id}</td>
-                          <td>{recording.source_type ?? "unknown"}</td>
-                          <td>{recording.tags.join(", ") || "-"}</td>
-                          <td>
-                            <button onClick={() => addTagToRecording(recording.id)}>
-                              <Tags size={16} />
-                              Add Tag
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            ) : (
-              <EmptyState text="Build a recording to populate the local run catalog." />
-            )}
-          </section>
-
-          <section className="surface">
-            <div className="section-heading">
-              <Search size={18} />
-              <h3>Query Console</h3>
-            </div>
-            <div className="query-controls">
-              <select
-                value={selectedQueryTemplate}
-                onChange={(event) => setSelectedQueryTemplate(event.target.value)}
-              >
-                {queryTemplates.map((template) => (
-                  <option key={template.template_id} value={template.template_id}>
-                    {template.name}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={selectedQueryRecording}
-                onChange={(event) => setSelectedQueryRecording(event.target.value)}
-              >
-                <option value="">All recordings</option>
-                {recordings.map((recording) => (
-                  <option key={recording.id} value={recording.id}>
-                    {recording.run_name}
-                  </option>
-                ))}
-              </select>
-              {thresholdTemplates.has(selectedQueryTemplate) && (
-                <input
-                  value={queryThreshold}
-                  onChange={(event) => setQueryThreshold(event.target.value)}
-                />
-              )}
-              <button className="primary" onClick={runQuery}>
-                <Search size={16} />
-                Run Query
-              </button>
-              <button onClick={exportQuery}>
-                <Download size={16} />
-                Export CSV
-              </button>
-            </div>
-            {exportPath && <p className="path-line light">Exported: {exportPath}</p>}
-            {queryResult?.rows.length ? (
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      {queryResult.columns.map((column) => (
-                        <th key={column}>{column}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {queryResult.rows.slice(0, 50).map((row, index) => (
-                      <tr key={index}>
-                        {queryResult.columns.map((column) => (
-                          <td key={column}>{formatCell(row[column])}</td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <EmptyState text="Run a query to see matching samples, frames, or topics." />
-            )}
-          </section>
-
-          <section className="surface">
-            <div className="section-heading">
-              <Search size={18} />
-              <h3>Run Compare</h3>
-            </div>
-            <div className="query-controls">
-              <input
-                placeholder="recording ids separated by comma"
-                value={compareRecordingIds}
-                onChange={(event) => setCompareRecordingIds(event.target.value)}
-              />
-              <input
-                placeholder="metric tokens, e.g. battery temperature"
-                value={compareMetric}
-                onChange={(event) => setCompareMetric(event.target.value)}
-              />
-              <button className="primary" onClick={runCompare}>
-                <Search size={16} />
-                Compare
-              </button>
-            </div>
-            {compareResult?.rows.length ? (
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      {compareResult.columns.map((column) => (
-                        <th key={column}>{column}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {compareResult.rows.slice(0, 50).map((row, index) => (
-                      <tr key={index}>
-                        {compareResult.columns.map((column) => (
-                          <td key={column}>{formatCell(row[column])}</td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <EmptyState text="Select two or more recordings from the browser and compare scalar summaries." />
-            )}
-          </section>
-        </div>
-
-        <section className="surface">
-          <div className="section-heading">
-            <ListChecks size={18} />
-            <h3>Jobs</h3>
-          </div>
-          {jobs.length ? (
-            <div className="job-list">
-              {jobs.slice(0, 6).map((job) => (
-                <span key={job.id}>
-                  {job.type} / {job.status} / {Math.round(job.progress * 100)}%
-                </span>
+              <option value="">{t("selectProject")}</option>
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
+                </option>
               ))}
+            </select>
+            <div className="compact-form">
+              <input
+                aria-label={t("createProject")}
+                value={projectName}
+                onChange={(event) => setProjectName(event.target.value)}
+              />
+              <button className="icon-button" onClick={createProject} title={t("createProject")}>
+                <FolderPlus size={16} />
+              </button>
             </div>
-          ) : (
-            <EmptyState text="Conversion and query jobs will appear here." />
+            {selectedProject && <p className="path-line">{selectedProject.workspace_path}</p>}
+          </section>
+
+          <section className="sidebar-card subtle">
+            <div className="mini-stat">
+              <span>{t("recordings")}</span>
+              <strong>{recordings.length}</strong>
+            </div>
+            <div className="mini-stat">
+              <span>{t("jobs")}</span>
+              <strong>{jobs.length}</strong>
+            </div>
+            <div className="mini-stat">
+              <span>{t("templates")}</span>
+              <strong>{templateRegistry.length}</strong>
+            </div>
+          </section>
+        </aside>
+
+        <section className="workspace">
+          {(busy || error) && (
+            <div className={`notice ${error ? "notice-error" : "notice-info"}`} role="status">
+              {error ? <AlertCircle size={17} /> : <Activity size={17} />}
+              <span>{error || busy}</span>
+            </div>
+          )}
+
+          {activeSection === "dashboard" && (
+          <section className="dashboard" id="dashboard">
+            <div className="hero-card">
+              <div>
+                <span className="eyebrow">{t("currentProjectEyebrow")}</span>
+                <h2>{selectedProject?.name ?? t("selectOrCreateProject")}</h2>
+                <p>
+                  {selectedProject
+                    ? t("projectReadyDescription")
+                    : t("projectEmptyDescription")}
+                </p>
+              </div>
+              <div className="hero-metrics">
+                <Metric label={t("runs")} value={recordings.length} />
+                <Metric label={t("streams")} value={streams.length} />
+                <Metric label={t("jobs")} value={jobs.length} />
+              </div>
+            </div>
+
+            <section className="card import-card">
+              <CardHeader
+                icon={<Upload size={18} />}
+                title={t("importData")}
+                subtitle={t("importDataSubtitle")}
+              />
+              <div
+                className={`drop-zone ${dragActive ? "is-dragging" : ""}`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
+                <div className="drop-icon">
+                  <Upload size={22} />
+                </div>
+                <div>
+                  <strong>{t("dragSourceHere")}</strong>
+                  <span>{t("supportedSources")}</span>
+                </div>
+              </div>
+              <div className="chip-row">
+                {supportedFormats.map((format) => (
+                  <span className="chip" key={format}>
+                    {format}
+                  </span>
+                ))}
+              </div>
+              <input
+                placeholder={t("sourcePathPlaceholder")}
+                value={sourcePath}
+                onChange={(event) => setSourcePath(event.target.value)}
+                onBlur={(event) => setSourcePath(normalizeSourcePathInput(event.target.value))}
+              />
+              <button className="button-primary" disabled={isBusy} onClick={importAndInspect}>
+                <FileSearch size={16} />
+                {t("inspectSource")}
+              </button>
+            </section>
+
+            <section className="card quick-actions-card">
+              <CardHeader icon={<Zap size={18} />} title={t("quickActions")} subtitle={t("quickActionsSubtitle")} />
+              <div className="quick-actions">
+                <button onClick={() => refreshProjectData()} disabled={!selectedProjectId || isBusy}>
+                  <RefreshCcw size={16} />
+                  {t("refreshRuns")}
+                </button>
+                <button onClick={exportProject} disabled={!selectedProjectId || isBusy}>
+                  <Download size={16} />
+                  {t("exportProject")}
+                </button>
+                <button onClick={openInRerun} disabled={!buildResult || isBusy}>
+                  <ExternalLink size={16} />
+                  {t("openInRerun")}
+                </button>
+              </div>
+              {projectExport && <p className="path-line light">{t("packagePath")}: {projectExport.path}</p>}
+              {latestJob && (
+                <div className="soft-status">
+                  <span>{latestJob.type}</span>
+                  <StatusBadge tone={latestJob.status === "failed" ? "danger" : "neutral"} label={latestJob.status} />
+                </div>
+              )}
+            </section>
+
+            <section className="card recent-runs-card">
+              <CardHeader
+                icon={<ListChecks size={18} />}
+                title={t("recentRuns")}
+                subtitle={latestRecording ? `${t("latest")}: ${latestRecording.run_name}` : t("noRecordingsYet")}
+              />
+              {recordings.length ? (
+                <div className="compact-list">
+                  {recentRecordings.map((recording) => (
+                    <div className="run-row" key={recording.id}>
+                      <div>
+                        <strong>{recording.run_name}</strong>
+                        <span>{recording.source_type ?? t("unknown")} · {formatDateTime(recording.created_at, language)}</span>
+                      </div>
+                      <StatusBadge tone="neutral" label={recording.blueprint_id ?? t("recording")} />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState text={t("recordingsWillAppear")} />
+              )}
+            </section>
+          </section>
+          )}
+
+          {activeSection === "import" && (
+          <section className="section-stack" id="import">
+            <SectionTitle
+              eyebrow={t("workspace")}
+              title={t("importWorkflow")}
+              subtitle={t("importWorkflowSubtitle")}
+              action={
+                <div className="template-control">
+                  <Image size={16} />
+                  <select
+                    value={selectedTemplateId}
+                    onChange={(event) => changeTemplate(event.target.value)}
+                  >
+                    {templateOptions.map((template) => (
+                      <option key={template.template_id} value={template.template_id}>
+                        {template.name} ({Math.round(template.score * 100)}%)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              }
+            />
+
+            <div className="two-column">
+              <section className="card">
+                <CardHeader icon={<FileSearch size={18} />} title={t("schemaInspector")} />
+                {source ? (
+                  <>
+                    <dl className="meta-grid">
+                      <div>
+                        <dt>{t("type")}</dt>
+                        <dd>{source.type}</dd>
+                      </div>
+                      <div>
+                        <dt>{t("status")}</dt>
+                        <dd>{source.status}</dd>
+                      </div>
+                      <div>
+                        <dt>{t("size")}</dt>
+                        <dd>{source.size_bytes.toLocaleString()} {t("bytes")}</dd>
+                      </div>
+                      <div>
+                        <dt>{t("streams")}</dt>
+                        <dd>{streams.length}</dd>
+                      </div>
+                    </dl>
+                    <StreamTable
+                      streams={streams}
+                      labels={{
+                        empty: t("noStreams"),
+                        name: t("streamName"),
+                        semanticType: t("semanticType"),
+                        fields: t("fields"),
+                        time: t("time"),
+                        confidence: t("confidence")
+                      }}
+                    />
+                  </>
+                ) : (
+                  <EmptyState text={t("sourceEmpty")} />
+                )}
+              </section>
+
+              <section className="card">
+                <CardHeader icon={<Save size={18} />} title={t("mappingEditor")} />
+                {mapping ? (
+                  <>
+                    <div className="mapping-meta">
+                      <span>{mapping.mapping.app_id}</span>
+                      <span>{mapping.mapping.timelines.primary.source_field}</span>
+                    </div>
+                    <div className="table-wrap">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>{t("fields")}</th>
+                            <th>{t("type")}</th>
+                            <th>{t("entityPath")}</th>
+                            <th>{t("archetype")}</th>
+                            <th>{t("confidence")}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {mapping.mapping.streams.map((stream, index) => (
+                            <tr key={stream.stream_id}>
+                              <td>{stream.source_fields.join(", ")}</td>
+                              <td>{stream.semantic_type}</td>
+                              <td>
+                                <input
+                                  value={stream.entity_path}
+                                  onChange={(event) =>
+                                    updateMappingStream(index, "entity_path", event.target.value)
+                                  }
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  value={stream.archetype}
+                                  onChange={(event) =>
+                                    updateMappingStream(index, "archetype", event.target.value)
+                                  }
+                                />
+                              </td>
+                              <td>{Math.round(stream.confidence * 100)}%</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="actions">
+                      <button onClick={saveMapping} disabled={isBusy}>
+                        <Save size={16} />
+                        {t("saveMapping")}
+                      </button>
+                      {savedMappingId && <span className="success">{t("saved")} {savedMappingId}</span>}
+                    </div>
+                  </>
+                ) : (
+                  <EmptyState text={t("mappingEmpty")} />
+                )}
+              </section>
+            </div>
+
+            <div className="two-column balanced">
+              <section className="card">
+                <CardHeader icon={<Play size={18} />} title={t("conversionJob")} />
+                <div className="build-row">
+                  <input value={outputName} onChange={(event) => setOutputName(event.target.value)} />
+                  <button className="button-primary" disabled={isBusy} onClick={buildRecording}>
+                    <Play size={16} />
+                    {t("buildArtifacts")}
+                  </button>
+                  <button disabled={!buildResult || isBusy} onClick={openInRerun}>
+                    <ExternalLink size={16} />
+                    {t("openInRerun")}
+                  </button>
+                </div>
+                {buildResult ? (
+                  <dl className="artifact-list">
+                    <div>
+                      <dt>{t("recording")}</dt>
+                      <dd>{buildResult.recording_path}</dd>
+                    </div>
+                    <div>
+                      <dt>{t("blueprint")}</dt>
+                      <dd>{buildResult.blueprint_path}</dd>
+                    </div>
+                    <div>
+                      <dt>{t("job")}</dt>
+                      <dd>
+                        {buildResult.job_id} / {buildResult.status}
+                      </dd>
+                    </div>
+                  </dl>
+                ) : (
+                  <EmptyState text={t("buildEmpty")} />
+                )}
+              </section>
+
+              <section className="card">
+                <CardHeader icon={<FileSearch size={18} />} title={t("preview")} />
+                {previewRows.length ? (
+                  <pre className="preview">{JSON.stringify(previewRows.slice(0, 8), null, 2)}</pre>
+                ) : (
+                  <EmptyState text={t("previewEmpty")} />
+                )}
+              </section>
+            </div>
+          </section>
+          )}
+
+          {activeSection === "recordings" && (
+          <section className="section-stack" id="recordings">
+            <SectionTitle
+              eyebrow={t("workspace")}
+              title={t("recordingsQueries")}
+              subtitle={t("recordingsQueriesSubtitle")}
+            />
+            <div className="two-column">
+              <section className="card">
+                <CardHeader icon={<ListChecks size={18} />} title={t("recordingBrowser")} />
+                {recordings.length ? (
+                  <>
+                    <div className="tag-row">
+                      <input
+                        placeholder={t("tagPlaceholder")}
+                        value={tagInput}
+                        onChange={(event) => setTagInput(event.target.value)}
+                      />
+                    </div>
+                    <div className="table-wrap responsive-table">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>{t("run")}</th>
+                            <th>{t("template")}</th>
+                            <th>{t("source")}</th>
+                            <th>{t("tags")}</th>
+                            <th>{t("action")}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {recordings.map((recording) => (
+                            <tr key={recording.id}>
+                              <td data-label={t("run")}>
+                                <strong>{recording.run_name}</strong>
+                                <span className="subline">{recording.id}</span>
+                              </td>
+                              <td data-label={t("template")}>{recording.blueprint_id}</td>
+                              <td data-label={t("source")}>{recording.source_type ?? t("unknown")}</td>
+                              <td data-label={t("tags")}>{recording.tags.join(", ") || "-"}</td>
+                              <td data-label={t("action")}>
+                                <button onClick={() => addTagToRecording(recording.id)} disabled={isBusy}>
+                                  <Tags size={16} />
+                                  {t("addTag")}
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                ) : (
+                  <EmptyState text={t("recordingBrowserEmpty")} />
+                )}
+              </section>
+
+              <section className="card">
+                <CardHeader icon={<Search size={18} />} title={t("queryConsole")} />
+                <div className="query-controls">
+                  <select
+                    value={selectedQueryTemplate}
+                    onChange={(event) => setSelectedQueryTemplate(event.target.value)}
+                  >
+                    {queryTemplates.length ? (
+                      queryTemplates.map((template) => (
+                        <option key={template.template_id} value={template.template_id}>
+                          {template.name}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="low_battery">{t("lowBattery")}</option>
+                    )}
+                  </select>
+                  <select
+                    value={selectedQueryRecording}
+                    onChange={(event) => setSelectedQueryRecording(event.target.value)}
+                  >
+                    <option value="">{t("allRecordings")}</option>
+                    {recordings.map((recording) => (
+                      <option key={recording.id} value={recording.id}>
+                        {recording.run_name}
+                      </option>
+                    ))}
+                  </select>
+                  {thresholdTemplates.has(selectedQueryTemplate) && (
+                    <input
+                      aria-label={t("queryThreshold")}
+                      value={queryThreshold}
+                      onChange={(event) => setQueryThreshold(event.target.value)}
+                    />
+                  )}
+                  <button className="button-primary" onClick={runQuery} disabled={!selectedProjectId || isBusy}>
+                    <Search size={16} />
+                    {t("runQuery")}
+                  </button>
+                  <button onClick={exportQuery} disabled={!selectedProjectId || isBusy}>
+                    <Download size={16} />
+                    {t("exportCsv")}
+                  </button>
+                </div>
+                {exportPath && <p className="path-line light">{t("exported")}: {exportPath}</p>}
+                <ResultTable result={queryResult} emptyText={t("queryEmpty")} />
+              </section>
+            </div>
+
+            <div className="two-column balanced">
+              <section className="card">
+                <CardHeader icon={<Search size={18} />} title={t("runCompare")} />
+                <div className="query-controls">
+                  <input
+                    placeholder={t("recordingIdsPlaceholder")}
+                    value={compareRecordingIds}
+                    onChange={(event) => setCompareRecordingIds(event.target.value)}
+                  />
+                  <input
+                    placeholder={t("metricPlaceholder")}
+                    value={compareMetric}
+                    onChange={(event) => setCompareMetric(event.target.value)}
+                  />
+                  <button className="button-primary" onClick={runCompare} disabled={!selectedProjectId || isBusy}>
+                    <Search size={16} />
+                    {t("compare")}
+                  </button>
+                </div>
+                <ResultTable
+                  result={compareResult}
+                  emptyText={t("compareEmpty")}
+                />
+              </section>
+
+              <section className="card">
+                <CardHeader icon={<Activity size={18} />} title={t("jobs")} />
+                {jobs.length ? (
+                  <div className="job-list">
+                    {visibleJobs.map((job) => (
+                      <span key={job.id}>
+                        {job.type} / {job.status} / {Math.round(job.progress * 100)}%
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState text={t("jobsEmpty")} />
+                )}
+              </section>
+            </div>
+          </section>
+          )}
+
+          {(activeSection === "templates" || activeSection === "settings") && (
+          <section className="section-stack" id="templates">
+            <SectionTitle
+              eyebrow={t("workspace")}
+              title={t("templatesExtensions")}
+              subtitle={t("templatesExtensionsSubtitle")}
+            />
+            <div className="two-column balanced">
+              <section className="card">
+                <CardHeader icon={<FolderOpen size={18} />} title={t("batchImport")} />
+                <textarea
+                  placeholder={t("batchPlaceholder")}
+                  value={batchPattern}
+                  onChange={(event) => setBatchPattern(event.target.value)}
+                />
+                <div className="inline-actions">
+                  <input
+                    value={batchOutputPrefix}
+                    onChange={(event) => setBatchOutputPrefix(event.target.value)}
+                  />
+                  <button onClick={runBatchImport} disabled={!selectedProjectId || isBusy}>
+                    <Upload size={16} />
+                    {t("runBatch")}
+                  </button>
+                </div>
+                {batchResult && (
+                  <p className="path-line light">
+                    {batchResult.id}: {batchResult.succeeded}/{batchResult.total} succeeded
+                  </p>
+                )}
+              </section>
+
+              <section className="card" id="settings">
+                <CardHeader icon={<Settings size={18} />} title={t("settings")} subtitle={t("settingsSubtitle")} />
+                <div className="settings-block">
+                  <div>
+                    <strong>{t("language")}</strong>
+                    <span>{t("languageSubtitle")}</span>
+                  </div>
+                  <div className="segmented-control" role="group" aria-label={t("language")}>
+                    {languageOptions.map((option) => (
+                      <button
+                        key={option.value}
+                        className={language === option.value ? "is-selected" : ""}
+                        onClick={() => setLanguage(option.value)}
+                        type="button"
+                      >
+                        {option.value === "zh" ? t("chinese") : t("english")}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="extension-form">
+                  <input
+                    placeholder={t("pluginPathPlaceholder")}
+                    value={pluginPath}
+                    onChange={(event) => setPluginPath(event.target.value)}
+                  />
+                  <button onClick={installPlugin} disabled={isBusy}>
+                    <Save size={16} />
+                    {t("installPlugin")}
+                  </button>
+                  <input
+                    placeholder={t("templatePathPlaceholder")}
+                    value={templatePath}
+                    onChange={(event) => setTemplatePath(event.target.value)}
+                  />
+                  <button onClick={installTemplate} disabled={isBusy}>
+                    <Save size={16} />
+                    {t("installTemplate")}
+                  </button>
+                </div>
+              </section>
+            </div>
+
+            <section className="card registry-card">
+              <CardHeader
+                icon={<Database size={18} />}
+                title={t("pluginTemplateRegistry")}
+                subtitle={`${plugins.length} ${t("plugins")} / ${templateRegistry.length} ${t("templates")}`}
+              />
+              <div className="table-wrap responsive-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>{t("kind")}</th>
+                      <th>{t("name")}</th>
+                      <th>{t("version")}</th>
+                      <th>{t("status")}</th>
+                      <th>{t("pathApp")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {plugins.map((plugin) => (
+                      <tr key={`plugin-${plugin.id}`}>
+                        <td data-label={t("kind")}>{t("plugin")}</td>
+                        <td data-label={t("name")}>{plugin.name}</td>
+                        <td data-label={t("version")}>{plugin.version}</td>
+                        <td data-label={t("status")}>{plugin.status}</td>
+                        <td data-label={t("pathApp")}>{plugin.path}</td>
+                      </tr>
+                    ))}
+                    {templateRegistry.map((template) => (
+                      <tr key={`template-${template.id}`}>
+                        <td data-label={t("kind")}>{t("template")}</td>
+                        <td data-label={t("name")}>{template.name}</td>
+                        <td data-label={t("version")}>{template.version}</td>
+                        <td data-label={t("status")}>{template.enabled ? t("enabled") : t("disabled")}</td>
+                        <td data-label={t("pathApp")}>{template.app_id}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {!plugins.length && !templateRegistry.length && (
+                <EmptyState text={t("registryEmpty")} />
+              )}
+            </section>
+          </section>
           )}
         </section>
-
-        <section className="surface">
-          <div className="section-heading">
-            <Database size={18} />
-            <h3>Plugin & Template Registry</h3>
-          </div>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Kind</th>
-                  <th>Name</th>
-                  <th>Version</th>
-                  <th>Status</th>
-                  <th>Path / App</th>
-                </tr>
-              </thead>
-              <tbody>
-                {plugins.map((plugin) => (
-                  <tr key={`plugin-${plugin.id}`}>
-                    <td>plugin</td>
-                    <td>{plugin.name}</td>
-                    <td>{plugin.version}</td>
-                    <td>{plugin.status}</td>
-                    <td>{plugin.path}</td>
-                  </tr>
-                ))}
-                {templateRegistry.map((template) => (
-                  <tr key={`template-${template.id}`}>
-                    <td>template</td>
-                    <td>{template.name}</td>
-                    <td>{template.version}</td>
-                    <td>{template.enabled ? "enabled" : "disabled"}</td>
-                    <td>{template.app_id}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </section>
+      </div>
     </main>
   );
 }
 
-const thresholdTemplates = new Set(["low_battery", "detection_failure"]);
+function normalizeDroppedPath(value: string) {
+  const firstLine = value.trim().split(/\r?\n/)[0];
+  if (!firstLine) return "";
+  return normalizeSourcePathInput(decodeURIComponent(firstLine.replace(/^file:\/\//, "")));
+}
+
+function normalizeSourcePathInput(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  const roots = ["/home/", "/mnt/", "/media/", "/tmp/", "/var/", "/opt/"];
+  for (const root of roots) {
+    let index = trimmed.indexOf(root, 1);
+    while (index > 0) {
+      const prefix = trimmed.slice(0, index);
+      const suffix = trimmed.slice(index);
+      if (prefix === suffix || prefix.endsWith(suffix)) {
+        return suffix;
+      }
+      index = trimmed.indexOf(root, index + root.length);
+    }
+  }
+  return trimmed;
+}
+
+function upsertProject(projects: Project[], project: Project) {
+  const withoutProject = projects.filter((item) => item.id !== project.id);
+  return [project, ...withoutProject];
+}
 
 function formatCell(value: unknown) {
   if (value === null || value === undefined) return "";
@@ -839,38 +1134,187 @@ function formatCell(value: unknown) {
   return String(value);
 }
 
-function StreamTable({ streams }: { streams: StreamInfo[] }) {
-  if (!streams.length) return <EmptyState text="No streams detected yet." />;
+function formatDateTime(value: string, language: Language) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString(language === "zh" ? "zh-CN" : "en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+const NavButton = memo(function NavButton({
+  active,
+  icon,
+  label,
+  onClick
+}: {
+  active: boolean;
+  icon: ReactNode;
+  label: string;
+  onClick: () => void;
+}) {
   return (
-    <div className="table-wrap">
+    <button className={`nav-item ${active ? "is-active" : ""}`} onClick={onClick}>
+      {icon}
+      <span>{label}</span>
+    </button>
+  );
+});
+
+const StatusBadge = memo(function StatusBadge({
+  tone,
+  label
+}: {
+  tone: "success" | "danger" | "neutral";
+  label: string;
+}) {
+  return (
+    <span className={`status-badge ${tone}`}>
+      {tone === "success" ? <CheckCircle2 size={13} /> : <span className="status-dot" />}
+      {label}
+    </span>
+  );
+});
+
+const Metric = memo(function Metric({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="metric">
+      <strong>{value}</strong>
+      <span>{label}</span>
+    </div>
+  );
+});
+
+const CardHeader = memo(function CardHeader({
+  icon,
+  title,
+  subtitle
+}: {
+  icon: ReactNode;
+  title: string;
+  subtitle?: string;
+}) {
+  return (
+    <div className="card-header">
+      <div className="card-icon">{icon}</div>
+      <div>
+        <h3>{title}</h3>
+        {subtitle && <p>{subtitle}</p>}
+      </div>
+    </div>
+  );
+});
+
+const SectionTitle = memo(function SectionTitle({
+  eyebrow,
+  title,
+  subtitle,
+  action
+}: {
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="section-title">
+      <div>
+        <span className="eyebrow">{eyebrow}</span>
+        <h2>{title}</h2>
+        <p>{subtitle}</p>
+      </div>
+      {action}
+    </div>
+  );
+});
+
+const StreamTable = memo(function StreamTable({
+  streams,
+  labels
+}: {
+  streams: StreamInfo[];
+  labels: {
+    empty: string;
+    name: string;
+    semanticType: string;
+    fields: string;
+    time: string;
+    confidence: string;
+  };
+}) {
+  if (!streams.length) return <EmptyState text={labels.empty} />;
+  return (
+    <div className="table-wrap responsive-table">
       <table>
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Semantic Type</th>
-            <th>Fields</th>
-            <th>Time</th>
-            <th>Confidence</th>
+            <th>{labels.name}</th>
+            <th>{labels.semanticType}</th>
+            <th>{labels.fields}</th>
+            <th>{labels.time}</th>
+            <th>{labels.confidence}</th>
           </tr>
         </thead>
         <tbody>
           {streams.map((stream) => (
             <tr key={stream.stream_id}>
-              <td>{stream.name}</td>
-              <td>{stream.semantic_type}</td>
-              <td>{stream.fields.join(", ")}</td>
-              <td>{stream.time_key ?? "row"}</td>
-              <td>{Math.round(stream.confidence * 100)}%</td>
+              <td data-label={labels.name}>{stream.name}</td>
+              <td data-label={labels.semanticType}>{stream.semantic_type}</td>
+              <td data-label={labels.fields}>{stream.fields.join(", ")}</td>
+              <td data-label={labels.time}>{stream.time_key ?? "row"}</td>
+              <td data-label={labels.confidence}>{Math.round(stream.confidence * 100)}%</td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
   );
-}
+});
 
-function EmptyState({ text }: { text: string }) {
-  return <div className="empty-state">{text}</div>;
-}
+const ResultTable = memo(function ResultTable({
+  result,
+  emptyText
+}: {
+  result: QueryResult | null;
+  emptyText: string;
+}) {
+  if (!result?.rows.length) return <EmptyState text={emptyText} />;
+  return (
+    <div className="table-wrap responsive-table">
+      <table>
+        <thead>
+          <tr>
+            {result.columns.map((column) => (
+              <th key={column}>{column}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {result.rows.slice(0, 50).map((row, index) => (
+            <tr key={index}>
+              {result.columns.map((column) => (
+                <td key={column} data-label={column}>
+                  {formatCell(row[column])}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+});
+
+const EmptyState = memo(function EmptyState({ text }: { text: string }) {
+  return (
+    <div className="empty-state">
+      <Command size={17} />
+      <span>{text}</span>
+    </div>
+  );
+});
 
 export default App;

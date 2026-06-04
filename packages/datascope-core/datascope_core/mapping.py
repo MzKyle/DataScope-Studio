@@ -174,6 +174,8 @@ def _template_for_streams(streams: list[StreamInfo]) -> str:
     semantic_types = {stream.semantic_type for stream in streams}
     if "mcap" in semantic_types or any(stream.metadata.get("message_encoding") for stream in streams):
         return "robotics_debug"
+    if semantic_types & {"points3d", "transform3d", "trajectory3d", "asset3d"}:
+        return "robotics_debug"
     if "image" in semantic_types:
         return "cv_detection"
     return "sensor_monitor"

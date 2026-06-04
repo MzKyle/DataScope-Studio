@@ -27,7 +27,7 @@ app.add_typer(project_app, name="project")
 
 @app.command()
 def inspect(path: Path, json_output: bool = typer.Option(False, "--json", help="Print JSON.")) -> None:
-    """Inspect a CSV, JSONL, image folder, or MCAP source and print inferred streams."""
+    """Inspect a CSV, JSONL, image folder, point cloud, or MCAP source."""
     adapter = _adapter_for_cli_path(path)
     source = adapter.inspect(str(path))
     streams = adapter.infer_streams(source)
@@ -44,6 +44,14 @@ def inspect(path: Path, json_output: bool = typer.Option(False, "--json", help="
         typer.echo(f"Messages: {source.metadata.get('message_count', 0)}")
         if source.metadata.get("inspect_warning"):
             typer.echo(f"Warning: {source.metadata['inspect_warning']}")
+    elif source.source_type == "point_cloud":
+        typer.echo(f"Point clouds: {source.metadata.get('point_cloud_count', 0)}")
+        typer.echo(f"Formats: {', '.join(source.metadata.get('formats', []))}")
+        typer.echo(
+            "Sampled points: "
+            f"{source.metadata.get('sampled_point_count_min', 0)}-"
+            f"{source.metadata.get('sampled_point_count_max', 0)}"
+        )
     else:
         typer.echo(f"Rows: {source.metadata.get('rows', 0)}")
         typer.echo(f"Columns: {', '.join(source.metadata.get('columns', []))}")

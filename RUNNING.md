@@ -56,6 +56,15 @@ datascope inspect /path/to/run.mcap
 datascope import /path/to/run.mcap --project robot_demo --template robotics_debug --out robot_run_001
 ```
 
+3D 点云导入支持单个文件或目录，当前支持 `.ply`、`.pcd`、`.npy`、`.npz`。目录下每个点云文件会作为一帧写入 Rerun `Points3D`：
+
+```bash
+datascope inspect /home/kyle/sany/scan_point_cloud
+datascope import /home/kyle/sany/scan_point_cloud --project cloud_demo --template robotics_debug --out cloud_run_001
+```
+
+桌面端中在“导入数据”输入点云目录路径后点击“检查数据源”，模板会优先推荐 `robotics_debug`。
+
 Run catalog 和本地查询示例：
 
 ```bash
@@ -108,43 +117,52 @@ npm run tauri:dev
 
 `npm run tauri:dev` 会自动检查 `http://127.0.0.1:8000/api/health`。如果后端没有运行，它会使用项目根目录的 `.venv` 自动启动 FastAPI 后端；如果后端已经运行，则复用现有后端。
 
-`npm run tauri:dev` 还会先执行 `npm run dev:tauri`：清理本项目残留的旧 Tauri/Vite 进程，构建前端，并用 `vite preview` 在 `127.0.0.1:1420` 提供静态页面。这样可以避开 Vite HMR websocket 在 Linux WebKit/Tauri 中偶发的 `Connection terminated unexpectedly`。
+`npm run tauri:dev` 会先清理本项目残留的旧 Tauri/Vite/静态服务进程，再构建前端静态包，最后直接运行 Tauri。当前启动链路不依赖 `127.0.0.1:1420`，所以桌面端正常运行时只需要确认后端 `8000` 可用。
 
-如果启动时报 `Port 1420 is already in use`，说明已经有一个旧的 Vite/Tauri 前端进程占用了端口。可以先查看占用进程：
-
-```bash
-ss -ltnp | grep ':1420'
-```
-
-然后结束对应的 `node ... vite` 进程，再重新运行：
+如果终端默认还是 Node 12，启动脚本会优先使用本机已有的 Node 20：
 
 ```bash
-kill <pid>
-npm run tauri:dev
+/home/kyle/.local/node-v20.20.1-linux-x64/bin
+/home/kyle/.local/node-v20.19.5-linux-x64/bin
 ```
 
-如果终端或窗口里偶发出现 `Connection terminated unexpectedly`，先确认服务是否仍在：
+如果这些目录不存在，请先安装 Node `>=20.19.0` 或把它加入 `PATH`。
 
-```bash
-curl http://127.0.0.1:8000/api/health
-curl -I http://127.0.0.1:1420/
-```
+默认 `npm run tauri:dev` 使用性能优先的图形模式，只保留低成本的 WebKitGTK 兼容设置，交互会更流畅。
 
-注意：`/api/health` 只支持普通 GET，请不要用 `curl -I` 检查后端，否则 FastAPI 会返回 `405 Method Not Allowed`。如果 `1420` 返回 `502 Bad Gateway` 或连接被拒绝，通常表示 `npm run tauri:dev` 已经退出、Vite 正在重启，或者第一次 Rust 编译还没有完成。
-
-如果两个命令都正常，通常只是 Tauri dev/WebView 热更新连接在重载时断开了一次，可以继续使用。如果窗口已经关闭、页面空白，或者 `1420` 不再监听，按 `Ctrl+C` 停掉当前 `npm run tauri:dev`，然后重新运行：
-
-```bash
-npm run tauri:dev
-```
-
-如果之前留下了孤立的旧窗口进程，可以先清理：
+如果窗口里仍然显示 `Connection terminated unexpectedly`，通常是旧窗口/旧 WebKit 进程还在，先按 `Ctrl+C` 停掉当前启动命令，然后清理本项目残留进程：
 
 ```bash
 pkill -f 'target/debug/datascope-studio'
+pkill -f 'npm run tauri:dev'
+pkill -f 'bash scripts/run-desktop.sh'
 pkill -f 'vite --host 127.0.0.1'
-pkill -f 'vite preview --host 127.0.0.1 --port 1420'
+pkill -f 'http.server 1420'
 ```
+
+再重新启动：
+
+```bash
+npm run tauri:dev
+```
+
+如果清理后仍然崩溃，再使用安全图形模式启动：
+
+```bash
+npm run tauri:dev:safe
+```
+
+安全图形模式等价于 `DATASCOPE_SAFE_GRAPHICS=1 npm run tauri:dev`，会启用 `WEBKIT_DISABLE_COMPOSITING_MODE=1`、`LIBGL_ALWAYS_SOFTWARE=1`、`GSK_RENDERER=cairo`、`GDK_BACKEND=x11` 等回退设置。它更稳定，但会明显降低界面流畅度；只建议在普通模式仍然崩溃时使用。
+
+可以用下面的命令确认后端健康：
+
+```bash
+curl http://127.0.0.1:8000/api/health
+```
+
+注意：`/api/health` 只支持普通 GET，请不要用 `curl -I` 检查后端，否则 FastAPI 会返回 `405 Method Not Allowed`。
+
+Linux WebKitGTK 某些 GPU/沙箱组合会导致窗口显示 `Connection terminated unexpectedly`。项目默认只设置 `WEBKIT_DISABLE_DMABUF_RENDERER=1` 和 `NO_AT_BRIDGE=1`；完整软件渲染回退需要使用上面的安全图形模式。
 
 如果仍然不稳定，可以先单独完成 Rust 编译缓存，再启动桌面端：
 
