@@ -870,6 +870,13 @@ dt {
   margin-top: 2px;
 }
 
+.run-row-actions {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--space-8);
+}
+
 .section-stack {
   display: grid;
   gap: var(--space-20);
@@ -1082,6 +1089,12 @@ td {
   padding: var(--space-16);
 }
 
+.settings-block.vertical {
+  align-items: stretch;
+  display: grid;
+  gap: var(--space-12);
+}
+
 .settings-block strong,
 .settings-block span {
   display: block;
@@ -1091,6 +1104,12 @@ td {
   color: var(--color-text-muted);
   font-size: 13px;
   margin-top: var(--space-4);
+}
+
+.settings-path-control {
+  display: grid;
+  gap: var(--space-8);
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 
 .segmented-control {
@@ -1291,6 +1310,7 @@ td {
   .query-controls,
   .inline-actions,
   .settings-block,
+  .settings-path-control,
   .extension-form {
     display: grid;
     grid-template-columns: 1fr;

@@ -2,6 +2,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
+from datascope_core.workspace import Workspace
 from datascope_cli.main import app
 
 
@@ -38,3 +39,19 @@ def test_cli_import_builds_artifacts(tmp_path: Path, monkeypatch) -> None:
     assert "Blueprint:" in result.output
     assert (tmp_path / "workspace").exists()
 
+
+def test_cli_project_import_package(tmp_path: Path, monkeypatch) -> None:
+    package_workspace = Workspace(tmp_path / "package_workspace")
+    project = package_workspace.create_project("CLI Package")
+    source = package_workspace.add_source(project["id"], str(FIXTURES / "sample_sensor.csv"))
+    package_workspace.inspect_source(source["id"])
+    package_workspace.build_recording(project["id"], source["id"], output_name="cli_package")
+    package = package_workspace.export_project(project["id"])
+
+    monkeypatch.setenv("DATASCOPE_WORKSPACE", str(tmp_path / "import_workspace"))
+    runner = CliRunner()
+    result = runner.invoke(app, ["project", "import", package["path"]])
+
+    assert result.exit_code == 0
+    assert "Imported project CLI Package" in result.output
+    assert "with 1 recordings" in result.output

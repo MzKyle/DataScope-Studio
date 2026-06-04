@@ -52,6 +52,7 @@ import type {
 const supportedFormats = ["CSV", "JSONL", "Images", "PLY", "PCD", "NPZ", "MCAP", "ROS2"];
 const thresholdTemplates = new Set(["low_battery", "detection_failure"]);
 const TABLE_RENDER_LIMIT = 100;
+const DEFAULT_EXPORT_DIR_KEY = "datascope.defaultExportDir";
 
 function App() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -86,6 +87,8 @@ function App() {
   const [templatePath, setTemplatePath] = useState("");
   const [exportPath, setExportPath] = useState("");
   const [projectExport, setProjectExport] = useState<ProjectExportResult | null>(null);
+  const [openedPackagePath, setOpenedPackagePath] = useState("");
+  const [defaultExportDir, setDefaultExportDir] = useState(getInitialDefaultExportDir);
   const [tagInput, setTagInput] = useState("");
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
@@ -149,6 +152,10 @@ function App() {
   useEffect(() => {
     saveLanguage(language);
   }, [language]);
+
+  useEffect(() => {
+    window.localStorage.setItem(DEFAULT_EXPORT_DIR_KEY, defaultExportDir.trim());
+  }, [defaultExportDir]);
 
   async function run<T>(label: string, task: () => Promise<T>): Promise<T | null> {
     setBusy(label);
@@ -310,9 +317,20 @@ function App() {
   }
 
   async function openInRerun() {
-    if (!buildResult) return;
+    const recordingPath = buildResult?.recording_path ?? latestRecording?.path;
+    const blueprintPath = buildResult?.blueprint_path ?? latestRecording?.blueprint_path ?? undefined;
+    if (!recordingPath) {
+      setError(t("errorNoRecordingToOpen"));
+      return;
+    }
     await run(t("busyOpeningRerun"), () =>
-      api.open(buildResult.recording_path, buildResult.blueprint_path)
+      api.open(recordingPath, blueprintPath)
+    );
+  }
+
+  async function openRecording(recording: Recording) {
+    await run(t("busyOpeningRerun"), () =>
+      api.open(recording.path, recording.blueprint_path ?? undefined)
     );
   }
 
@@ -430,8 +448,72 @@ function App() {
 
   async function exportProject() {
     if (!selectedProjectId) return;
-    const result = await run(t("busyExportingProject"), () => api.exportProject(selectedProjectId));
+    const outputPath = normalizeSourcePathInput(defaultExportDir);
+    if (outputPath !== defaultExportDir) {
+      setDefaultExportDir(outputPath);
+    }
+    const result = await run(t("busyExportingProject"), () =>
+      api.exportProject(selectedProjectId, outputPath || undefined)
+    );
     if (result) setProjectExport(result);
+  }
+
+  async function chooseExportFolder() {
+    if (!isTauriRuntime()) {
+      setError(t("errorPickerUnavailable"));
+      return;
+    }
+    const selected = await run(t("busySelectingExportFolder"), () =>
+      openDialog({
+        title: t("selectExportFolder"),
+        directory: true,
+        multiple: false,
+        recursive: false
+      })
+    );
+    const selectedPath = Array.isArray(selected) ? selected[0] : selected;
+    if (selectedPath) {
+      setDefaultExportDir(normalizeSourcePathInput(selectedPath));
+      setError("");
+    }
+  }
+
+  async function openProjectPackage() {
+    if (!isTauriRuntime()) {
+      setError(t("errorPickerUnavailable"));
+      return;
+    }
+    const selected = await run(t("busyOpeningPackage"), () =>
+      openDialog({
+        title: t("selectProjectPackage"),
+        multiple: false,
+        filters: [
+          {
+            name: "DataScope Project Package",
+            extensions: ["zip"]
+          }
+        ]
+      })
+    );
+    const selectedPath = Array.isArray(selected) ? selected[0] : selected;
+    if (!selectedPath) return;
+    const packagePath = normalizeSourcePathInput(selectedPath);
+    const result = await run(t("busyOpeningPackage"), () => api.importProjectPackage(packagePath));
+    if (result) {
+      setProjects((current) => upsertProject(current, result.project));
+      setSelectedProjectId(result.project.id);
+      setRecordings(result.recordings);
+      setJobs([]);
+      setSource(null);
+      setStreams([]);
+      setMapping(null);
+      setTemplates([]);
+      setSavedMappingId("");
+      setBuildResult(null);
+      setOpenedPackagePath(result.package_path);
+      setError("");
+      setActiveSection("dashboard");
+    }
   }
 
   function goToSection(sectionId: string) {
@@ -740,12 +822,17 @@ function App() {
                   <Download size={16} />
                   {t("exportProject")}
                 </button>
-                <button onClick={openInRerun} disabled={!buildResult || isBusy}>
+                <button onClick={openProjectPackage} disabled={isBusy}>
+                  <FolderOpen size={16} />
+                  {t("openProjectPackage")}
+                </button>
+                <button onClick={openInRerun} disabled={(!buildResult && !latestRecording) || isBusy}>
                   <ExternalLink size={16} />
                   {t("openInRerun")}
                 </button>
               </div>
               {projectExport && <p className="path-line light">{t("packagePath")}: {projectExport.path}</p>}
+              {openedPackagePath && <p className="path-line light">{t("importedPackage")}: {openedPackagePath}</p>}
               {latestJob && (
                 <div className="soft-status">
                   <span>{latestJob.type}</span>
@@ -768,7 +855,12 @@ function App() {
                         <strong>{recording.run_name}</strong>
                         <span>{recording.source_type ?? t("unknown")} · {formatDateTime(recording.created_at, language)}</span>
                       </div>
-                      <StatusBadge tone="neutral" label={recording.blueprint_id ?? t("recording")} />
+                      <div className="run-row-actions">
+                        <StatusBadge tone="neutral" label={recording.blueprint_id ?? t("recording")} />
+                        <button className="mini-button" onClick={() => openRecording(recording)} disabled={isBusy} title={t("openInRerun")}>
+                          <ExternalLink size={15} />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -991,6 +1083,10 @@ function App() {
                               <td data-label={t("source")}>{recording.source_type ?? t("unknown")}</td>
                               <td data-label={t("tags")}>{recording.tags.join(", ") || "-"}</td>
                               <td data-label={t("action")}>
+                                <button onClick={() => openRecording(recording)} disabled={isBusy}>
+                                  <ExternalLink size={16} />
+                                  {t("openInRerun")}
+                                </button>
                                 <button onClick={() => addTagToRecording(recording.id)} disabled={isBusy}>
                                   <Tags size={16} />
                                   {t("addTag")}
@@ -1161,6 +1257,24 @@ function App() {
                     ))}
                   </div>
                 </div>
+                <div className="settings-block vertical">
+                  <div>
+                    <strong>{t("defaultExportPath")}</strong>
+                    <span>{t("defaultExportPathSubtitle")}</span>
+                  </div>
+                  <div className="settings-path-control">
+                    <input
+                      placeholder={t("exportPathPlaceholder")}
+                      value={defaultExportDir}
+                      onChange={(event) => setDefaultExportDir(event.target.value)}
+                      onBlur={(event) => setDefaultExportDir(normalizeSourcePathInput(event.target.value))}
+                    />
+                    <button type="button" onClick={chooseExportFolder} disabled={isBusy}>
+                      <FolderOpen size={16} />
+                      {t("selectExportFolder")}
+                    </button>
+                  </div>
+                </div>
                 <div className="extension-form">
                   <input
                     placeholder={t("pluginPathPlaceholder")}
@@ -1270,6 +1384,10 @@ function normalizeSourcePathInput(value: string) {
 
 function isTauriRuntime() {
   return Boolean((window as Window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__);
+}
+
+function getInitialDefaultExportDir() {
+  return window.localStorage.getItem(DEFAULT_EXPORT_DIR_KEY) ?? "";
 }
 
 function upsertProject(projects: Project[], project: Project) {
