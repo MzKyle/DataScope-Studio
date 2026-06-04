@@ -1,4 +1,5 @@
 import { memo, type DragEvent, type ReactNode, useEffect, useMemo, useState } from "react";
+import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import {
   Activity,
   AlertCircle,
@@ -50,6 +51,7 @@ import type {
 
 const supportedFormats = ["CSV", "JSONL", "Images", "PLY", "PCD", "NPZ", "MCAP", "ROS2"];
 const thresholdTemplates = new Set(["low_battery", "detection_failure"]);
+const TABLE_RENDER_LIMIT = 100;
 
 function App() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -89,6 +91,7 @@ function App() {
   const [error, setError] = useState("");
   const [activeSection, setActiveSection] = useState("dashboard");
   const [dragActive, setDragActive] = useState(false);
+  const [sourcePickerOpen, setSourcePickerOpen] = useState(false);
   const [language, setLanguage] = useState<Language>(getInitialLanguage);
   const t = useMemo(() => createTranslator(language), [language]);
 
@@ -108,20 +111,40 @@ function App() {
   const latestRecording = recordings[0] ?? null;
   const latestJob = jobs[0] ?? null;
   const recentRecordings = useMemo(() => recordings.slice(0, 4), [recordings]);
+  const visibleRecordings = useMemo(() => recordings.slice(0, TABLE_RENDER_LIMIT), [recordings]);
+  const queryRecordingOptions = useMemo(() => recordings.slice(0, TABLE_RENDER_LIMIT), [recordings]);
   const visibleJobs = useMemo(() => jobs.slice(0, 8), [jobs]);
+  const visiblePlugins = useMemo(() => plugins.slice(0, TABLE_RENDER_LIMIT), [plugins]);
+  const visibleTemplateRegistry = useMemo(
+    () => templateRegistry.slice(0, TABLE_RENDER_LIMIT),
+    [templateRegistry]
+  );
+  const previewText = useMemo(
+    () => (previewRows.length ? JSON.stringify(previewRows.slice(0, 8), null, 2) : ""),
+    [previewRows]
+  );
   const isBusy = Boolean(busy);
 
   useEffect(() => {
     window.scrollTo(0, 0);
     refreshProjects();
-    refreshExtensionData();
+    refreshTemplateRegistry();
   }, []);
 
   useEffect(() => {
     if (selectedProjectId) {
-      refreshProjectData(selectedProjectId);
+      refreshProjectData(selectedProjectId, activeSection === "recordings");
     }
   }, [selectedProjectId]);
+
+  useEffect(() => {
+    if (selectedProjectId && activeSection === "recordings") {
+      refreshProjectData(selectedProjectId, true);
+    }
+    if (activeSection === "templates" || activeSection === "settings") {
+      refreshExtensionData();
+    }
+  }, [activeSection]);
 
   useEffect(() => {
     saveLanguage(language);
@@ -150,24 +173,31 @@ function App() {
     }
   }
 
-  async function refreshProjectData(projectId = selectedProjectId) {
+  async function refreshProjectData(projectId = selectedProjectId, includeQueryTemplates = false) {
     if (!projectId) return;
     const result = await run(t("busyRefreshingWorkspace"), async () => {
-      const [recordingRows, jobRows, templatesRows] = await Promise.all([
+      const [recordingRows, jobRows] = await Promise.all([
         api.recordings(projectId),
-        api.jobs(projectId),
-        api.queryTemplates(projectId)
+        api.jobs(projectId)
       ]);
+      const templatesRows = includeQueryTemplates ? await api.queryTemplates(projectId) : null;
       return { recordingRows, jobRows, templatesRows };
     });
     if (result) {
       setRecordings(result.recordingRows);
       setJobs(result.jobRows);
-      setQueryTemplates(result.templatesRows);
-      if (!result.templatesRows.some((template) => template.template_id === selectedQueryTemplate)) {
-        setSelectedQueryTemplate(result.templatesRows[0]?.template_id ?? "low_battery");
+      if (result.templatesRows) {
+        setQueryTemplates(result.templatesRows);
+        if (!result.templatesRows.some((template) => template.template_id === selectedQueryTemplate)) {
+          setSelectedQueryTemplate(result.templatesRows[0]?.template_id ?? "low_battery");
+        }
       }
     }
+  }
+
+  async function refreshTemplateRegistry() {
+    const result = await run(t("busyLoadingRegistry"), () => api.templates());
+    if (result) setTemplateRegistry(result);
   }
 
   async function refreshExtensionData() {
@@ -184,7 +214,11 @@ function App() {
   async function refreshAll() {
     await refreshProjects();
     if (selectedProjectId) await refreshProjectData(selectedProjectId);
-    await refreshExtensionData();
+    if (activeSection === "templates" || activeSection === "settings") {
+      await refreshExtensionData();
+    } else {
+      await refreshTemplateRegistry();
+    }
   }
 
   async function createProject() {
@@ -402,7 +436,7 @@ function App() {
 
   function goToSection(sectionId: string) {
     setActiveSection(sectionId);
-    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    document.querySelector(".workspace")?.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }
 
   function handleDragOver(event: DragEvent<HTMLDivElement>) {
@@ -428,6 +462,50 @@ function App() {
       droppedFile?.webkitRelativePath ??
       normalizeDroppedPath(uriList || textPath);
     if (droppedPath) setSourcePath(normalizeSourcePathInput(droppedPath));
+  }
+
+  async function chooseSource(kind: "file" | "folder") {
+    setSourcePickerOpen(false);
+    if (!isTauriRuntime()) {
+      setError(t("errorPickerUnavailable"));
+      return;
+    }
+    const selected = await run(
+      kind === "file" ? t("busySelectingFile") : t("busySelectingFolder"),
+      () =>
+        openDialog({
+          title: kind === "file" ? t("selectSourceFile") : t("selectSourceFolder"),
+          directory: kind === "folder",
+          multiple: false,
+          recursive: kind === "folder",
+          filters:
+            kind === "file"
+              ? [
+                  {
+                    name: "DataScope",
+                    extensions: ["csv", "jsonl", "json", "mcap", "ply", "pcd", "npy", "npz"]
+                  },
+                  {
+                    name: "Tabular",
+                    extensions: ["csv", "jsonl", "json"]
+                  },
+                  {
+                    name: "Point Cloud",
+                    extensions: ["ply", "pcd", "npy", "npz"]
+                  },
+                  {
+                    name: "MCAP",
+                    extensions: ["mcap"]
+                  }
+                ]
+              : undefined
+        })
+    );
+    const selectedPath = Array.isArray(selected) ? selected[0] : selected;
+    if (selectedPath) {
+      setSourcePath(normalizeSourcePathInput(selectedPath));
+      setError("");
+    }
   }
 
   return (
@@ -547,21 +625,38 @@ function App() {
 
           {activeSection === "dashboard" && (
           <section className="dashboard" id="dashboard">
-            <div className="hero-card">
-              <div>
-                <span className="eyebrow">{t("currentProjectEyebrow")}</span>
-                <h2>{selectedProject?.name ?? t("selectOrCreateProject")}</h2>
-                <p>
-                  {selectedProject
-                    ? t("projectReadyDescription")
-                    : t("projectEmptyDescription")}
-                </p>
+            <div className="hero-card project-summary-card">
+              <div className="project-summary-main">
+                <div>
+                  <span className="eyebrow">{t("currentProjectEyebrow")}</span>
+                  <h2>{selectedProject?.name ?? t("selectOrCreateProject")}</h2>
+                  <p>
+                    {selectedProject
+                      ? t("projectReadyDescription")
+                      : t("projectEmptyDescription")}
+                  </p>
+                </div>
+                <div className="project-meta-list">
+                  <span className="project-meta-item">
+                    <FolderOpen size={14} />
+                    {selectedProject?.workspace_path ?? t("createProject")}
+                  </span>
+                  <span className="project-meta-item">
+                    <ListChecks size={14} />
+                    {latestRecording ? `${t("latestRun")}: ${latestRecording.run_name}` : t("noLatestRun")}
+                  </span>
+                  <span className="project-meta-item">
+                    <Activity size={14} />
+                    {latestJob ? `${latestJob.type} / ${latestJob.status}` : t("localArtifacts")}
+                  </span>
+                </div>
+                <div className="hero-metrics compact-metrics">
+                  <Metric label={t("runs")} value={recordings.length} />
+                  <Metric label={t("streams")} value={streams.length} />
+                  <Metric label={t("jobs")} value={jobs.length} />
+                </div>
               </div>
-              <div className="hero-metrics">
-                <Metric label={t("runs")} value={recordings.length} />
-                <Metric label={t("streams")} value={streams.length} />
-                <Metric label={t("jobs")} value={jobs.length} />
-              </div>
+              <ProjectVisual recordings={recordings.length} streams={streams.length} jobs={jobs.length} />
             </div>
 
             <section className="card import-card">
@@ -570,8 +665,43 @@ function App() {
                 title={t("importData")}
                 subtitle={t("importDataSubtitle")}
               />
+              <div className="source-picker-toolbar">
+                <div className="source-picker-wrap">
+                  <button
+                    className="button-primary source-picker-button"
+                    disabled={isBusy}
+                    onClick={() => setSourcePickerOpen((value) => !value)}
+                    type="button"
+                  >
+                    <FolderOpen size={16} />
+                    {t("chooseSource")}
+                  </button>
+                  {sourcePickerOpen && (
+                    <div className="source-picker-popover" role="menu">
+                      <button type="button" onClick={() => chooseSource("file")}>
+                        <FileSearch size={16} />
+                        <span>
+                          <strong>{t("selectSourceFile")}</strong>
+                          <small>{t("selectSourceFileHint")}</small>
+                        </span>
+                      </button>
+                      <button type="button" onClick={() => chooseSource("folder")}>
+                        <FolderOpen size={16} />
+                        <span>
+                          <strong>{t("selectSourceFolder")}</strong>
+                          <small>{t("selectSourceFolderHint")}</small>
+                        </span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <button disabled={isBusy} onClick={importAndInspect} type="button">
+                  <FileSearch size={16} />
+                  {t("inspectSource")}
+                </button>
+              </div>
               <div
-                className={`drop-zone ${dragActive ? "is-dragging" : ""}`}
+                className={`drop-zone compact-drop-zone ${dragActive ? "is-dragging" : ""}`}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
@@ -597,10 +727,6 @@ function App() {
                 onChange={(event) => setSourcePath(event.target.value)}
                 onBlur={(event) => setSourcePath(normalizeSourcePathInput(event.target.value))}
               />
-              <button className="button-primary" disabled={isBusy} onClick={importAndInspect}>
-                <FileSearch size={16} />
-                {t("inspectSource")}
-              </button>
             </section>
 
             <section className="card quick-actions-card">
@@ -814,8 +940,8 @@ function App() {
 
               <section className="card">
                 <CardHeader icon={<FileSearch size={18} />} title={t("preview")} />
-                {previewRows.length ? (
-                  <pre className="preview">{JSON.stringify(previewRows.slice(0, 8), null, 2)}</pre>
+                {previewText ? (
+                  <pre className="preview">{previewText}</pre>
                 ) : (
                   <EmptyState text={t("previewEmpty")} />
                 )}
@@ -855,7 +981,7 @@ function App() {
                           </tr>
                         </thead>
                         <tbody>
-                          {recordings.map((recording) => (
+                          {visibleRecordings.map((recording) => (
                             <tr key={recording.id}>
                               <td data-label={t("run")}>
                                 <strong>{recording.run_name}</strong>
@@ -875,6 +1001,11 @@ function App() {
                         </tbody>
                       </table>
                     </div>
+                    {visibleRecordings.length < recordings.length && (
+                      <p className="render-limit-note">
+                        {renderLimitText(language, visibleRecordings.length, recordings.length)}
+                      </p>
+                    )}
                   </>
                 ) : (
                   <EmptyState text={t("recordingBrowserEmpty")} />
@@ -903,12 +1034,17 @@ function App() {
                     onChange={(event) => setSelectedQueryRecording(event.target.value)}
                   >
                     <option value="">{t("allRecordings")}</option>
-                    {recordings.map((recording) => (
+                    {queryRecordingOptions.map((recording) => (
                       <option key={recording.id} value={recording.id}>
                         {recording.run_name}
                       </option>
                     ))}
                   </select>
+                  {queryRecordingOptions.length < recordings.length && (
+                    <span className="field-hint">
+                      {renderLimitText(language, queryRecordingOptions.length, recordings.length)}
+                    </span>
+                  )}
                   {thresholdTemplates.has(selectedQueryTemplate) && (
                     <input
                       aria-label={t("queryThreshold")}
@@ -1066,7 +1202,7 @@ function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {plugins.map((plugin) => (
+                    {visiblePlugins.map((plugin) => (
                       <tr key={`plugin-${plugin.id}`}>
                         <td data-label={t("kind")}>{t("plugin")}</td>
                         <td data-label={t("name")}>{plugin.name}</td>
@@ -1075,7 +1211,7 @@ function App() {
                         <td data-label={t("pathApp")}>{plugin.path}</td>
                       </tr>
                     ))}
-                    {templateRegistry.map((template) => (
+                    {visibleTemplateRegistry.map((template) => (
                       <tr key={`template-${template.id}`}>
                         <td data-label={t("kind")}>{t("template")}</td>
                         <td data-label={t("name")}>{template.name}</td>
@@ -1087,6 +1223,15 @@ function App() {
                   </tbody>
                 </table>
               </div>
+              {visiblePlugins.length + visibleTemplateRegistry.length < plugins.length + templateRegistry.length && (
+                <p className="render-limit-note">
+                  {renderLimitText(
+                    language,
+                    visiblePlugins.length + visibleTemplateRegistry.length,
+                    plugins.length + templateRegistry.length
+                  )}
+                </p>
+              )}
               {!plugins.length && !templateRegistry.length && (
                 <EmptyState text={t("registryEmpty")} />
               )}
@@ -1123,6 +1268,10 @@ function normalizeSourcePathInput(value: string) {
   return trimmed;
 }
 
+function isTauriRuntime() {
+  return Boolean((window as Window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__);
+}
+
 function upsertProject(projects: Project[], project: Project) {
   const withoutProject = projects.filter((item) => item.id !== project.id);
   return [project, ...withoutProject];
@@ -1143,6 +1292,10 @@ function formatDateTime(value: string, language: Language) {
     hour: "2-digit",
     minute: "2-digit"
   });
+}
+
+function renderLimitText(language: Language, shown: number, total: number) {
+  return language === "zh" ? `已显示 ${shown} / 共 ${total} 条` : `Showing ${shown} of ${total}`;
 }
 
 const NavButton = memo(function NavButton({
@@ -1184,6 +1337,45 @@ const Metric = memo(function Metric({ label, value }: { label: string; value: st
     <div className="metric">
       <strong>{value}</strong>
       <span>{label}</span>
+    </div>
+  );
+});
+
+const ProjectVisual = memo(function ProjectVisual({
+  recordings,
+  streams,
+  jobs
+}: {
+  recordings: number;
+  streams: number;
+  jobs: number;
+}) {
+  const total = Math.max(1, recordings + streams + jobs);
+  const values = [
+    { label: "Runs", value: recordings, ratio: Math.max(recordings / total, 0.08) },
+    { label: "Streams", value: streams, ratio: Math.max(streams / total, 0.08) },
+    { label: "Jobs", value: jobs, ratio: Math.max(jobs / total, 0.08) }
+  ];
+  return (
+    <div className="project-visual" aria-hidden="true">
+      <div className="visual-card">
+        {values.map((item) => (
+          <div className="visual-meter" key={item.label}>
+            <div>
+              <strong>{item.value}</strong>
+              <span>{item.label}</span>
+            </div>
+            <span className="visual-track">
+              <span style={{ width: `${Math.round(item.ratio * 100)}%` }} />
+            </span>
+          </div>
+        ))}
+        <div className="visual-foot">
+          <span />
+          <span />
+          <span />
+        </div>
+      </div>
     </div>
   );
 });

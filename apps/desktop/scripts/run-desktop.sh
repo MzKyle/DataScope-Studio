@@ -47,8 +47,6 @@ ensure_node() {
 
 cleanup_stale_desktop_processes() {
   pkill -f "$APP_DIR/src-tauri/target/debug/datascope-studio" >/dev/null 2>&1 || true
-  pkill -f "$APP_DIR/node_modules/.bin/vite" >/dev/null 2>&1 || true
-  pkill -f "http.server 1420" >/dev/null 2>&1 || true
 }
 
 api_ready() {
@@ -143,7 +141,41 @@ cleanup_stale_desktop_processes
 ensure_api
 
 cd "$APP_DIR"
-npm run build
+build_frontend_if_needed() {
+  local dist_index="$APP_DIR/dist/index.html"
+  if [[ "${DATASCOPE_FORCE_BUILD:-0}" =~ ^(1|true|TRUE|yes|YES|on|ON)$ ]]; then
+    echo "DATASCOPE_FORCE_BUILD is set; rebuilding desktop frontend."
+    npm run build
+    return
+  fi
+
+  if [[ ! -f "$dist_index" ]]; then
+    echo "Desktop frontend build output is missing; building once."
+    npm run build
+    return
+  fi
+
+  local changed
+  changed="$(
+    find \
+      "$APP_DIR/src" \
+      "$APP_DIR/index.html" \
+      "$APP_DIR/package.json" \
+      "$APP_DIR/package-lock.json" \
+      "$APP_DIR/tsconfig.json" \
+      "$APP_DIR/vite.config.ts" \
+      -newer "$dist_index" -print -quit 2>/dev/null
+  )"
+  if [[ -n "$changed" ]]; then
+    echo "Desktop frontend changed since last build; rebuilding."
+    npm run build
+    return
+  fi
+
+  echo "Desktop frontend build is up to date. Set DATASCOPE_FORCE_BUILD=1 to rebuild."
+}
+
+build_frontend_if_needed
 
 cd "$APP_DIR/src-tauri"
 if [[ "${DATASCOPE_SAFE_GRAPHICS:-0}" =~ ^(1|true|TRUE|yes|YES|on|ON)$ ]]; then

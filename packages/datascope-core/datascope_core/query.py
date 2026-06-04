@@ -16,6 +16,7 @@ from datascope_core.adapters.point_cloud_adapter import (
 )
 from datascope_core.cv_schema import load_annotations, load_predictions, sidecar_frame_map, supported_image_paths
 from datascope_core.models import MappingSpec, SourceInfo
+from datascope_core.time_utils import query_time_seconds
 
 
 QUERY_TEMPLATES = [
@@ -328,9 +329,7 @@ def _append_field_values(
 
 def _row_time(row: pd.Series, time_key: str, row_index: int) -> float:
     if time_key in row and pd.notna(row[time_key]):
-        numeric = pd.to_numeric(pd.Series([row[time_key]]), errors="coerce").iloc[0]
-        if pd.notna(numeric):
-            return float(numeric)
+        return query_time_seconds(row[time_key], row_index)
     return float(row_index)
 
 

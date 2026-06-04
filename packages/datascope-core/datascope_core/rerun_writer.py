@@ -6,6 +6,7 @@ from typing import Any
 import pandas as pd
 
 from datascope_core.models import ConvertRequest
+from datascope_core.time_utils import normalize_time_value
 
 
 def write_tabular_recording(frame: pd.DataFrame, request: ConvertRequest) -> None:
@@ -28,14 +29,12 @@ def write_tabular_recording(frame: pd.DataFrame, request: ConvertRequest) -> Non
 def _set_row_time(rec: Any, row: pd.Series, row_index: int, mappings: list[dict[str, Any]]) -> None:
     time_key = _primary_time_key(mappings)
     if time_key and time_key in row and pd.notna(row[time_key]):
-        value = row[time_key]
-        numeric = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
-        if pd.notna(numeric):
-            rec.set_time("time", duration=float(numeric))
+        normalized = normalize_time_value(row[time_key])
+        if normalized is not None and normalized.kind == "timestamp" and normalized.timestamp is not None:
+            rec.set_time("time", timestamp=normalized.timestamp)
             return
-        parsed = pd.to_datetime(value, errors="coerce")
-        if pd.notna(parsed):
-            rec.set_time("time", timestamp=parsed.to_pydatetime())
+        if normalized is not None:
+            rec.set_time("time", duration=normalized.seconds)
             return
     rec.set_time("row", sequence=int(row_index))
 
@@ -102,4 +101,3 @@ def _log_level(row: pd.Series, fields: list[str]) -> Any:
             if value in {"DEBUG", "TRACE"}:
                 return rr.TextLogLevel.DEBUG
     return rr.TextLogLevel.INFO
-

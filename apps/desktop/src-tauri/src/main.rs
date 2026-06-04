@@ -108,6 +108,7 @@ fn main() {
     configure_webkit_environment();
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![api_request])
         .run(tauri::generate_context!())
         .expect("error while running DataScope Studio");

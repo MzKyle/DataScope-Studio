@@ -1,0 +1,11 @@
+{
+  "identifier": "main-capability",
+  "description": "Main window access for DataScope Studio desktop features.",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "dialog:allow-open"
+  ]
+}
