@@ -131,7 +131,7 @@ npm run tauri:dev:safe
 “**一键**”的含义：在界面中完成 `Inspect` → `Save mapping` → `Build recording` → `Open` 这条流水线后，Rerun 会自动加载对应流并渲染，达到即时可视化多元数据的效果。
 
 示例 B：图像数据（带 annotations.json）
-- 按照仓库 README 的 DataScope CV sidecar 格式组织文件（`images/`, `annotations.json`, 可选 `predictions.json`）。
+- 按照 DataScope CV sidecar 格式组织文件（`images/`, `annotations.json`, 可选 `predictions.json`）。
 - 在导入时选择数据集根目录，项目会把图像、bounding boxes、masks、keypoints 转为可视化流，构建后在 Viewer 中即刻可见。
 
 ## 7. 进阶：批量导入与对比
@@ -168,9 +168,11 @@ datascope open ~/.datascope-studio/projects/<project_id>/recordings/run_001.rrd
 
 ---
 
-如果你愿意，我可以：
-- 把这份文档加入到仓库（我已写入 `docs/OPERATION.md`）。
-- 根据你的数据样例（例如 `tests/fixtures/sample_sensor.csv` 或某个真实数据集）写一份“快速上手”的示例 mapping 文件并自动演示一次导入与可视化流程。
-- 或者现在在你的机器上执行 `npm run tauri:dev` 并观察启动输出（需要你允许我运行命令）。
+更多开发、架构、API、CLI 和故障排查说明见 docsify 文档站：
 
-请选择接下来要我做的操作。
+```bash
+cd docs
+python3 -m http.server 4173
+```
+
+然后访问 `http://127.0.0.1:4173/`。

@@ -8,6 +8,7 @@ import type {
   Plugin,
   Project,
   ProjectExportResult,
+  ProjectImportResult,
   QueryExportResult,
   QueryResult,
   QueryTemplate,
@@ -227,9 +228,14 @@ export const api = {
         limit
       })
     }),
-  exportProject: (projectId: string) =>
+  exportProject: (projectId: string, outputPath?: string) =>
     request<ProjectExportResult>(`/api/projects/${projectId}/export`, {
       method: "POST",
-      body: JSON.stringify({})
+      body: JSON.stringify({ output_path: outputPath || null })
+    }),
+  importProjectPackage: (path: string) =>
+    request<ProjectImportResult>("/api/projects/import", {
+      method: "POST",
+      body: JSON.stringify({ path })
     })
 };

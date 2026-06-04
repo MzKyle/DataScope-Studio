@@ -1,12 +1,11 @@
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = [
-  "packages/datascope-core",
-  "packages/datascope-cli",
-  "services/api",
+  "packages/core/src",
+  "packages/cli/src",
+  "services/api/src",
 ]
 
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-

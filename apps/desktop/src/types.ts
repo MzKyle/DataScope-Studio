@@ -172,3 +172,10 @@ export type ProjectExportResult = {
   format: string;
   project_id: string;
 };
+
+export type ProjectImportResult = {
+  project: Project;
+  recordings: Recording[];
+  recording_ids: string[];
+  package_path: string;
+};

@@ -1,20 +1,52 @@
-__pycache__/
-*.pyc
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.history/
+
+# Local environment
+.env
+.env.*
+!.env.example
 .venv/
 venv/
 .tooling/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 build/
 dist/
-*.egg-info/
+
+# Node / frontend
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 apps/desktop/dist/
+
+# Rust / Tauri
 apps/desktop/src-tauri/target/
-.DS_Store
+
+# DataScope local artifacts
 *.rrd
 *.rbl
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
+*.db
+*.db-shm
+*.db-wal
+*.log
+*.zip
+DataScope Studio Exports/
+
+# Private planning notes
+软件产品设计.md
