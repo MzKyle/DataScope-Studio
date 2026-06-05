@@ -7,7 +7,10 @@ export default defineConfig({
   server: {
     port: 1420,
     strictPort: true,
-    host: "127.0.0.1"
+    host: "127.0.0.1",
+    watch: {
+      ignored: ["**/src-tauri/resources/datascope-runtime/**", "**/src-tauri/target/**"]
+    }
   },
   envPrefix: ["VITE_", "TAURI_"]
 });

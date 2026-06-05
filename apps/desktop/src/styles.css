@@ -1016,6 +1016,18 @@ td {
   padding: 0 var(--space-12);
 }
 
+.pending {
+  align-items: center;
+  background: var(--color-primary-soft);
+  border-radius: var(--radius-pill);
+  color: var(--color-primary);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  min-height: 28px;
+  padding: 0 var(--space-12);
+}
+
 .build-row input {
   max-width: 260px;
 }

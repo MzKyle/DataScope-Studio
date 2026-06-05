@@ -266,6 +266,7 @@ function App() {
       const templateMatches = await api.suggestTemplates(added.id);
       const nextTemplateId = templateMatches[0]?.template_id ?? "sensor_monitor";
       const suggested = await api.suggestMappingForTemplate(added.id, nextTemplateId);
+      const savedMapping = await api.saveMapping(added.id, suggested.mapping);
       const firstStream = inspection.streams[0];
       const preview = firstStream ? await api.preview(added.id, firstStream.stream_id) : null;
       return {
@@ -276,6 +277,7 @@ function App() {
         templateMatches,
         nextTemplateId,
         suggested,
+        savedMappingId: savedMapping.id,
         previewRows: preview?.rows ?? []
       };
     });
@@ -290,7 +292,7 @@ function App() {
       setSelectedTemplateId(result.nextTemplateId);
       setMapping(result.suggested);
       setPreviewRows(result.previewRows);
-      setSavedMappingId("");
+      setSavedMappingId(result.savedMappingId);
       setBuildResult(null);
       setActiveSection("import");
     }
@@ -303,15 +305,18 @@ function App() {
   }
 
   async function buildRecording() {
-    if (!selectedProject || !source || !savedMappingId) {
-      setError(t("errorSaveMappingFirst"));
+    if (!selectedProject || !source || !mapping) {
+      setError(t("errorMappingUnavailable"));
       return;
     }
-    const result = await run(t("busyBuildingRecording"), () =>
-      api.build(selectedProject.id, source.id, savedMappingId, outputName, selectedTemplateId)
-    );
+    const result = await run(t("busyBuildingRecording"), async () => {
+      const mappingId = savedMappingId || (await api.saveMapping(source.id, mapping.mapping)).id;
+      const built = await api.build(selectedProject.id, source.id, mappingId, outputName, selectedTemplateId);
+      return { built, mappingId };
+    });
     if (result) {
-      setBuildResult(result);
+      setSavedMappingId(result.mappingId);
+      setBuildResult(result.built);
       refreshProjectData(selectedProject.id);
     }
   }
@@ -346,10 +351,15 @@ function App() {
     setSelectedTemplateId(templateId);
     setSavedMappingId("");
     if (!source) return;
-    const suggested = await run(t("busySuggestingMapping"), () =>
-      api.suggestMappingForTemplate(source.id, templateId)
-    );
-    if (suggested) setMapping(suggested);
+    const result = await run(t("busySuggestingMapping"), async () => {
+      const suggested = await api.suggestMappingForTemplate(source.id, templateId);
+      const savedMapping = await api.saveMapping(source.id, suggested.mapping);
+      return { suggested, savedMappingId: savedMapping.id };
+    });
+    if (result) {
+      setMapping(result.suggested);
+      setSavedMappingId(result.savedMappingId);
+    }
   }
 
   async function addTagToRecording(recordingId: string) {
@@ -981,11 +991,15 @@ function App() {
                       </table>
                     </div>
                     <div className="actions">
-                      <button onClick={saveMapping} disabled={isBusy}>
+                      <button onClick={saveMapping} disabled={isBusy || Boolean(savedMappingId)}>
                         <Save size={16} />
-                        {t("saveMapping")}
+                        {savedMappingId ? t("mappingSaved") : t("saveMapping")}
                       </button>
-                      {savedMappingId && <span className="success">{t("saved")} {savedMappingId}</span>}
+                      {savedMappingId ? (
+                        <span className="success">{t("autoMapped")} {savedMappingId}</span>
+                      ) : (
+                        <span className="pending">{t("mappingEditedAutoSave")}</span>
+                      )}
                     </div>
                   </>
                 ) : (
