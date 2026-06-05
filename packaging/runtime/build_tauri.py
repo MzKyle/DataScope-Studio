@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import os
 import platform
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -16,7 +17,7 @@ def main() -> None:
     parser.add_argument("--bundles", default=default_bundles())
     args = parser.parse_args()
 
-    command = ["npx", "tauri", "build", "--bundles", args.bundles]
+    command = [resolve_npx(), "tauri", "build", "--bundles", args.bundles]
     env = build_environment(args.bundles)
     print("+ " + " ".join(command))
     subprocess.run(command, cwd=DESKTOP_DIR, check=True, env=env)
@@ -31,6 +32,22 @@ def default_bundles() -> str:
     if system == "darwin":
         return "dmg"
     raise RuntimeError(f"Unsupported Tauri bundle platform: {platform.system()}")
+
+
+def resolve_npx() -> str:
+    candidates = (
+        ["npx.cmd", "npx.exe", "npx"]
+        if platform.system().lower() == "windows"
+        else ["npx"]
+    )
+    for candidate in candidates:
+        executable = shutil.which(candidate)
+        if executable:
+            return executable
+
+    raise RuntimeError(
+        "Unable to find npx on PATH. Install Node.js/npm before building the Tauri installer."
+    )
 
 
 def build_environment(bundles: str) -> dict[str, str]:
