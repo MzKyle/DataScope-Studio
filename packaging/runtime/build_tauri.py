@@ -17,9 +17,9 @@ def main() -> None:
     parser.add_argument("--bundles", default=default_bundles())
     args = parser.parse_args()
 
-    command = [resolve_npx(), "tauri", "build", "--bundles", args.bundles]
+    command = [resolve_npx(), "tauri", "build", "--ci", "--verbose", "--bundles", args.bundles]
     env = build_environment(args.bundles)
-    print("+ " + " ".join(command))
+    print("+ " + " ".join(command), flush=True)
     subprocess.run(command, cwd=DESKTOP_DIR, check=True, env=env)
 
 
