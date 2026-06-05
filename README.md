@@ -41,6 +41,44 @@ graph LR
 
 ## Quick Start
 
+### Installable Desktop Builds
+
+Release installers are built with the local API and Rerun runtime bundled inside the
+desktop app:
+
+| Platform | Artifact |
+| --- | --- |
+| Linux | `.deb` and `.AppImage` |
+| Windows | `.msi` |
+| macOS | `.dmg` |
+
+After installing, launch **DataScope Studio** from the system app menu. The desktop process
+starts the bundled FastAPI backend on a free localhost port and uses the bundled Rerun CLI
+when opening recordings or converting MCAP files. Users do not need to install Python,
+Node, npm, or Rerun separately.
+
+To build an installer on the current platform:
+
+```bash
+cd apps/desktop
+npm install
+npm run runtime:build
+npm run tauri:build
+```
+
+`npm run tauri:build` builds the expected bundle type for the current host platform
+instead of every Tauri target. Linux builds `.deb` and `.AppImage`; Windows builds `.msi`;
+macOS builds `.dmg`.
+
+For a faster development-only runtime that uses the current Python interpreter:
+
+```bash
+cd apps/desktop
+npm run runtime:build:dev
+```
+
+### Development
+
 ```bash
 python3 -m venv .venv
 . .venv/bin/activate
@@ -52,8 +90,8 @@ npm install
 npm run tauri:dev
 ```
 
-The desktop script starts the local API automatically when `127.0.0.1:8000` is not already
-healthy. For backend-only development:
+The Tauri process starts the local API automatically from the packaged runtime or the
+development `.venv`. For backend-only development:
 
 ```bash
 . .venv/bin/activate
@@ -74,6 +112,7 @@ datascope project export --project demo --out ~/DataScopeExports
 ```bash
 pytest -q
 cd apps/desktop && npm run build
+npm run runtime:build:dev
 cd apps/desktop/src-tauri && cargo check
 git diff --check
 ```

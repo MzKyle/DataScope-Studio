@@ -14,6 +14,9 @@ dependencies = [
   "uvicorn[standard]>=0.30,<1",
 ]
 
+[project.scripts]
+datascope-api = "datascope_api.launcher:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["datascope_api*"]

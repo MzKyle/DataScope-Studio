@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import shutil
 import subprocess
 from collections import Counter
 from pathlib import Path
@@ -8,6 +7,7 @@ from typing import Any
 
 from datascope_core.inference import safe_slug
 from datascope_core.models import ConvertRequest, SourceInfo, StreamInfo
+from datascope_core.rerun_cli import rerun_command, rerun_subprocess_env
 
 
 class McapAdapter:
@@ -85,14 +85,9 @@ class McapAdapter:
         }
 
     def convert(self, request: ConvertRequest) -> None:
-        rerun = shutil.which("rerun")
-        if rerun is None:
-            raise RuntimeError(
-                "Rerun CLI is not installed or not on PATH. Activate the project venv or install rerun-sdk."
-            )
         Path(request.output_rrd).parent.mkdir(parents=True, exist_ok=True)
         command = [
-            rerun,
+            *rerun_command(),
             "mcap",
             "convert",
             str(request.source.path),
@@ -103,7 +98,13 @@ class McapAdapter:
             "--recording-id",
             request.recording_id,
         ]
-        result = subprocess.run(command, capture_output=True, text=True, check=False)
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            check=False,
+            env=rerun_subprocess_env(),
+        )
         if result.returncode != 0:
             message = (result.stderr or result.stdout or "Rerun MCAP conversion failed").strip()
             raise RuntimeError(message)

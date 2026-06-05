@@ -132,12 +132,11 @@ def _mock_rerun_converter(monkeypatch) -> None:
         stdout = ""
         stderr = ""
 
-    def fake_run(command, capture_output, text, check):
+    def fake_run(command, capture_output, text, check, env=None):
         output = Path(command[command.index("--output") + 1])
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_bytes(b"mock rrd")
         return Result()
 
-    monkeypatch.setattr(mcap_adapter.shutil, "which", lambda _: "/usr/bin/rerun")
+    monkeypatch.setattr(mcap_adapter, "rerun_command", lambda: ["/usr/bin/rerun"])
     monkeypatch.setattr(mcap_adapter.subprocess, "run", fake_run)
-

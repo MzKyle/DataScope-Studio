@@ -1,4 +1,35 @@
-# DataScope Studio V1.0 运行说明
+# DataScope Studio V1.0 运行与安装说明
+
+## 安装版
+
+正式安装包会把桌面端、FastAPI 后端、Python 运行时、DataScope Python 包和 Rerun SDK/CLI 一起打包。用户安装后直接从系统菜单启动 DataScope Studio，不需要手动安装 Python、Node、npm、`.venv`、uvicorn 或 Rerun。
+
+安装版启动时会自动选择一个空闲的 `127.0.0.1:<port>`，由 Tauri 主进程拉起内置后端。应用退出时后端进程会同步退出。后端日志写入系统应用日志目录的 `datascope-api.log`。
+
+本机当前平台构建安装包：
+
+```bash
+cd apps/desktop
+npm install
+npm run runtime:build
+npm run tauri:build
+```
+
+Linux 只构建 `.deb + .AppImage`：
+
+```bash
+cd apps/desktop
+npm run package:linux
+```
+
+开发机快速验证 runtime 可以使用当前 Python 生成开发用 runtime：
+
+```bash
+cd apps/desktop
+npm run runtime:build:dev
+```
+
+注意：`runtime:build:dev` 只用于开发验证，不作为正式可迁移安装包；正式安装包使用 `runtime:build` 下载独立 CPython runtime。
 
 ## 后端和 CLI
 
@@ -107,7 +138,7 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements-dev.txt
 ```
 
-之后启动桌面端只需要运行：
+之后启动开发版桌面端只需要运行：
 
 ```bash
 cd apps/desktop
@@ -115,9 +146,15 @@ npm install
 npm run tauri:dev
 ```
 
-`npm run tauri:dev` 会自动检查 `http://127.0.0.1:8000/api/health`。如果后端没有运行，它会使用项目根目录的 `.venv` 自动启动 FastAPI 后端；如果后端已经运行，则复用现有后端。
+`npm run tauri:dev` 会由 Tauri 主进程使用项目根目录 `.venv` 自动启动 FastAPI 后端，并自动选择空闲端口。开发启动不再依赖固定 `127.0.0.1:8000`。
 
-`npm run tauri:dev` 会先清理本项目残留的旧 Tauri/Vite/静态服务进程，再构建前端静态包，最后直接运行 Tauri。当前启动链路不依赖 `127.0.0.1:1420`，所以桌面端正常运行时只需要确认后端 `8000` 可用。
+如果你想手动启动后端并让桌面端复用它，可以设置：
+
+```bash
+DATASCOPE_DEV_BACKEND=1 DATASCOPE_API_PORT=8000 npm run tauri:dev
+```
+
+`npm run tauri:dev` 会先清理本项目残留的旧 Tauri 进程，再按需增量构建前端静态包，最后直接运行 Tauri。当前启动链路不依赖 `127.0.0.1:1420`。
 
 如果终端默认还是 Node 12，启动脚本会优先使用本机已有的 Node 20：
 
@@ -154,7 +191,7 @@ npm run tauri:dev:safe
 
 安全图形模式等价于 `DATASCOPE_SAFE_GRAPHICS=1 npm run tauri:dev`，会启用 `WEBKIT_DISABLE_COMPOSITING_MODE=1`、`LIBGL_ALWAYS_SOFTWARE=1`、`GSK_RENDERER=cairo`、`GDK_BACKEND=x11` 等回退设置。它更稳定，但会明显降低界面流畅度；只建议在普通模式仍然崩溃时使用。
 
-可以用下面的命令确认后端健康：
+如果使用 `DATASCOPE_DEV_BACKEND=1 DATASCOPE_API_PORT=8000` 复用外部后端，可以用下面的命令确认后端健康：
 
 ```bash
 curl http://127.0.0.1:8000/api/health

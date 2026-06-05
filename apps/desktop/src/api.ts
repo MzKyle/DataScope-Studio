@@ -31,6 +31,14 @@ type ApiCommandResponse = {
   body: string;
 };
 
+export type ApiStatus = {
+  status: string;
+  port: number;
+  packaged_runtime: boolean;
+  runtime_dir: string | null;
+  rerun_available: boolean;
+};
+
 function delay(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
@@ -92,6 +100,7 @@ function parseBody(body: string) {
 }
 
 export const api = {
+  status: () => invoke<ApiStatus>("api_status"),
   projects: () => request<Project[]>("/api/projects"),
   createProject: (name: string) =>
     request<Project>("/api/projects", {
