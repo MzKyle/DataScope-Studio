@@ -53,21 +53,27 @@ def suggest_mapping(
         recording_id=recording_id or f"recording_{uuid4().hex[:12]}",
         primary_timeline=primary_timeline,
         streams=[_stream_mapping(stream) for stream in streams],
+        template_id=resolved_template_id,
     )
 
 
 def mapping_to_yaml_dict(spec: MappingSpec) -> dict[str, Any]:
     return {
         "mapping": {
+            "schema_version": 2,
             "id": spec.mapping_id,
             "source": spec.source_id,
             "app_id": spec.app_id,
             "recording_id": spec.recording_id,
+            "template_id": spec.template_id,
+            "mapping_template_id": spec.mapping_template_id,
+            "status": spec.status,
             "timelines": {
                 "primary": {
                     "name": spec.primary_timeline,
                     "source_field": spec.primary_timeline,
-                    "unit": "seconds",
+                    "unit": spec.timeline_unit,
+                    "effective_unit": spec.effective_timeline_unit,
                 }
             },
             "streams": spec.streams,
@@ -77,14 +83,24 @@ def mapping_to_yaml_dict(spec: MappingSpec) -> dict[str, Any]:
 
 def mapping_from_yaml_dict(data: dict[str, Any]) -> MappingSpec:
     mapping = data["mapping"]
+    schema_version = int(mapping.get("schema_version") or 1)
     primary = mapping.get("timelines", {}).get("primary", {})
+    if isinstance(primary, str):
+        primary = {"name": primary, "source_field": primary}
+    streams = [_normalize_stream(stream) for stream in mapping.get("streams", [])]
     return MappingSpec(
         mapping_id=mapping["id"],
         source_id=mapping["source"],
         app_id=mapping.get("app_id", "datascope.sensor_monitor.v1"),
         recording_id=mapping.get("recording_id", f"recording_{uuid4().hex[:12]}"),
         primary_timeline=primary.get("source_field") or primary.get("name") or "time",
-        streams=mapping.get("streams", []),
+        streams=streams,
+        schema_version=2,
+        timeline_unit=primary.get("unit", "auto") if schema_version >= 2 else "auto",
+        effective_timeline_unit=primary.get("effective_unit"),
+        template_id=mapping.get("template_id"),
+        mapping_template_id=mapping.get("mapping_template_id"),
+        status=mapping.get("status", "draft"),
     )
 
 
@@ -110,10 +126,35 @@ def _stream_mapping(stream: StreamInfo) -> dict[str, Any]:
         "archetype": ARCHETYPES.get(semantic_type, "AnyValues"),
         "view": _view_for_semantic_type(semantic_type),
         "confidence": round(stream.confidence, 3),
+        "name": stream.name,
+        "enabled": True,
+        "required": False,
+        "origin": "inferred",
+        "rule_key": f"inferred:{stream.stream_id}",
     }
     if stream.metadata.get("role"):
         mapping["role"] = stream.metadata["role"]
     return mapping
+
+
+def derived_stream_fields(semantic_type: str) -> dict[str, str]:
+    return {
+        "archetype": ARCHETYPES.get(semantic_type, "AnyValues"),
+        "view": _view_for_semantic_type(semantic_type),
+    }
+
+
+def _normalize_stream(stream: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(stream)
+    if "source_fields" not in normalized and "fields" in normalized:
+        normalized["source_fields"] = normalized.pop("fields")
+    normalized.setdefault("source_fields", [])
+    normalized.setdefault("enabled", True)
+    normalized.setdefault("required", False)
+    normalized.setdefault("origin", "legacy")
+    normalized.setdefault("rule_key", f"legacy:{normalized.get('stream_id', 'stream')}")
+    normalized.update(derived_stream_fields(str(normalized.get("semantic_type") or "mcap")))
+    return normalized
 
 
 def _entity_path(stream: StreamInfo) -> str:

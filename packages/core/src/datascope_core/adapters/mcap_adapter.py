@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from datascope_core.inference import safe_slug
-from datascope_core.models import ConvertRequest, SourceInfo, StreamInfo
+from datascope_core.models import ConvertRequest, MappingSpec, SourceInfo, StreamInfo
 from datascope_core.rerun_cli import rerun_command, rerun_subprocess_env
 
 
@@ -108,6 +108,37 @@ class McapAdapter:
         if result.returncode != 0:
             message = (result.stderr or result.stdout or "Rerun MCAP conversion failed").strip()
             raise RuntimeError(message)
+
+    def validate_mapping(
+        self,
+        source: SourceInfo,
+        spec: MappingSpec,
+        profile: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        issues = []
+        if source.metadata.get("inspect_warning"):
+            issues.append(
+                {
+                    "severity": "warning",
+                    "code": "mcap_summary_unavailable",
+                    "message": str(source.metadata["inspect_warning"]),
+                    "stream_id": None,
+                    "rule_key": None,
+                    "field": None,
+                }
+            )
+        if not source.metadata.get("topics"):
+            issues.append(
+                {
+                    "severity": "warning",
+                    "code": "mcap_topics_unavailable",
+                    "message": "No MCAP topics were available for mapping validation.",
+                    "stream_id": None,
+                    "rule_key": None,
+                    "field": None,
+                }
+            )
+        return issues
 
 
 def classify_topic(topic: str, schema_name: str = "") -> tuple[str, str, float]:

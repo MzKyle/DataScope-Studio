@@ -18,11 +18,15 @@ plugin_app = typer.Typer(help="Install and validate local DataScope plugins.")
 template_app = typer.Typer(help="Install and validate local DataScope templates.")
 batch_app = typer.Typer(help="Run batch import workflows.")
 project_app = typer.Typer(help="Project packaging tools.")
+mapping_app = typer.Typer(help="Validate mappings and manage reusable mapping templates.")
+mapping_template_app = typer.Typer(help="Manage reusable mapping templates.")
 
 app.add_typer(plugin_app, name="plugin")
 app.add_typer(template_app, name="template")
 app.add_typer(batch_app, name="batch")
 app.add_typer(project_app, name="project")
+app.add_typer(mapping_app, name="mapping")
+mapping_app.add_typer(mapping_template_app, name="template")
 
 
 @app.command()
@@ -130,6 +134,108 @@ def suggest_mapping(path: Path) -> None:
 
     spec = suggest(source, streams)
     typer.echo(mapping_to_yaml_dict(spec))
+
+
+@mapping_app.command("validate")
+def mapping_validate(
+    mapping_id: str,
+    json_output: bool = typer.Option(False, "--json", help="Print JSON."),
+) -> None:
+    """Validate a saved mapping."""
+    workspace = Workspace(os.environ.get("DATASCOPE_WORKSPACE"))
+    report = workspace.validate_saved_mapping(mapping_id)
+    if json_output:
+        _echo_json(report)
+        return
+    typer.echo(
+        f"{mapping_id}: {'valid' if report['valid'] else 'invalid'} "
+        f"errors={report['summary']['errors']} warnings={report['summary']['warnings']}"
+    )
+    for issue in report["issues"]:
+        typer.echo(f"  {issue['severity']} {issue['code']}: {issue['message']}")
+    if not report["valid"]:
+        raise typer.Exit(code=1)
+
+
+@mapping_app.command("confirm")
+def mapping_confirm(mapping_id: str) -> None:
+    """Validate and confirm a saved mapping."""
+    workspace = Workspace(os.environ.get("DATASCOPE_WORKSPACE"))
+    result = workspace.confirm_mapping(mapping_id)
+    typer.echo(
+        f"Confirmed {mapping_id} "
+        f"warnings={result['validation']['summary']['warnings']}"
+    )
+
+
+@mapping_app.command("diff")
+def mapping_diff(
+    project: str = typer.Option(..., "--project", help="Project name or id."),
+    template: str = typer.Option(..., "--template", help="Mapping template id."),
+    left: str = typer.Option(..., "--left", help="Left source id."),
+    right: str = typer.Option(..., "--right", help="Right source id."),
+) -> None:
+    """Compare one mapping template across two project sources."""
+    workspace = Workspace(os.environ.get("DATASCOPE_WORKSPACE"))
+    project_row = _project_by_name_or_id(workspace, project)
+    _echo_json(workspace.diff_mapping_template(project_row["id"], template, left, right))
+
+
+@mapping_template_app.command("list")
+def mapping_template_list(
+    json_output: bool = typer.Option(False, "--json", help="Print JSON."),
+) -> None:
+    """List reusable mapping templates."""
+    workspace = Workspace(os.environ.get("DATASCOPE_WORKSPACE"))
+    rows = workspace.list_mapping_templates()
+    if json_output:
+        _echo_json(rows)
+        return
+    for template in rows:
+        typer.echo(
+            f"{template['id']}  {template['version']}  "
+            f"{template['source_family']}  {template['name']}"
+        )
+
+
+@mapping_template_app.command("create")
+def mapping_template_create(
+    name: str = typer.Option(..., "--name", help="Template display name."),
+    source_id: str = typer.Option(..., "--source", help="Source id."),
+    mapping_id: str = typer.Option(..., "--mapping", help="Saved mapping id."),
+    template_id: str | None = typer.Option(None, "--id", help="Optional stable template id."),
+) -> None:
+    """Create a mapping template from a saved mapping."""
+    workspace = Workspace(os.environ.get("DATASCOPE_WORKSPACE"))
+    _echo_json(
+        workspace.create_mapping_template(
+            name,
+            source_id,
+            mapping_id,
+            template_id=template_id,
+        )
+    )
+
+
+@mapping_template_app.command("import")
+def mapping_template_import(path: Path) -> None:
+    """Import a mapping template YAML."""
+    workspace = Workspace(os.environ.get("DATASCOPE_WORKSPACE"))
+    _echo_json(workspace.import_mapping_template(str(path)))
+
+
+@mapping_template_app.command("export")
+def mapping_template_export(
+    template_id: str,
+    out: Path | None = typer.Option(None, "--out", help="Output YAML path or directory."),
+) -> None:
+    """Export a mapping template YAML."""
+    workspace = Workspace(os.environ.get("DATASCOPE_WORKSPACE"))
+    result = workspace.export_mapping_template(
+        template_id,
+        output_path=str(out) if out else None,
+    )
+    typer.echo(result["path"])
 
 
 @app.command()

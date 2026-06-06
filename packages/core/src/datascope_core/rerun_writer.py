@@ -21,22 +21,44 @@ def write_tabular_recording(frame: pd.DataFrame, request: ConvertRequest) -> Non
         rec.save(request.output_rrd)
         rec.send_recording_name(request.recording_id)
         for row_index, row in frame.iterrows():
-            _set_row_time(rec, row, row_index, request.mappings)
+            _set_row_time(
+                rec,
+                row,
+                row_index,
+                request.mappings,
+                time_key=request.primary_timeline,
+                time_unit=request.timeline_unit,
+            )
             for mapping in request.mappings:
                 _log_mapping(rec, row, mapping)
 
 
-def _set_row_time(rec: Any, row: pd.Series, row_index: int, mappings: list[dict[str, Any]]) -> None:
-    time_key = _primary_time_key(mappings)
+def _set_row_time(
+    rec: Any,
+    row: pd.Series,
+    row_index: int,
+    mappings: list[dict[str, Any]],
+    *,
+    time_key: str | None = None,
+    time_unit: str = "auto",
+) -> None:
+    rec.set_time("row", sequence=int(row_index))
+    time_key = time_key or _primary_time_key(mappings)
     if time_key and time_key in row and pd.notna(row[time_key]):
-        normalized = normalize_time_value(row[time_key])
-        if normalized is not None and normalized.kind == "timestamp" and normalized.timestamp is not None:
+        normalized = normalize_time_value(row[time_key], unit=time_unit)
+        if (
+            normalized is not None
+            and normalized.kind == "timestamp"
+            and normalized.timestamp is not None
+        ):
             rec.set_time("time", timestamp=normalized.timestamp)
             return
         if normalized is not None:
             rec.set_time("time", duration=normalized.seconds)
             return
-    rec.set_time("row", sequence=int(row_index))
+    disable_timeline = getattr(rec, "disable_timeline", None)
+    if callable(disable_timeline):
+        disable_timeline("time")
 
 
 def _primary_time_key(mappings: list[dict[str, Any]]) -> str | None:
@@ -53,7 +75,7 @@ def _log_mapping(rec: Any, row: pd.Series, mapping: dict[str, Any]) -> None:
     semantic_type = mapping.get("semantic_type")
     fields = mapping.get("source_fields", [])
     entity_path = mapping.get("entity_path")
-    if not entity_path or not fields:
+    if not mapping.get("enabled", True) or not entity_path or not fields:
         return
     if semantic_type == "scalar":
         value = _first_present(row, fields)
@@ -71,6 +93,30 @@ def _log_mapping(rec: Any, row: pd.Series, mapping: dict[str, Any]) -> None:
         message = _message_from_fields(row, fields)
         if message:
             rec.log(entity_path, rr.TextLog(message, level=_log_level(row, fields)))
+    elif semantic_type == "points2d":
+        values = _coordinate_values(row, fields, ("x", "y"))
+        if values is not None:
+            rec.log(entity_path, rr.Points2D([values]))
+    elif semantic_type == "points3d":
+        values = _coordinate_values(row, fields, ("x", "y", "z"))
+        if values is not None:
+            rec.log(entity_path, rr.Points3D([values]))
+    elif semantic_type == "trajectory3d":
+        values = _coordinate_values(row, fields, ("x", "y", "z"))
+        if values is not None:
+            rec.log(entity_path, rr.LineStrips3D([[values]]))
+    elif semantic_type == "boxes2d":
+        xywh = _box_values(row, fields)
+        if xywh is not None:
+            rec.log(entity_path, rr.Boxes2D(array=[xywh], array_format=rr.Box2DFormat.XYWH))
+    elif semantic_type == "transform3d":
+        translation = _coordinate_values(row, fields, ("x", "y", "z"))
+        if translation is not None:
+            kwargs: dict[str, Any] = {"translation": translation}
+            quaternion = _coordinate_values(row, fields, ("qx", "qy", "qz", "qw"))
+            if quaternion is not None and hasattr(rr, "Quaternion"):
+                kwargs["quaternion"] = rr.Quaternion(xyzw=quaternion)
+            rec.log(entity_path, rr.Transform3D(**kwargs))
 
 
 def _first_present(row: pd.Series, fields: list[str]) -> Any:
@@ -101,3 +147,46 @@ def _log_level(row: pd.Series, fields: list[str]) -> Any:
             if value in {"DEBUG", "TRACE"}:
                 return rr.TextLogLevel.DEBUG
     return rr.TextLogLevel.INFO
+
+
+def _coordinate_values(
+    row: pd.Series,
+    fields: list[str],
+    roles: tuple[str, ...],
+) -> list[float] | None:
+    role_fields = {_field_role(field): field for field in fields}
+    values = []
+    for role in roles:
+        field = role_fields.get(role)
+        if field is None or field not in row or pd.isna(row[field]):
+            return None
+        values.append(float(row[field]))
+    return values
+
+
+def _box_values(row: pd.Series, fields: list[str]) -> list[float] | None:
+    xywh = _coordinate_values(row, fields, ("x", "y", "w", "h"))
+    if xywh is not None:
+        return xywh
+    xyxy = _coordinate_values(row, fields, ("xmin", "ymin", "xmax", "ymax"))
+    if xyxy is None:
+        return None
+    xmin, ymin, xmax, ymax = xyxy
+    return [xmin, ymin, xmax - xmin, ymax - ymin]
+
+
+def _field_role(field: str) -> str:
+    token = (
+        field.lower()
+        .replace("/", ".")
+        .replace("-", ".")
+        .replace("_", ".")
+        .split(".")[-1]
+    )
+    if token == "width":
+        return "w"
+    if token == "height":
+        return "h"
+    if "quat" in field.lower() and token[-1:] in {"x", "y", "z", "w"}:
+        return f"q{token[-1]}"
+    return token

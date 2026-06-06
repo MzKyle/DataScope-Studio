@@ -38,23 +38,114 @@ export type MappingStream = {
   confidence: number;
   time_key?: string;
   timeline_source_field?: string;
+  name?: string;
+  enabled: boolean;
+  required: boolean;
+  origin: string;
+  rule_key: string;
+  role?: string | null;
+  expected_unit?: string | null;
+  source_unit?: string | null;
 };
 
 export type MappingPayload = {
   mapping: {
+    schema_version: number;
     id: string;
     source: string;
     app_id: string;
     recording_id: string;
+    template_id?: string | null;
+    mapping_template_id?: string | null;
+    status: "draft" | "confirmed";
     timelines: {
       primary: {
         name: string;
         source_field: string;
         unit: string;
+        effective_unit?: string | null;
       };
     };
     streams: MappingStream[];
   };
+};
+
+export type SchemaProfile = {
+  schema_version: number;
+  source_id: string;
+  source_type: string;
+  source_family: string;
+  sample_rows?: number | null;
+  field_names: string[];
+  fields: Array<{
+    name: string;
+    dtype: string;
+    null_count: number;
+    null_ratio: number;
+    non_null_count?: number | null;
+    axis?: string | null;
+  }>;
+  timeline: Record<string, unknown>;
+  adapter_metadata: Record<string, unknown>;
+};
+
+export type MappingValidationIssue = {
+  severity: "error" | "warning";
+  code: string;
+  message?: string;
+  stream_id?: string | null;
+  rule_key?: string | null;
+  field?: string | null;
+  candidates?: string[];
+};
+
+export type MappingValidation = {
+  valid: boolean;
+  errors: MappingValidationIssue[];
+  warnings: MappingValidationIssue[];
+  issues: MappingValidationIssue[];
+  summary: { errors: number; warnings: number };
+  effective_timeline_unit: string;
+};
+
+export type MappingTemplateItem = {
+  id: string;
+  name: string;
+  version: string;
+  source_family: string;
+  visual_template_id: string;
+  path: string;
+  config: {
+    mapping_template: {
+      schema_version: number;
+      id: string;
+      name: string;
+      version: string;
+      source_family: string;
+      visual_template_id: string;
+      timeline: Record<string, unknown>;
+      rules: Array<Record<string, unknown>>;
+    };
+  };
+  enabled: boolean;
+  installed_at: string;
+  updated_at: string;
+};
+
+export type MappingDiff = {
+  template_id: string;
+  left_source_id: string;
+  right_source_id: string;
+  timeline: Record<string, unknown>;
+  rows: Array<{
+    rule_key: string;
+    status: string;
+    changes: string[];
+    left: MappingStream | null;
+    right: MappingStream | null;
+  }>;
+  left_issues: MappingValidationIssue[];
+  right_issues: MappingValidationIssue[];
 };
 
 export type BuildResult = {

@@ -25,7 +25,9 @@ imported -> inspected -> mapped -> converted
 | `projects` | 项目元数据和 workspace path |
 | `sources` | 数据源副本、类型、checksum |
 | `streams` | inspect 后推断出的语义流 |
-| `mappings` | mapping YAML 配置和确认状态 |
+| `mappings` | Mapping v2 YAML、draft/confirmed 状态 |
+| `schema_profiles` | 按 source checksum 缓存的字段与时间统计 |
+| `mapping_template_registry` | 工作区全局 Mapping 模板 |
 | `recordings` | `.rrd`、`.rbl`、tags、params |
 | `jobs` | 转换和后台任务 |
 | `query_rows` | 本地查询索引 |

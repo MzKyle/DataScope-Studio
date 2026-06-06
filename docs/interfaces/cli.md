@@ -17,6 +17,19 @@ datascope recordings --project <name-or-id> [--json]
 datascope tag <recording_id> --add failed --add firmware:v1.2
 ```
 
+## Mapping
+
+```bash
+datascope mapping validate <mapping_id>
+datascope mapping confirm <mapping_id>
+datascope mapping diff --project demo --template robot_sensor --left <source_id> --right <source_id>
+
+datascope mapping template list
+datascope mapping template create --name "Robot Sensor" --source <source_id> --mapping <mapping_id>
+datascope mapping template import ./robot-sensor.yaml
+datascope mapping template export robot_sensor --out ./exports/
+```
+
 ## 查询与对比
 
 ```bash

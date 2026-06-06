@@ -5,7 +5,13 @@ from pathlib import Path
 from typing import Any
 
 from datascope_core.inference import safe_slug
-from datascope_core.models import ConvertRequest, POINT_CLOUD_EXTENSIONS, SourceInfo, StreamInfo
+from datascope_core.models import (
+    ConvertRequest,
+    MappingSpec,
+    POINT_CLOUD_EXTENSIONS,
+    SourceInfo,
+    StreamInfo,
+)
 
 
 @dataclass(slots=True)
@@ -120,6 +126,38 @@ class PointCloudAdapter:
                     continue
                 rec.set_time("time", duration=_cloud_time(index, cloud))
                 rec.log(entity_path, rr.Points3D(points))
+
+    def validate_mapping(
+        self,
+        source: SourceInfo,
+        spec: MappingSpec,
+        profile: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        sampled = source.metadata.get("sampled", [])
+        issues = [
+            {
+                "severity": "warning",
+                "code": "point_cloud_sample_warning",
+                "message": str(item["warning"]),
+                "stream_id": "stream_point_cloud",
+                "rule_key": None,
+                "field": item.get("path"),
+            }
+            for item in sampled
+            if item.get("warning")
+        ]
+        if sampled and not any(int(item.get("point_count") or 0) > 0 for item in sampled):
+            issues.append(
+                {
+                    "severity": "error",
+                    "code": "point_cloud_coordinates_missing",
+                    "message": "Sampled point clouds do not contain readable x/y/z coordinates.",
+                    "stream_id": "stream_point_cloud",
+                    "rule_key": None,
+                    "field": "points",
+                }
+            )
+        return issues
 
 
 def supported_point_cloud_paths(root: str | Path) -> list[Path]:

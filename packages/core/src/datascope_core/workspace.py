@@ -16,11 +16,27 @@ from uuid import uuid4
 from datascope_core.adapters.registry import adapter_for_path, adapter_for_type
 from datascope_core.mapping import (
     load_mapping_yaml,
+    mapping_from_yaml_dict,
     mapping_to_yaml_dict,
     save_mapping_yaml,
     suggest_mapping,
 )
-from datascope_core.models import ConvertRequest, MappingSpec, SourceInfo, StreamInfo, detect_source_type
+from datascope_core.mapping_templates import (
+    apply_mapping_template,
+    diff_template_applications,
+    load_mapping_template,
+    save_mapping_template,
+    template_from_mapping,
+    validate_mapping_template,
+)
+from datascope_core.mapping_validation import MappingValidationError, validate_mapping
+from datascope_core.models import (
+    ConvertRequest,
+    MappingSpec,
+    SourceInfo,
+    StreamInfo,
+    detect_source_type,
+)
 from datascope_core.mapping import TEMPLATE_APP_IDS
 from datascope_core.plugin_registry import (
     instantiate_entrypoint,
@@ -40,6 +56,7 @@ from datascope_core.template_registry import (
     validate_template,
 )
 from datascope_core.templates import match_templates, save_blueprint
+from datascope_core.schema_profile import build_schema_profile
 
 
 def default_workspace_path() -> Path:
@@ -142,6 +159,20 @@ class Workspace:
         result["metadata"] = json.loads(result.pop("metadata_json") or "{}")
         return result
 
+    def list_sources(self, project_id: str) -> list[dict[str, Any]]:
+        self.get_project(project_id)
+        with self._connect() as conn:
+            rows = conn.execute(
+                "select * from sources where project_id = ? order by created_at desc",
+                (project_id,),
+            ).fetchall()
+        results = []
+        for row in rows:
+            result = _row_to_dict(row)
+            result["metadata"] = json.loads(result.pop("metadata_json") or "{}")
+            results.append(result)
+        return results
+
     def inspect_source(self, source_id: str) -> dict[str, Any]:
         source_row = self.get_source(source_id)
         adapter = self._adapter_for_type(source_row["type"])
@@ -176,9 +207,40 @@ class Workspace:
                         json.dumps(stream.metadata),
                     ),
                 )
+        with self._connect() as conn:
+            cached_profile = conn.execute(
+                "select profile_json from schema_profiles where checksum = ?",
+                (source_row["checksum"],),
+            ).fetchone()
+        profile = (
+            json.loads(cached_profile["profile_json"])
+            if cached_profile is not None
+            else build_schema_profile(source, streams)
+        )
+        profile["source_id"] = source_id
+        profile["adapter_metadata"] = source.metadata
+        with self._connect() as conn:
+            conn.execute(
+                """
+                insert into schema_profiles (checksum, source_type, profile_json, created_at, updated_at)
+                values (?, ?, ?, ?, ?)
+                on conflict(checksum) do update set
+                  source_type = excluded.source_type,
+                  profile_json = excluded.profile_json,
+                  updated_at = excluded.updated_at
+                """,
+                (
+                    source_row["checksum"],
+                    source.source_type,
+                    json.dumps(profile, ensure_ascii=False),
+                    now,
+                    now,
+                ),
+            )
         return {
             "source": self.get_source(source_id),
             "streams": [asdict(stream) for stream in streams],
+            "schema_profile": profile,
         }
 
     def get_streams(self, source_id: str) -> list[StreamInfo]:
@@ -205,6 +267,20 @@ class Workspace:
         adapter = self._adapter_for_type(source_row["type"])
         return adapter.preview(_source_info_from_row(source_row), stream_id, limit=limit)
 
+    def get_schema_profile(self, source_id: str) -> dict[str, Any]:
+        source = self.get_source(source_id)
+        with self._connect() as conn:
+            row = conn.execute(
+                "select profile_json from schema_profiles where checksum = ?",
+                (source["checksum"],),
+            ).fetchone()
+        if row is None:
+            self.inspect_source(source_id)
+            return self.get_schema_profile(source_id)
+        profile = json.loads(row["profile_json"])
+        profile["source_id"] = source_id
+        return profile
+
     def suggest_mapping(self, source_id: str, template_id: str | None = None) -> MappingSpec:
         source_row = self.get_source(source_id)
         streams = self.get_streams(source_id)
@@ -214,6 +290,9 @@ class Workspace:
         source = _source_info_from_row(source_row)
         app_id = self.template_app_ids().get(template_id or "")
         spec = suggest_mapping(source, streams, template_id=template_id, app_id=app_id)
+        profile = self.get_schema_profile(source_id)
+        spec.timeline_unit = "auto"
+        spec.effective_timeline_unit = profile.get("timeline", {}).get("inferred_unit")
         for stream in spec.streams:
             stream["time_key"] = spec.primary_timeline
             stream["timeline_source_field"] = spec.primary_timeline
@@ -226,8 +305,16 @@ class Workspace:
             streams = self.get_streams(source_id)
         return match_templates(streams)
 
-    def save_mapping(self, project_id: str, source_id: str, spec: MappingSpec) -> dict[str, Any]:
+    def save_mapping(
+        self,
+        project_id: str,
+        source_id: str,
+        spec: MappingSpec,
+        *,
+        confirmed: bool = False,
+    ) -> dict[str, Any]:
         project = self.get_project(project_id)
+        spec.status = "confirmed" if confirmed else "draft"
         path = Path(project["workspace_path"]) / "mappings" / f"{spec.mapping_id}.yaml"
         save_mapping_yaml(spec, path)
         now = _now()
@@ -252,7 +339,7 @@ class Workspace:
                     None,
                     None,
                     json.dumps(mapping_to_yaml_dict(spec)),
-                    1,
+                    1 if confirmed else 0,
                     str(path),
                     now,
                     now,
@@ -267,7 +354,77 @@ class Workspace:
             raise KeyError(f"Mapping not found: {mapping_id}")
         result = _row_to_dict(row)
         result["config"] = json.loads(result.pop("config_json") or "{}")
+        result["user_confirmed"] = bool(result["user_confirmed"])
         return result
+
+    def validate_mapping_spec(self, source_id: str, spec: MappingSpec) -> dict[str, Any]:
+        source = self.get_source(source_id)
+        report = validate_mapping(
+            _source_info_from_row(source),
+            spec,
+            self.get_schema_profile(source_id),
+        )
+        adapter = self._adapter_for_type(source["type"])
+        adapter_validator = getattr(adapter, "validate_mapping", None)
+        if callable(adapter_validator):
+            adapter_issues = adapter_validator(
+                _source_info_from_row(source),
+                spec,
+                self.get_schema_profile(source_id),
+            )
+            report["issues"].extend(adapter_issues)
+            report["errors"] = [
+                issue for issue in report["issues"] if issue.get("severity") == "error"
+            ]
+            report["warnings"] = [
+                issue for issue in report["issues"] if issue.get("severity") == "warning"
+            ]
+            report["valid"] = not report["errors"]
+            report["summary"] = {
+                "errors": len(report["errors"]),
+                "warnings": len(report["warnings"]),
+            }
+        spec.effective_timeline_unit = report["effective_timeline_unit"]
+        return report
+
+    def validate_saved_mapping(self, mapping_id: str) -> dict[str, Any]:
+        mapping = self.get_mapping(mapping_id)
+        spec = mapping_from_yaml_dict(mapping["config"])
+        return self.validate_mapping_spec(mapping["source_id"], spec)
+
+    def mapping_preview(self, source_id: str, spec: MappingSpec) -> dict[str, Any]:
+        streams = self.get_streams(source_id)
+        preview = (
+            self.preview_source(source_id, streams[0].stream_id, limit=25)
+            if streams
+            else {"columns": [], "rows": []}
+        )
+        return {
+            "mapping": mapping_to_yaml_dict(spec)["mapping"],
+            "schema_profile": self.get_schema_profile(source_id),
+            "validation": self.validate_mapping_spec(source_id, spec),
+            "preview": preview,
+        }
+
+    def confirm_mapping(self, mapping_id: str) -> dict[str, Any]:
+        mapping = self.get_mapping(mapping_id)
+        spec = mapping_from_yaml_dict(mapping["config"])
+        report = self.validate_mapping_spec(mapping["source_id"], spec)
+        if not report["valid"]:
+            raise MappingValidationError(report)
+        spec.effective_timeline_unit = report["effective_timeline_unit"]
+        saved = self.save_mapping(
+            mapping["project_id"],
+            mapping["source_id"],
+            spec,
+            confirmed=True,
+        )
+        with self._connect() as conn:
+            conn.execute(
+                "update sources set status = ?, updated_at = ? where id = ?",
+                ("mapped", _now(), mapping["source_id"]),
+            )
+        return {"mapping": saved, "validation": report}
 
     def build_recording(
         self,
@@ -289,6 +446,12 @@ class Workspace:
             spec = self.suggest_mapping(source_id, template_id=template_id)
             self.save_mapping(project_id, source_id, spec)
         spec.app_id = template_app_ids[template_id]
+        spec.template_id = template_id
+        report = self.validate_mapping_spec(source_id, spec)
+        if not report["valid"]:
+            raise MappingValidationError(report)
+        spec.effective_timeline_unit = report["effective_timeline_unit"]
+        self.save_mapping(project_id, source_id, spec, confirmed=True)
 
         job_id = f"job_{uuid4().hex[:12]}"
         now = _now()
@@ -323,6 +486,8 @@ class Workspace:
                 output_rrd=str(recording_path),
                 app_id=spec.app_id,
                 recording_id=recording_id,
+                primary_timeline=spec.primary_timeline,
+                timeline_unit=spec.effective_timeline_unit or spec.timeline_unit,
             )
             self._adapter_for_path(source_row["uri"], source_row["type"]).convert(request)
             self._update_job(job_id, status="running", progress=0.8)
@@ -351,6 +516,11 @@ class Workspace:
                     ),
                 )
             self._index_recording(recording_db_id, self.get_source(source_id), spec)
+            with self._connect() as conn:
+                conn.execute(
+                    "update sources set status = ?, updated_at = ? where id = ?",
+                    ("converted", _now(), source_id),
+                )
             self._update_job(job_id, status="succeeded", progress=1.0)
             return {
                 "job_id": job_id,
@@ -600,6 +770,220 @@ class Workspace:
         if row is None:
             raise KeyError(f"Template not found: {template_id}")
         return _template_from_row(row)
+
+    def list_mapping_templates(self) -> list[dict[str, Any]]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "select * from mapping_template_registry order by name"
+            ).fetchall()
+        return [_mapping_template_from_row(row) for row in rows]
+
+    def get_mapping_template(self, template_id: str) -> dict[str, Any]:
+        with self._connect() as conn:
+            row = conn.execute(
+                "select * from mapping_template_registry where id = ?",
+                (template_id,),
+            ).fetchone()
+        if row is None:
+            raise KeyError(f"Mapping template not found: {template_id}")
+        return _mapping_template_from_row(row)
+
+    def save_mapping_template(
+        self,
+        payload: dict[str, Any],
+        *,
+        enabled: bool = True,
+    ) -> dict[str, Any]:
+        validation = validate_mapping_template(payload)
+        if not validation["valid"]:
+            raise ValueError("; ".join(validation["errors"]))
+        template = validation["template"]
+        path = self.root / "mapping_templates" / f"{template['id']}.yaml"
+        save_mapping_template({"mapping_template": template}, path)
+        now = _now()
+        with self._connect() as conn:
+            conn.execute(
+                """
+                insert into mapping_template_registry
+                  (id, name, version, source_family, visual_template_id, path,
+                   config_json, enabled, installed_at, updated_at)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                on conflict(id) do update set
+                  name = excluded.name,
+                  version = excluded.version,
+                  source_family = excluded.source_family,
+                  visual_template_id = excluded.visual_template_id,
+                  path = excluded.path,
+                  config_json = excluded.config_json,
+                  enabled = excluded.enabled,
+                  updated_at = excluded.updated_at
+                """,
+                (
+                    template["id"],
+                    template["name"],
+                    template["version"],
+                    template["source_family"],
+                    template.get("visual_template_id") or "sensor_monitor",
+                    str(path),
+                    json.dumps({"mapping_template": template}, ensure_ascii=False),
+                    1 if enabled else 0,
+                    now,
+                    now,
+                ),
+            )
+        return self.get_mapping_template(template["id"])
+
+    def create_mapping_template(
+        self,
+        name: str,
+        source_id: str,
+        mapping_id: str,
+        *,
+        template_id: str | None = None,
+    ) -> dict[str, Any]:
+        source = self.get_source(source_id)
+        mapping = self.get_mapping(mapping_id)
+        if mapping["source_id"] != source_id:
+            raise ValueError("Mapping does not belong to source")
+        spec = mapping_from_yaml_dict(mapping["config"])
+        payload = template_from_mapping(
+            name,
+            spec,
+            _source_info_from_row(source),
+            template_id=template_id,
+        )
+        return self.save_mapping_template(payload)
+
+    def import_mapping_template(self, path: str, *, enabled: bool = True) -> dict[str, Any]:
+        return self.save_mapping_template(load_mapping_template(path), enabled=enabled)
+
+    def export_mapping_template(
+        self,
+        template_id: str,
+        output_path: str | None = None,
+    ) -> dict[str, Any]:
+        template = self.get_mapping_template(template_id)
+        source_path = Path(template["path"])
+        if output_path:
+            requested = Path(output_path).expanduser()
+            destination = (
+                requested / source_path.name
+                if requested.exists() and requested.is_dir()
+                else requested
+            )
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source_path, destination)
+        else:
+            destination = source_path
+        return {"template_id": template_id, "path": str(destination)}
+
+    def delete_mapping_template(self, template_id: str) -> dict[str, Any]:
+        template = self.get_mapping_template(template_id)
+        with self._connect() as conn:
+            conn.execute("delete from mapping_template_registry where id = ?", (template_id,))
+        path = Path(template["path"])
+        if path.exists():
+            path.unlink()
+        return {"deleted": template_id}
+
+    def apply_mapping_template(
+        self,
+        template_id: str,
+        source_id: str,
+    ) -> dict[str, Any]:
+        template = self.get_mapping_template(template_id)
+        source = self.get_source(source_id)
+        streams = self.get_streams(source_id)
+        if not streams:
+            self.inspect_source(source_id)
+            streams = self.get_streams(source_id)
+        spec, match_issues = apply_mapping_template(
+            template["config"],
+            _source_info_from_row(source),
+            streams,
+            self.get_schema_profile(source_id),
+        )
+        spec.app_id = self.template_app_ids().get(
+            spec.template_id or "",
+            "datascope.sensor_monitor.v1",
+        )
+        report = self.validate_mapping_spec(source_id, spec)
+        report["issues"] = [*match_issues, *report["issues"]]
+        report["errors"] = [
+            issue for issue in report["issues"] if issue.get("severity") == "error"
+        ]
+        report["warnings"] = [
+            issue for issue in report["issues"] if issue.get("severity") == "warning"
+        ]
+        report["valid"] = not report["errors"]
+        report["summary"] = {
+            "errors": len(report["errors"]),
+            "warnings": len(report["warnings"]),
+        }
+        spec.effective_timeline_unit = report["effective_timeline_unit"]
+        return {
+            "mapping": mapping_to_yaml_dict(spec)["mapping"],
+            "validation": report,
+            "match_issues": match_issues,
+        }
+
+    def diff_mapping_template(
+        self,
+        project_id: str,
+        template_id: str,
+        left_source_id: str,
+        right_source_id: str,
+    ) -> dict[str, Any]:
+        source_ids = {source["id"] for source in self.list_sources(project_id)}
+        if left_source_id not in source_ids or right_source_id not in source_ids:
+            raise ValueError("Both diff sources must belong to the selected project")
+        left_result = self._mapping_application_for_diff(template_id, left_source_id)
+        right_result = self._mapping_application_for_diff(template_id, right_source_id)
+        left = mapping_from_yaml_dict({"mapping": left_result["mapping"]})
+        right = mapping_from_yaml_dict({"mapping": right_result["mapping"]})
+        result = diff_template_applications(
+            left,
+            right,
+            left_result["validation"]["issues"],
+            right_result["validation"]["issues"],
+        )
+        result.update(
+            {
+                "template_id": template_id,
+                "left_source_id": left_source_id,
+                "right_source_id": right_source_id,
+            }
+        )
+        return result
+
+    def _mapping_application_for_diff(
+        self,
+        template_id: str,
+        source_id: str,
+    ) -> dict[str, Any]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                select config_json
+                from mappings
+                where source_id = ?
+                order by updated_at desc
+                """,
+                (source_id,),
+            ).fetchall()
+        for row in rows:
+            config = json.loads(row["config_json"] or "{}")
+            mapping = config.get("mapping", {})
+            if mapping.get("mapping_template_id") != template_id:
+                continue
+            spec = mapping_from_yaml_dict(config)
+            report = self.validate_mapping_spec(source_id, spec)
+            return {
+                "mapping": mapping_to_yaml_dict(spec)["mapping"],
+                "validation": report,
+                "match_issues": [],
+            }
+        return self.apply_mapping_template(template_id, source_id)
 
     def batch_import(
         self,
@@ -1167,6 +1551,25 @@ class Workspace:
                   installed_at text not null,
                   updated_at text not null
                 );
+                create table if not exists schema_profiles (
+                  checksum text primary key,
+                  source_type text not null,
+                  profile_json text not null,
+                  created_at text not null,
+                  updated_at text not null
+                );
+                create table if not exists mapping_template_registry (
+                  id text primary key,
+                  name text not null,
+                  version text not null,
+                  source_family text not null,
+                  visual_template_id text not null,
+                  path text not null,
+                  config_json text not null,
+                  enabled integer not null default 1,
+                  installed_at text not null,
+                  updated_at text not null
+                );
                 create table if not exists batch_jobs (
                   id text primary key,
                   project_id text not null,
@@ -1248,6 +1651,7 @@ class Workspace:
             "blueprints",
             "mappings",
             "templates",
+            "mapping_templates",
             "exports",
             "logs",
         ):
@@ -1287,6 +1691,13 @@ def _plugin_from_row(row: sqlite3.Row) -> dict[str, Any]:
 def _template_from_row(row: sqlite3.Row) -> dict[str, Any]:
     result = _row_to_dict(row)
     result["manifest"] = json.loads(result.pop("manifest_json") or "{}")
+    result["enabled"] = bool(result["enabled"])
+    return result
+
+
+def _mapping_template_from_row(row: sqlite3.Row) -> dict[str, Any]:
+    result = _row_to_dict(row)
+    result["config"] = json.loads(result.pop("config_json") or "{}")
     result["enabled"] = bool(result["enabled"])
     return result
 

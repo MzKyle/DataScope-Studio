@@ -21,11 +21,15 @@ http://127.0.0.1:8000
 | Method | Path | 说明 |
 | --- | --- | --- |
 | `POST` | `/api/projects/{project_id}/sources` | 导入 source |
+| `GET` | `/api/projects/{project_id}/sources` | 项目 source 列表 |
 | `POST` | `/api/sources/{source_id}/inspect` | inspect source |
 | `GET` | `/api/sources/{source_id}/streams` | streams |
 | `GET` | `/api/sources/{source_id}/preview` | preview |
 | `GET` | `/api/sources/{source_id}/mapping/suggest` | mapping 建议 |
-| `POST` | `/api/sources/{source_id}/mapping` | 保存 mapping |
+| `POST` | `/api/sources/{source_id}/mapping/preview` | mapping、schema profile、预览和校验 |
+| `POST` | `/api/sources/{source_id}/mapping/validate` | 校验 mapping |
+| `POST` | `/api/sources/{source_id}/mapping` | 保存 mapping draft |
+| `POST` | `/api/mappings/{mapping_id}/confirm` | 校验并确认 mapping |
 | `POST` | `/api/recordings/build` | 构建 `.rrd + .rbl` |
 | `POST` | `/api/viewer/open` | 外部打开 Rerun |
 
@@ -50,5 +54,16 @@ http://127.0.0.1:8000
 | `POST` | `/api/plugins/validate` | 校验插件 |
 | `GET` | `/api/templates` | 模板列表 |
 | `POST` | `/api/templates/install` | 安装模板 |
+| `GET` | `/api/mapping-templates` | Mapping 模板列表 |
+| `POST` | `/api/mapping-templates` | 从已保存 mapping 创建模板 |
+| `PUT` | `/api/mapping-templates/{template_id}` | 更新模板规则 |
+| `DELETE` | `/api/mapping-templates/{template_id}` | 删除模板 |
+| `POST` | `/api/mapping-templates/import` | 导入 Mapping 模板 YAML |
+| `POST` | `/api/mapping-templates/{template_id}/export` | 导出 Mapping 模板 YAML |
+| `POST` | `/api/mapping-templates/{template_id}/apply` | 将模板应用到 source |
+| `POST` | `/api/projects/{project_id}/mapping-diff` | 比较模板在两个 source 上的结果 |
 | `POST` | `/api/batch/import` | 批量导入 |
 | `GET` | `/api/batch/{batch_id}` | 批量任务状态 |
+
+构建前若存在 blocking error，API 返回 `409` 和
+`error.code = mapping_validation_failed`，响应内包含完整 validation report。

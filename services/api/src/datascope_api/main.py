@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from datascope_core.mapping import mapping_from_yaml_dict, mapping_to_yaml_dict
+from datascope_core.mapping_validation import MappingValidationError
 from datascope_core.viewer import open_recording
 from datascope_core.workspace import Workspace
 
@@ -27,6 +28,38 @@ class SourceCreate(BaseModel):
 
 class MappingCreate(BaseModel):
     mapping: dict[str, Any] | None = None
+    confirmed: bool = False
+
+
+class MappingTemplateCreate(BaseModel):
+    name: str = Field(min_length=1)
+    source_id: str
+    mapping_id: str
+    template_id: str | None = None
+
+
+class MappingTemplateSave(BaseModel):
+    config: dict[str, Any]
+    enabled: bool = True
+
+
+class MappingTemplateImport(BaseModel):
+    path: str = Field(min_length=1)
+    enabled: bool = True
+
+
+class MappingTemplateExport(BaseModel):
+    output_path: str | None = None
+
+
+class MappingTemplateApply(BaseModel):
+    source_id: str
+
+
+class MappingTemplateDiff(BaseModel):
+    template_id: str
+    left_source_id: str
+    right_source_id: str
 
 
 class BuildRecordingRequest(BaseModel):
@@ -154,6 +187,10 @@ def create_app() -> FastAPI:
     def add_source(project_id: str, payload: SourceCreate) -> dict[str, Any]:
         return _guard(lambda: _workspace().add_source(project_id, payload.path))
 
+    @app.get("/api/projects/{project_id}/sources")
+    def list_sources(project_id: str) -> list[dict[str, Any]]:
+        return _guard(lambda: _workspace().list_sources(project_id))
+
     @app.post("/api/sources/{source_id}/inspect")
     def inspect_source(source_id: str) -> dict[str, Any]:
         return _guard(lambda: _workspace().inspect_source(source_id))
@@ -172,7 +209,37 @@ def create_app() -> FastAPI:
 
     @app.get("/api/sources/{source_id}/mapping/suggest")
     def suggest_mapping(source_id: str, template_id: str | None = None) -> dict[str, Any]:
-        return _guard(lambda: mapping_to_yaml_dict(_workspace().suggest_mapping(source_id, template_id)))
+        return _guard(
+            lambda: mapping_to_yaml_dict(
+                _workspace().suggest_mapping(source_id, template_id)
+            )
+        )
+
+    @app.post("/api/sources/{source_id}/mapping/preview")
+    def preview_mapping(source_id: str, payload: MappingCreate) -> dict[str, Any]:
+        def run() -> dict[str, Any]:
+            workspace = _workspace()
+            spec = (
+                mapping_from_yaml_dict({"mapping": payload.mapping})
+                if payload.mapping is not None
+                else workspace.suggest_mapping(source_id)
+            )
+            return workspace.mapping_preview(source_id, spec)
+
+        return _guard(run)
+
+    @app.post("/api/sources/{source_id}/mapping/validate")
+    def validate_source_mapping(source_id: str, payload: MappingCreate) -> dict[str, Any]:
+        def run() -> dict[str, Any]:
+            workspace = _workspace()
+            spec = (
+                mapping_from_yaml_dict({"mapping": payload.mapping})
+                if payload.mapping is not None
+                else workspace.suggest_mapping(source_id)
+            )
+            return workspace.validate_mapping_spec(source_id, spec)
+
+        return _guard(run)
 
     @app.get("/api/sources/{source_id}/templates/suggest")
     def suggest_templates(source_id: str) -> list[dict[str, float | str]]:
@@ -188,9 +255,22 @@ def create_app() -> FastAPI:
                 if payload.mapping is not None
                 else workspace.suggest_mapping(source_id)
             )
-            return workspace.save_mapping(source["project_id"], source_id, spec)
+            return workspace.save_mapping(
+                source["project_id"],
+                source_id,
+                spec,
+                confirmed=payload.confirmed,
+            )
 
         return _guard(run)
+
+    @app.post("/api/mappings/{mapping_id}/confirm")
+    def confirm_mapping(mapping_id: str) -> dict[str, Any]:
+        return _guard(lambda: _workspace().confirm_mapping(mapping_id))
+
+    @app.get("/api/mappings/{mapping_id}/validate")
+    def validate_saved_mapping(mapping_id: str) -> dict[str, Any]:
+        return _guard(lambda: _workspace().validate_saved_mapping(mapping_id))
 
     @app.post("/api/recordings/build")
     def build_recording(payload: BuildRecordingRequest) -> dict[str, Any]:
@@ -287,6 +367,78 @@ def create_app() -> FastAPI:
     def validate_template(payload: TemplateInstallRequest) -> dict[str, Any]:
         return _guard(lambda: _workspace().validate_template(payload.path))
 
+    @app.get("/api/mapping-templates")
+    def list_mapping_templates() -> list[dict[str, Any]]:
+        return _guard(lambda: _workspace().list_mapping_templates())
+
+    @app.post("/api/mapping-templates")
+    def create_mapping_template(payload: MappingTemplateCreate) -> dict[str, Any]:
+        return _guard(
+            lambda: _workspace().create_mapping_template(
+                payload.name,
+                payload.source_id,
+                payload.mapping_id,
+                template_id=payload.template_id,
+            )
+        )
+
+    @app.put("/api/mapping-templates/{template_id}")
+    def save_mapping_template(template_id: str, payload: MappingTemplateSave) -> dict[str, Any]:
+        config = dict(payload.config)
+        template = dict(config.get("mapping_template", config))
+        template["id"] = template_id
+        return _guard(
+            lambda: _workspace().save_mapping_template(
+                {"mapping_template": template},
+                enabled=payload.enabled,
+            )
+        )
+
+    @app.delete("/api/mapping-templates/{template_id}")
+    def delete_mapping_template(template_id: str) -> dict[str, Any]:
+        return _guard(lambda: _workspace().delete_mapping_template(template_id))
+
+    @app.post("/api/mapping-templates/import")
+    def import_mapping_template(payload: MappingTemplateImport) -> dict[str, Any]:
+        return _guard(
+            lambda: _workspace().import_mapping_template(payload.path, enabled=payload.enabled)
+        )
+
+    @app.post("/api/mapping-templates/{template_id}/export")
+    def export_mapping_template(
+        template_id: str,
+        payload: MappingTemplateExport,
+    ) -> dict[str, Any]:
+        return _guard(
+            lambda: _workspace().export_mapping_template(
+                template_id,
+                output_path=payload.output_path,
+            )
+        )
+
+    @app.post("/api/mapping-templates/{template_id}/apply")
+    def apply_mapping_template(
+        template_id: str,
+        payload: MappingTemplateApply,
+    ) -> dict[str, Any]:
+        return _guard(
+            lambda: _workspace().apply_mapping_template(template_id, payload.source_id)
+        )
+
+    @app.post("/api/projects/{project_id}/mapping-diff")
+    def diff_mapping_template(
+        project_id: str,
+        payload: MappingTemplateDiff,
+    ) -> dict[str, Any]:
+        return _guard(
+            lambda: _workspace().diff_mapping_template(
+                project_id,
+                payload.template_id,
+                payload.left_source_id,
+                payload.right_source_id,
+            )
+        )
+
     @app.post("/api/batch/import")
     def batch_import(payload: BatchImportRequest) -> dict[str, Any]:
         return _guard(
@@ -346,6 +498,17 @@ def _guard(operation):
         raise HTTPException(
             status_code=400,
             detail={"error": {"code": "bad_request", "message": str(exc)}},
+        ) from exc
+    except MappingValidationError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": {
+                    "code": "mapping_validation_failed",
+                    "message": str(exc),
+                    "validation": exc.report,
+                }
+            },
         ) from exc
     except RuntimeError as exc:
         raise HTTPException(

@@ -32,3 +32,7 @@ permissions:
 - `experiment_compare`
 
 本地模板可通过 YAML 安装、启用或禁用。
+
+这里的模板控制 Rerun app id 和 blueprint。字段匹配规则使用独立的
+`mapping_template_registry`，可从已确认或草稿 Mapping 创建，并支持 YAML
+导入/导出、跨项目应用和项目内双数据源 diff。

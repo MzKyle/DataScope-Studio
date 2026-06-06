@@ -16,7 +16,7 @@ from datascope_core.adapters.point_cloud_adapter import (
 )
 from datascope_core.cv_schema import load_annotations, load_predictions, sidecar_frame_map, supported_image_paths
 from datascope_core.models import MappingSpec, SourceInfo
-from datascope_core.time_utils import query_time_seconds
+from datascope_core.time_utils import time_seconds_or_none
 
 
 QUERY_TEMPLATES = [
@@ -222,8 +222,14 @@ def _tabular_rows(
 ) -> list[QueryRow]:
     rows: list[QueryRow] = []
     for row_index, row in frame.iterrows():
-        timestamp = _row_time(row, spec.primary_timeline, row_index)
+        timestamp = _row_time(
+            row,
+            spec.primary_timeline,
+            spec.effective_timeline_unit or spec.timeline_unit,
+        )
         for mapping in spec.streams:
+            if not mapping.get("enabled", True):
+                continue
             fields = mapping.get("source_fields", [])
             entity_path = mapping.get("entity_path", "")
             semantic_type = mapping.get("semantic_type", "")
@@ -327,10 +333,10 @@ def _append_field_values(
             rows.append(QueryRow(recording_id, source_id, timestamp, entity_path, semantic_type, field, _json_value(row[field])))
 
 
-def _row_time(row: pd.Series, time_key: str, row_index: int) -> float:
+def _row_time(row: pd.Series, time_key: str, time_unit: str) -> float | None:
     if time_key in row and pd.notna(row[time_key]):
-        return query_time_seconds(row[time_key], row_index)
-    return float(row_index)
+        return time_seconds_or_none(row[time_key], unit=time_unit)
+    return None
 
 
 def _first_time(index: int, *frames: Any) -> float:

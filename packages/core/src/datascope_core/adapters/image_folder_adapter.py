@@ -18,7 +18,7 @@ from datascope_core.cv_schema import (
     supported_image_paths,
 )
 from datascope_core.inference import safe_slug
-from datascope_core.models import ConvertRequest, SourceInfo, StreamInfo
+from datascope_core.models import ConvertRequest, MappingSpec, SourceInfo, StreamInfo
 
 
 class ImageFolderAdapter:
@@ -264,6 +264,30 @@ class ImageFolderAdapter:
                 if prediction_frame and prediction_frame.masks:
                     for mask_index, mask in enumerate(prediction_frame.masks):
                         rec.log(f"{pred_masks_path}/{mask_index}", _segmentation_image(root, mask.path))
+
+    def validate_mapping(
+        self,
+        source: SourceInfo,
+        spec: MappingSpec,
+        profile: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        enabled_types = {
+            stream.get("semantic_type")
+            for stream in spec.streams
+            if stream.get("enabled", True)
+        }
+        if "image" in enabled_types:
+            return []
+        return [
+            {
+                "severity": "error",
+                "code": "image_stream_required",
+                "message": "Image folder mappings require an enabled image stream.",
+                "stream_id": None,
+                "rule_key": None,
+                "field": "image",
+            }
+        ]
 
 
 def _image_dimensions(path: Path) -> dict[str, int]:

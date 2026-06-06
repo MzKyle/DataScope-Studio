@@ -5,6 +5,9 @@ import type {
   BatchResult,
   Job,
   MappingPayload,
+  MappingDiff,
+  MappingTemplateItem,
+  MappingValidation,
   Plugin,
   Project,
   ProjectExportResult,
@@ -14,6 +17,7 @@ import type {
   QueryTemplate,
   Recording,
   Source,
+  SchemaProfile,
   StreamInfo,
   TemplateMatch,
   TemplateRegistryItem
@@ -113,9 +117,10 @@ export const api = {
       body: JSON.stringify({ path })
     }),
   inspect: (sourceId: string) =>
-    request<{ source: Source; streams: StreamInfo[] }>(`/api/sources/${sourceId}/inspect`, {
+    request<{ source: Source; streams: StreamInfo[]; schema_profile: SchemaProfile }>(`/api/sources/${sourceId}/inspect`, {
       method: "POST"
     }),
+  sources: (projectId: string) => request<Source[]>(`/api/projects/${projectId}/sources`),
   preview: (sourceId: string, streamId: string) =>
     request<{ columns: string[]; rows: Record<string, unknown>[] }>(
       `/api/sources/${sourceId}/preview?stream_id=${encodeURIComponent(streamId)}&limit=25`
@@ -128,11 +133,31 @@ export const api = {
     ),
   suggestTemplates: (sourceId: string) =>
     request<TemplateMatch[]>(`/api/sources/${sourceId}/templates/suggest`),
-  saveMapping: (sourceId: string, mapping: MappingPayload["mapping"]) =>
-    request<{ id: string; path: string }>(`/api/sources/${sourceId}/mapping`, {
+  previewMapping: (sourceId: string, mapping: MappingPayload["mapping"]) =>
+    request<{
+      mapping: MappingPayload["mapping"];
+      schema_profile: SchemaProfile;
+      validation: MappingValidation;
+      preview: { columns: string[]; rows: Record<string, unknown>[] };
+    }>(`/api/sources/${sourceId}/mapping/preview`, {
       method: "POST",
       body: JSON.stringify({ mapping })
     }),
+  validateMapping: (sourceId: string, mapping: MappingPayload["mapping"]) =>
+    request<MappingValidation>(`/api/sources/${sourceId}/mapping/validate`, {
+      method: "POST",
+      body: JSON.stringify({ mapping })
+    }),
+  saveMapping: (sourceId: string, mapping: MappingPayload["mapping"], confirmed = false) =>
+    request<{ id: string; path: string }>(`/api/sources/${sourceId}/mapping`, {
+      method: "POST",
+      body: JSON.stringify({ mapping, confirmed })
+    }),
+  confirmMapping: (mappingId: string) =>
+    request<{ mapping: { id: string; path: string }; validation: MappingValidation }>(
+      `/api/mappings/${mappingId}/confirm`,
+      { method: "POST" }
+    ),
   build: (
     projectId: string,
     sourceId: string,
@@ -209,6 +234,63 @@ export const api = {
     request<TemplateRegistryItem>("/api/templates/install", {
       method: "POST",
       body: JSON.stringify({ path })
+    }),
+  mappingTemplates: () => request<MappingTemplateItem[]>("/api/mapping-templates"),
+  createMappingTemplate: (
+    name: string,
+    sourceId: string,
+    mappingId: string,
+    templateId?: string
+  ) =>
+    request<MappingTemplateItem>("/api/mapping-templates", {
+      method: "POST",
+      body: JSON.stringify({
+        name,
+        source_id: sourceId,
+        mapping_id: mappingId,
+        template_id: templateId || null
+      })
+    }),
+  saveMappingTemplate: (templateId: string, config: MappingTemplateItem["config"]) =>
+    request<MappingTemplateItem>(`/api/mapping-templates/${templateId}`, {
+      method: "PUT",
+      body: JSON.stringify({ config, enabled: true })
+    }),
+  importMappingTemplate: (path: string) =>
+    request<MappingTemplateItem>("/api/mapping-templates/import", {
+      method: "POST",
+      body: JSON.stringify({ path, enabled: true })
+    }),
+  exportMappingTemplate: (templateId: string, outputPath?: string) =>
+    request<{ template_id: string; path: string }>(
+      `/api/mapping-templates/${templateId}/export`,
+      {
+        method: "POST",
+        body: JSON.stringify({ output_path: outputPath || null })
+      }
+    ),
+  applyMappingTemplate: (templateId: string, sourceId: string) =>
+    request<{
+      mapping: MappingPayload["mapping"];
+      validation: MappingValidation;
+      match_issues: MappingValidation["issues"];
+    }>(`/api/mapping-templates/${templateId}/apply`, {
+      method: "POST",
+      body: JSON.stringify({ source_id: sourceId })
+    }),
+  diffMappingTemplate: (
+    projectId: string,
+    templateId: string,
+    leftSourceId: string,
+    rightSourceId: string
+  ) =>
+    request<MappingDiff>(`/api/projects/${projectId}/mapping-diff`, {
+      method: "POST",
+      body: JSON.stringify({
+        template_id: templateId,
+        left_source_id: leftSourceId,
+        right_source_id: rightSourceId
+      })
     }),
   batchImport: (projectId: string, patterns: string[], templateId: string, outputPrefix: string) =>
     request<BatchResult>("/api/batch/import", {

@@ -1000,6 +1000,68 @@ td {
   margin-bottom: var(--space-12);
 }
 
+.mapping-template-toolbar,
+.mapping-template-manager {
+  display: grid;
+  gap: var(--space-16);
+}
+
+.timeline-editor,
+.diff-controls {
+  align-items: end;
+  display: grid;
+  gap: var(--space-12);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: var(--space-16);
+}
+
+.timeline-editor label {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.timeline-editor label span {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.validation-panel {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-12);
+  display: grid;
+  gap: var(--space-8);
+  margin-top: var(--space-16);
+  padding: var(--space-12);
+}
+
+.validation-panel.is-valid {
+  background: var(--color-success-soft);
+  border-color: rgba(27, 129, 88, 0.25);
+}
+
+.validation-panel.has-errors {
+  background: rgba(196, 54, 54, 0.08);
+  border-color: rgba(196, 54, 54, 0.24);
+}
+
+.validation-panel p {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  margin: 0;
+}
+
+.mapping-template-manager-grid {
+  display: grid;
+  gap: var(--space-20);
+  grid-template-columns: minmax(260px, 0.7fr) minmax(0, 1.3fr);
+}
+
+.mapping-template-json {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  min-height: 320px;
+}
+
 .actions {
   margin-top: var(--space-16);
 }
@@ -1304,6 +1366,12 @@ td {
   }
 
   .source-picker-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .timeline-editor,
+  .diff-controls,
+  .mapping-template-manager-grid {
     grid-template-columns: 1fr;
   }
 

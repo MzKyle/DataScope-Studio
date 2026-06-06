@@ -18,8 +18,10 @@ sequenceDiagram
     API->>WS: inspect_source()
     WS->>AD: inspect + infer_streams
     WS->>DB: save streams
-    UI->>API: suggest/save mapping
-    WS->>DB: save mapping YAML metadata
+    UI->>API: suggest/save draft mapping
+    WS->>DB: cache schema profile + mapping YAML
+    UI->>API: validate/confirm mapping
+    WS->>DB: mark confirmed
     UI->>API: build recording
     WS->>RR: convert to .rrd
     WS->>DB: index query rows + recording

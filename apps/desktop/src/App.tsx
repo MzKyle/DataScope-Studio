@@ -37,6 +37,9 @@ import type {
   BuildResult,
   Job,
   MappingPayload,
+  MappingDiff,
+  MappingTemplateItem,
+  MappingValidation,
   Plugin,
   Project,
   ProjectExportResult,
@@ -44,6 +47,7 @@ import type {
   QueryTemplate,
   Recording,
   Source,
+  SchemaProfile,
   StreamInfo,
   TemplateMatch,
   TemplateRegistryItem
@@ -53,6 +57,18 @@ const supportedFormats = ["CSV", "JSONL", "Images", "PLY", "PCD", "NPZ", "MCAP",
 const thresholdTemplates = new Set(["low_battery", "detection_failure"]);
 const TABLE_RENDER_LIMIT = 100;
 const DEFAULT_EXPORT_DIR_KEY = "datascope.defaultExportDir";
+const semanticTypes = [
+  "scalar",
+  "scalar_group",
+  "state",
+  "text_log",
+  "points2d",
+  "points3d",
+  "trajectory3d",
+  "boxes2d",
+  "transform3d"
+];
+const timeUnits = ["auto", "relative_s", "unix_s", "unix_ms", "unix_us", "unix_ns", "datetime"];
 
 function App() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -63,6 +79,19 @@ function App() {
   const [source, setSource] = useState<Source | null>(null);
   const [streams, setStreams] = useState<StreamInfo[]>([]);
   const [mapping, setMapping] = useState<MappingPayload | null>(null);
+  const [schemaProfile, setSchemaProfile] = useState<SchemaProfile | null>(null);
+  const [mappingValidation, setMappingValidation] = useState<MappingValidation | null>(null);
+  const [mappingConfirmed, setMappingConfirmed] = useState(false);
+  const [projectSources, setProjectSources] = useState<Source[]>([]);
+  const [mappingTemplates, setMappingTemplates] = useState<MappingTemplateItem[]>([]);
+  const [selectedMappingTemplateId, setSelectedMappingTemplateId] = useState("");
+  const [mappingTemplateName, setMappingTemplateName] = useState("My Mapping Template");
+  const [mappingTemplatePath, setMappingTemplatePath] = useState("");
+  const [mappingTemplateJson, setMappingTemplateJson] = useState("");
+  const [mappingTemplateExportPath, setMappingTemplateExportPath] = useState("");
+  const [diffLeftSourceId, setDiffLeftSourceId] = useState("");
+  const [diffRightSourceId, setDiffRightSourceId] = useState("");
+  const [mappingDiff, setMappingDiff] = useState<MappingDiff | null>(null);
   const [templates, setTemplates] = useState<TemplateMatch[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState("sensor_monitor");
   const [savedMappingId, setSavedMappingId] = useState("");
@@ -157,6 +186,11 @@ function App() {
     window.localStorage.setItem(DEFAULT_EXPORT_DIR_KEY, defaultExportDir.trim());
   }, [defaultExportDir]);
 
+  useEffect(() => {
+    const selected = mappingTemplates.find((item) => item.id === selectedMappingTemplateId);
+    setMappingTemplateJson(selected ? JSON.stringify(selected.config, null, 2) : "");
+  }, [mappingTemplates, selectedMappingTemplateId]);
+
   async function run<T>(label: string, task: () => Promise<T>): Promise<T | null> {
     setBusy(label);
     setError("");
@@ -183,16 +217,28 @@ function App() {
   async function refreshProjectData(projectId = selectedProjectId, includeQueryTemplates = false) {
     if (!projectId) return;
     const result = await run(t("busyRefreshingWorkspace"), async () => {
-      const [recordingRows, jobRows] = await Promise.all([
+      const [recordingRows, jobRows, sourceRows] = await Promise.all([
         api.recordings(projectId),
-        api.jobs(projectId)
+        api.jobs(projectId),
+        api.sources(projectId)
       ]);
       const templatesRows = includeQueryTemplates ? await api.queryTemplates(projectId) : null;
-      return { recordingRows, jobRows, templatesRows };
+      return { recordingRows, jobRows, sourceRows, templatesRows };
     });
     if (result) {
       setRecordings(result.recordingRows);
       setJobs(result.jobRows);
+      setProjectSources(result.sourceRows);
+      setDiffLeftSourceId((current) =>
+        result.sourceRows.some((item) => item.id === current)
+          ? current
+          : result.sourceRows[0]?.id || ""
+      );
+      setDiffRightSourceId((current) =>
+        result.sourceRows.some((item) => item.id === current)
+          ? current
+          : result.sourceRows[1]?.id || ""
+      );
       if (result.templatesRows) {
         setQueryTemplates(result.templatesRows);
         if (!result.templatesRows.some((template) => template.template_id === selectedQueryTemplate)) {
@@ -203,18 +249,34 @@ function App() {
   }
 
   async function refreshTemplateRegistry() {
-    const result = await run(t("busyLoadingRegistry"), () => api.templates());
-    if (result) setTemplateRegistry(result);
+    const result = await run(t("busyLoadingRegistry"), async () => {
+      const [templateRows, mappingTemplateRows] = await Promise.all([
+        api.templates(),
+        api.mappingTemplates()
+      ]);
+      return { templateRows, mappingTemplateRows };
+    });
+    if (result) {
+      setTemplateRegistry(result.templateRows);
+      setMappingTemplates(result.mappingTemplateRows);
+      setSelectedMappingTemplateId((current) => current || result.mappingTemplateRows[0]?.id || "");
+    }
   }
 
   async function refreshExtensionData() {
     const result = await run(t("busyLoadingRegistry"), async () => {
-      const [pluginRows, templateRows] = await Promise.all([api.plugins(), api.templates()]);
-      return { pluginRows, templateRows };
+      const [pluginRows, templateRows, mappingTemplateRows] = await Promise.all([
+        api.plugins(),
+        api.templates(),
+        api.mappingTemplates()
+      ]);
+      return { pluginRows, templateRows, mappingTemplateRows };
     });
     if (result) {
       setPlugins(result.pluginRows);
       setTemplateRegistry(result.templateRows);
+      setMappingTemplates(result.mappingTemplateRows);
+      setSelectedMappingTemplateId((current) => current || result.mappingTemplateRows[0]?.id || "");
     }
   }
 
@@ -267,8 +329,7 @@ function App() {
       const nextTemplateId = templateMatches[0]?.template_id ?? "sensor_monitor";
       const suggested = await api.suggestMappingForTemplate(added.id, nextTemplateId);
       const savedMapping = await api.saveMapping(added.id, suggested.mapping);
-      const firstStream = inspection.streams[0];
-      const preview = firstStream ? await api.preview(added.id, firstStream.stream_id) : null;
+      const mappingPreview = await api.previewMapping(added.id, suggested.mapping);
       return {
         added,
         project: projectForImport,
@@ -278,7 +339,9 @@ function App() {
         nextTemplateId,
         suggested,
         savedMappingId: savedMapping.id,
-        previewRows: preview?.rows ?? []
+        previewRows: mappingPreview.preview.rows,
+        schemaProfile: mappingPreview.schema_profile,
+        validation: mappingPreview.validation
       };
     });
     if (result) {
@@ -292,7 +355,10 @@ function App() {
       setSelectedTemplateId(result.nextTemplateId);
       setMapping(result.suggested);
       setPreviewRows(result.previewRows);
+      setSchemaProfile(result.schemaProfile);
+      setMappingValidation(result.validation);
       setSavedMappingId(result.savedMappingId);
+      setMappingConfirmed(false);
       setBuildResult(null);
       setActiveSection("import");
     }
@@ -301,12 +367,64 @@ function App() {
   async function saveMapping() {
     if (!source || !mapping) return;
     const saved = await run(t("busySavingMapping"), () => api.saveMapping(source.id, mapping.mapping));
-    if (saved) setSavedMappingId(saved.id);
+    if (saved) {
+      setSavedMappingId(saved.id);
+      setMappingConfirmed(false);
+      setMapping((current) =>
+        current
+          ? { mapping: { ...current.mapping, status: "draft" } }
+          : current
+      );
+    }
+  }
+
+  async function validateCurrentMapping() {
+    if (!source || !mapping) return null;
+    const result = await run(t("busyValidatingMapping"), () =>
+      api.validateMapping(source.id, mapping.mapping)
+    );
+    if (result) setMappingValidation(result);
+    return result;
+  }
+
+  async function confirmCurrentMapping() {
+    if (!source || !mapping) return;
+    const result = await run(t("busyConfirmingMapping"), async () => {
+      const saved = savedMappingId
+        ? { id: savedMappingId }
+        : await api.saveMapping(source.id, mapping.mapping);
+      return api.confirmMapping(saved.id);
+    });
+    if (result) {
+      setSavedMappingId(result.mapping.id);
+      setMappingValidation(result.validation);
+      setMappingConfirmed(true);
+      setMapping((current) =>
+        current
+          ? {
+              mapping: {
+                ...current.mapping,
+                status: "confirmed",
+                timelines: {
+                  primary: {
+                    ...current.mapping.timelines.primary,
+                    effective_unit: result.validation.effective_timeline_unit
+                  }
+                }
+              }
+            }
+          : current
+      );
+    }
   }
 
   async function buildRecording() {
     if (!selectedProject || !source || !mapping) {
       setError(t("errorMappingUnavailable"));
+      return;
+    }
+    if (!mappingConfirmed) {
+      setError(t("errorConfirmMappingFirst"));
       return;
     }
     const result = await run(t("busyBuildingRecording"), async () => {
@@ -339,12 +457,45 @@ function App() {
     );
   }
 
-  function updateMappingStream(index: number, key: "entity_path" | "archetype", value: string) {
+  function updateMappingStream(
+    index: number,
+    key: "entity_path" | "semantic_type" | "source_fields" | "enabled",
+    value: string | boolean
+  ) {
     if (!mapping) return;
     const next = structuredClone(mapping);
-    next.mapping.streams[index][key] = value;
+    if (key === "source_fields") {
+      next.mapping.streams[index].source_fields = String(value)
+        .split(",")
+        .map((field) => field.trim())
+        .filter(Boolean);
+    } else if (key === "enabled") {
+      next.mapping.streams[index].enabled = Boolean(value);
+    } else {
+      next.mapping.streams[index][key] = String(value);
+      if (key === "semantic_type") {
+        const derived = derivedMappingFields(String(value));
+        next.mapping.streams[index].archetype = derived.archetype;
+        next.mapping.streams[index].view = derived.view;
+      }
+    }
+    next.mapping.status = "draft";
     setMapping(next);
     setSavedMappingId("");
+    setMappingConfirmed(false);
+    setMappingValidation(null);
+  }
+
+  function updateTimeline(key: "source_field" | "unit", value: string) {
+    if (!mapping) return;
+    const next = structuredClone(mapping);
+    next.mapping.timelines.primary[key] = value;
+    if (key === "source_field") next.mapping.timelines.primary.name = value;
+    next.mapping.status = "draft";
+    setMapping(next);
+    setSavedMappingId("");
+    setMappingConfirmed(false);
+    setMappingValidation(null);
   }
 
   async function changeTemplate(templateId: string) {
@@ -354,12 +505,98 @@ function App() {
     const result = await run(t("busySuggestingMapping"), async () => {
       const suggested = await api.suggestMappingForTemplate(source.id, templateId);
       const savedMapping = await api.saveMapping(source.id, suggested.mapping);
-      return { suggested, savedMappingId: savedMapping.id };
+      const validation = await api.validateMapping(source.id, suggested.mapping);
+      return { suggested, savedMappingId: savedMapping.id, validation };
     });
     if (result) {
       setMapping(result.suggested);
       setSavedMappingId(result.savedMappingId);
+      setMappingValidation(result.validation);
+      setMappingConfirmed(false);
     }
+  }
+
+  async function applySelectedMappingTemplate() {
+    if (!source || !selectedMappingTemplateId) return;
+    const result = await run(t("busyApplyingMappingTemplate"), () =>
+      api.applyMappingTemplate(selectedMappingTemplateId, source.id)
+    );
+    if (result) {
+      setMapping({ mapping: result.mapping });
+      setMappingValidation(result.validation);
+      setSelectedTemplateId(result.mapping.template_id || selectedTemplateId);
+      setSavedMappingId("");
+      setMappingConfirmed(false);
+    }
+  }
+
+  async function createCurrentMappingTemplate() {
+    if (!source || !mapping) return;
+    const result = await run(t("busySavingMappingTemplate"), async () => {
+      const saved = savedMappingId
+        ? { id: savedMappingId }
+        : await api.saveMapping(source.id, mapping.mapping);
+      const template = await api.createMappingTemplate(
+        mappingTemplateName.trim(),
+        source.id,
+        saved.id
+      );
+      return { template, mappingId: saved.id };
+    });
+    if (result) {
+      setSavedMappingId(result.mappingId);
+      await refreshTemplateRegistry();
+      setSelectedMappingTemplateId(result.template.id);
+    }
+  }
+
+  async function importMappingTemplate() {
+    if (!mappingTemplatePath.trim()) return;
+    const result = await run(t("busyImportingMappingTemplate"), () =>
+      api.importMappingTemplate(mappingTemplatePath.trim())
+    );
+    if (result) {
+      setMappingTemplatePath("");
+      await refreshTemplateRegistry();
+      setSelectedMappingTemplateId(result.id);
+    }
+  }
+
+  async function saveMappingTemplateConfig() {
+    if (!selectedMappingTemplateId || !mappingTemplateJson.trim()) return;
+    const result = await run(t("busySavingMappingTemplate"), () =>
+      api.saveMappingTemplate(selectedMappingTemplateId, JSON.parse(mappingTemplateJson))
+    );
+    if (result) await refreshTemplateRegistry();
+  }
+
+  async function exportSelectedMappingTemplate() {
+    if (!selectedMappingTemplateId) return;
+    const result = await run(t("busyExportingMappingTemplate"), () =>
+      api.exportMappingTemplate(
+        selectedMappingTemplateId,
+        mappingTemplateExportPath.trim() || undefined
+      )
+    );
+    if (result) setMappingTemplateExportPath(result.path);
+  }
+
+  async function runMappingDiff() {
+    if (
+      !selectedProjectId ||
+      !selectedMappingTemplateId ||
+      !diffLeftSourceId ||
+      !diffRightSourceId
+    ) return;
+    const result = await run(t("busyDiffingMapping"), () =>
+      api.diffMappingTemplate(
+        selectedProjectId,
+        selectedMappingTemplateId,
+        diffLeftSourceId,
+        diffRightSourceId
+      )
+    );
+    if (result) setMappingDiff(result);
   }
 
   async function addTagToRecording(recordingId: string) {
@@ -517,9 +754,14 @@ function App() {
       setSource(null);
       setStreams([]);
       setMapping(null);
+      setSchemaProfile(null);
+      setMappingValidation(null);
+      setMappingConfirmed(false);
       setTemplates([]);
       setSavedMappingId("");
       setBuildResult(null);
+      setProjectSources([]);
+      setMappingDiff(null);
       setOpenedPackagePath(result.package_path);
       setError("");
       setActiveSection("dashboard");
@@ -904,6 +1146,45 @@ function App() {
               }
             />
 
+            <section className="card mapping-template-toolbar">
+              <CardHeader
+                icon={<ListChecks size={18} />}
+                title={t("mappingTemplates")}
+                subtitle={t("mappingTemplatesSubtitle")}
+              />
+              <div className="inline-actions">
+                <select
+                  value={selectedMappingTemplateId}
+                  onChange={(event) => setSelectedMappingTemplateId(event.target.value)}
+                >
+                  <option value="">{t("automaticMapping")}</option>
+                  {mappingTemplates.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name} ({item.source_family})
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={applySelectedMappingTemplate}
+                  disabled={!source || !selectedMappingTemplateId || isBusy}
+                >
+                  {t("applyMappingTemplate")}
+                </button>
+                <input
+                  value={mappingTemplateName}
+                  onChange={(event) => setMappingTemplateName(event.target.value)}
+                  placeholder={t("mappingTemplateName")}
+                />
+                <button
+                  onClick={createCurrentMappingTemplate}
+                  disabled={!mapping || !mappingTemplateName.trim() || isBusy}
+                >
+                  <Save size={16} />
+                  {t("saveAsMappingTemplate")}
+                </button>
+              </div>
+            </section>
+
             <div className="two-column">
               <section className="card">
                 <CardHeader icon={<FileSearch size={18} />} title={t("schemaInspector")} />
@@ -950,56 +1231,146 @@ function App() {
                   <>
                     <div className="mapping-meta">
                       <span>{mapping.mapping.app_id}</span>
-                      <span>{mapping.mapping.timelines.primary.source_field}</span>
+                      <span>
+                        {mapping.mapping.status} / {mapping.mapping.schema_version === 2 ? "v2" : "v1"}
+                      </span>
+                    </div>
+                    <div className="timeline-editor">
+                      <label>
+                        <span>{t("timeField")}</span>
+                        <select
+                          value={mapping.mapping.timelines.primary.source_field}
+                          onChange={(event) => updateTimeline("source_field", event.target.value)}
+                        >
+                          <option value="">{t("rowSequence")}</option>
+                          {(schemaProfile?.field_names ?? []).map((field) => (
+                            <option key={field} value={field}>{field}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        <span>{t("timeUnit")}</span>
+                        <select
+                          value={mapping.mapping.timelines.primary.unit}
+                          onChange={(event) => updateTimeline("unit", event.target.value)}
+                        >
+                          {timeUnits.map((unit) => (
+                            <option key={unit} value={unit}>{unit}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <span className="soft-status">
+                        {t("effectiveUnit")}: {mappingValidation?.effective_timeline_unit ?? "pending"}
+                      </span>
                     </div>
                     <div className="table-wrap">
                       <table>
                         <thead>
                           <tr>
+                            <th>{t("enabled")}</th>
                             <th>{t("fields")}</th>
-                            <th>{t("type")}</th>
+                            <th>{t("semanticType")}</th>
                             <th>{t("entityPath")}</th>
                             <th>{t("archetype")}</th>
-                            <th>{t("confidence")}</th>
+                            <th>{t("view")}</th>
                           </tr>
                         </thead>
                         <tbody>
                           {mapping.mapping.streams.map((stream, index) => (
                             <tr key={stream.stream_id}>
-                              <td>{stream.source_fields.join(", ")}</td>
-                              <td>{stream.semantic_type}</td>
+                              <td>
+                                <input
+                                  type="checkbox"
+                                  checked={stream.enabled}
+                                  onChange={(event) =>
+                                    updateMappingStream(index, "enabled", event.target.checked)
+                                  }
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  value={stream.source_fields.join(", ")}
+                                  onChange={(event) =>
+                                    updateMappingStream(index, "source_fields", event.target.value)
+                                  }
+                                />
+                                <span className="subline">
+                                  {stream.rule_key} / {stream.origin}
+                                </span>
+                              </td>
+                              <td>
+                                <select
+                                  value={stream.semantic_type}
+                                  disabled={source?.type === "mcap"}
+                                  onChange={(event) =>
+                                    updateMappingStream(index, "semantic_type", event.target.value)
+                                  }
+                                >
+                                  {semanticTypes.map((type) => (
+                                    <option key={type} value={type}>{type}</option>
+                                  ))}
+                                  {!semanticTypes.includes(stream.semantic_type) && (
+                                    <option value={stream.semantic_type}>{stream.semantic_type}</option>
+                                  )}
+                                </select>
+                              </td>
                               <td>
                                 <input
                                   value={stream.entity_path}
+                                  disabled={source?.type === "mcap"}
+                                  title={source?.type === "mcap" ? t("mcapPathManaged") : undefined}
                                   onChange={(event) =>
                                     updateMappingStream(index, "entity_path", event.target.value)
                                   }
                                 />
+                                {source?.type === "mcap" && (
+                                  <span className="subline">{t("mcapPathManaged")}</span>
+                                )}
                               </td>
-                              <td>
-                                <input
-                                  value={stream.archetype}
-                                  onChange={(event) =>
-                                    updateMappingStream(index, "archetype", event.target.value)
-                                  }
-                                />
-                              </td>
-                              <td>{Math.round(stream.confidence * 100)}%</td>
+                              <td>{stream.archetype}</td>
+                              <td>{stream.view}</td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
+                    {mappingValidation && (
+                      <div className={`validation-panel ${mappingValidation.valid ? "is-valid" : "has-errors"}`}>
+                        <strong>
+                          {mappingValidation.valid ? t("mappingValid") : t("mappingInvalid")}
+                        </strong>
+                        <span>
+                          {mappingValidation.summary.errors} {t("errors")} /{" "}
+                          {mappingValidation.summary.warnings} {t("warnings")}
+                        </span>
+                        {mappingValidation.issues.map((issue, index) => (
+                          <p key={`${issue.code}-${issue.stream_id ?? index}`}>
+                            <b>{issue.severity.toUpperCase()}</b> {issue.code}:{" "}
+                            {issue.message ?? issue.field ?? ""}
+                          </p>
+                        ))}
+                      </div>
+                    )}
                     <div className="actions">
                       <button onClick={saveMapping} disabled={isBusy || Boolean(savedMappingId)}>
                         <Save size={16} />
-                        {savedMappingId ? t("mappingSaved") : t("saveMapping")}
+                        {savedMappingId ? t("draftSaved") : t("saveDraft")}
                       </button>
-                      {savedMappingId ? (
-                        <span className="success">{t("autoMapped")} {savedMappingId}</span>
-                      ) : (
-                        <span className="pending">{t("mappingEditedAutoSave")}</span>
-                      )}
+                      <button onClick={validateCurrentMapping} disabled={isBusy}>
+                        <ListChecks size={16} />
+                        {t("validateMapping")}
+                      </button>
+                      <button
+                        className="button-primary"
+                        onClick={confirmCurrentMapping}
+                        disabled={isBusy || Boolean(mappingValidation && !mappingValidation.valid)}
+                      >
+                        <CheckCircle2 size={16} />
+                        {mappingConfirmed ? t("mappingConfirmed") : t("confirmMapping")}
+                      </button>
+                      <span className={mappingConfirmed ? "success" : "pending"}>
+                        {mappingConfirmed ? t("mappingConfirmed") : t("mappingDraft")}
+                      </span>
                     </div>
                   </>
                 ) : (
@@ -1008,12 +1379,74 @@ function App() {
               </section>
             </div>
 
+            <section className="card">
+              <CardHeader
+                icon={<Activity size={18} />}
+                title={t("mappingDiff")}
+                subtitle={t("mappingDiffSubtitle")}
+              />
+              <div className="diff-controls">
+                <select value={diffLeftSourceId} onChange={(event) => setDiffLeftSourceId(event.target.value)}>
+                  <option value="">{t("leftSource")}</option>
+                  {projectSources.map((item) => (
+                    <option key={item.id} value={item.id}>{item.id} / {item.type}</option>
+                  ))}
+                </select>
+                <select value={diffRightSourceId} onChange={(event) => setDiffRightSourceId(event.target.value)}>
+                  <option value="">{t("rightSource")}</option>
+                  {projectSources.map((item) => (
+                    <option key={item.id} value={item.id}>{item.id} / {item.type}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={runMappingDiff}
+                  disabled={
+                    isBusy ||
+                    !selectedMappingTemplateId ||
+                    !diffLeftSourceId ||
+                    !diffRightSourceId ||
+                    diffLeftSourceId === diffRightSourceId
+                  }
+                >
+                  {t("compareMappings")}
+                </button>
+              </div>
+              {mappingDiff ? (
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>{t("rule")}</th>
+                        <th>{t("status")}</th>
+                        <th>{t("changes")}</th>
+                        <th>{t("leftSource")}</th>
+                        <th>{t("rightSource")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {mappingDiff.rows.map((row) => (
+                        <tr key={row.rule_key}>
+                          <td>{row.rule_key}</td>
+                          <td>{row.status}</td>
+                          <td>{row.changes.join(", ") || "-"}</td>
+                          <td>{row.left?.source_fields.join(", ") || "-"}</td>
+                          <td>{row.right?.source_fields.join(", ") || "-"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <EmptyState text={t("mappingDiffEmpty")} />
+              )}
+            </section>
+
             <div className="two-column balanced">
               <section className="card">
                 <CardHeader icon={<Play size={18} />} title={t("conversionJob")} />
                 <div className="build-row">
                   <input value={outputName} onChange={(event) => setOutputName(event.target.value)} />
-                  <button className="button-primary" disabled={isBusy} onClick={buildRecording}>
+                  <button className="button-primary" disabled={isBusy || !mappingConfirmed} onClick={buildRecording}>
                     <Play size={16} />
                     {t("buildArtifacts")}
                   </button>
@@ -1312,6 +1745,70 @@ function App() {
               </section>
             </div>
 
+            <section className="card mapping-template-manager">
+              <CardHeader
+                icon={<ListChecks size={18} />}
+                title={t("mappingTemplateRegistry")}
+                subtitle={`${mappingTemplates.length} ${t("mappingTemplates")}`}
+              />
+              <div className="mapping-template-manager-grid">
+                <div className="extension-form">
+                  <input
+                    placeholder={t("mappingTemplatePathPlaceholder")}
+                    value={mappingTemplatePath}
+                    onChange={(event) => setMappingTemplatePath(event.target.value)}
+                  />
+                  <button onClick={importMappingTemplate} disabled={isBusy}>
+                    <Upload size={16} />
+                    {t("importMappingTemplate")}
+                  </button>
+                  <select
+                    value={selectedMappingTemplateId}
+                    onChange={(event) => setSelectedMappingTemplateId(event.target.value)}
+                  >
+                    <option value="">{t("selectMappingTemplate")}</option>
+                    {mappingTemplates.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name} / {item.source_family}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="inline-actions">
+                    <input
+                      placeholder={t("mappingTemplateExportPath")}
+                      value={mappingTemplateExportPath}
+                      onChange={(event) => setMappingTemplateExportPath(event.target.value)}
+                    />
+                    <button
+                      onClick={exportSelectedMappingTemplate}
+                      disabled={!selectedMappingTemplateId || isBusy}
+                    >
+                      <Download size={16} />
+                      {t("exportMappingTemplate")}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="field-label">{t("mappingTemplateRules")}</label>
+                  <textarea
+                    className="mapping-template-json"
+                    value={mappingTemplateJson}
+                    onChange={(event) => setMappingTemplateJson(event.target.value)}
+                    placeholder={t("mappingTemplateRulesHint")}
+                  />
+                  <div className="actions">
+                    <button
+                      onClick={saveMappingTemplateConfig}
+                      disabled={!selectedMappingTemplateId || !mappingTemplateJson.trim() || isBusy}
+                    >
+                      <Save size={16} />
+                      {t("saveTemplateRules")}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
             <section className="card registry-card">
               <CardHeader
                 icon={<Database size={18} />}
@@ -1428,6 +1925,33 @@ function formatDateTime(value: string, language: Language) {
 
 function renderLimitText(language: Language, shown: number, total: number) {
   return language === "zh" ? `已显示 ${shown} / 共 ${total} 条` : `Showing ${shown} of ${total}`;
+}
+
+function derivedMappingFields(semanticType: string) {
+  const archetypes: Record<string, string> = {
+    scalar: "Scalars",
+    scalar_group: "Scalars",
+    state: "StateChange",
+    text_log: "TextLog",
+    points2d: "Points2D",
+    points3d: "Points3D",
+    trajectory3d: "LineStrips3D",
+    boxes2d: "Boxes2D",
+    transform3d: "Transform3D"
+  };
+  const view =
+    semanticType === "points2d" || semanticType === "boxes2d"
+      ? "Spatial2DView"
+      : ["points3d", "trajectory3d", "transform3d"].includes(semanticType)
+        ? "Spatial3DView"
+        : ["scalar", "scalar_group"].includes(semanticType)
+          ? "TimeSeriesView"
+          : semanticType === "text_log"
+            ? "TextLogView"
+            : semanticType === "state"
+              ? "StateTimelineView"
+              : "DataframeView";
+  return { archetype: archetypes[semanticType] ?? "AnyValues", view };
 }
 
 const NavButton = memo(function NavButton({

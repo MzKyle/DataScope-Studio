@@ -37,6 +37,8 @@ class ConvertRequest:
     output_rrd: str
     app_id: str
     recording_id: str
+    primary_timeline: str | None = None
+    timeline_unit: str = "auto"
 
 
 @dataclass(slots=True)
@@ -47,6 +49,12 @@ class MappingSpec:
     recording_id: str
     primary_timeline: str
     streams: list[dict[str, Any]]
+    schema_version: int = 2
+    timeline_unit: str = "auto"
+    effective_timeline_unit: str | None = None
+    template_id: str | None = None
+    mapping_template_id: str | None = None
+    status: str = "draft"
 
 
 class DataAdapter(Protocol):

@@ -45,9 +45,10 @@ def test_set_row_time_uses_timestamp_for_large_unix_values() -> None:
         [{"time_key": "timestamp", "timeline_source_field": "timestamp"}],
     )
 
-    assert rec.calls[0][0] == "time"
-    assert rec.calls[0][1]["timestamp"].isoformat() == "2026-06-03T21:58:58.361000+00:00"
-    assert "duration" not in rec.calls[0][1]
+    assert rec.calls[0] == ("row", {"sequence": 0})
+    assert rec.calls[1][0] == "time"
+    assert rec.calls[1][1]["timestamp"].isoformat() == "2026-06-03T21:58:58.361000+00:00"
+    assert "duration" not in rec.calls[1][1]
 
 
 class FakeRecording:
@@ -56,3 +57,6 @@ class FakeRecording:
 
     def set_time(self, timeline: str, **kwargs) -> None:
         self.calls.append((timeline, kwargs))
+
+    def disable_timeline(self, timeline: str) -> None:
+        self.calls.append((timeline, {"disabled": True}))
