@@ -43,3 +43,9 @@ def test_resolve_npx_reports_missing_binary(monkeypatch: pytest.MonkeyPatch) -> 
 
     with pytest.raises(RuntimeError, match="Unable to find npx"):
         build_tauri.resolve_npx()
+
+
+def test_default_bundles_uses_nsis_on_windows(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(build_tauri.platform, "system", lambda: "Windows")
+
+    assert build_tauri.default_bundles() == "nsis"

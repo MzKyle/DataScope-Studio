@@ -1,6 +1,6 @@
 # 插件与模板
 
-插件和模板 registry 是 V1.0 的本地扩展骨架，当前目标是可信本地扩展，不实现远程 marketplace。
+插件和模板 registry 是当前版本的本地扩展骨架，目标是可信本地扩展，不实现远程 marketplace。
 
 ## 插件 Manifest
 
@@ -10,7 +10,7 @@
 id: example.adapter
 name: Example Adapter
 version: 0.1.0
-min_datascope_version: 1.0.0
+min_datascope_version: 0.1.0
 entrypoints:
   adapters:
     - module: example_plugin.adapter

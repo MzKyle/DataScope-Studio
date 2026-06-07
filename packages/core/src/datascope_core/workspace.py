@@ -57,6 +57,7 @@ from datascope_core.template_registry import (
 )
 from datascope_core.templates import match_templates, save_blueprint
 from datascope_core.schema_profile import build_schema_profile
+from datascope_core.version import __version__
 
 
 def default_workspace_path() -> Path:
@@ -1415,7 +1416,7 @@ class Workspace:
             recordings = [self.get_recording(row["id"]) for row in conn.execute("select id from recordings where project_id = ?", (project_id,))]
             exports = [_row_to_dict(row) for row in conn.execute("select * from query_exports where project_id = ?", (project_id,))]
         return {
-            "datascope_version": "1.0.0",
+            "datascope_version": __version__,
             "project": project,
             "sources": sources,
             "mappings": mappings,

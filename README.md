@@ -1,133 +1,95 @@
 # DataScope Studio
 
-DataScope Studio is a local-first desktop application for turning heterogeneous robotics,
-industrial, and sensor datasets into inspectable Rerun recordings. It combines a Tauri +
-React desktop shell, a FastAPI backend, a SQLite workspace catalog, Python adapters, and a
-CLI into one repeatable import -> map -> convert -> visualize workflow.
+[English](README.md) | [简体中文](README.zh-CN.md)
 
-## Features
+![DataScope Studio](docs/assets/cover.svg)
 
-| Area | Capability |
+DataScope Studio turns robotics, industrial, and sensor datasets into interactive
+[Rerun](https://rerun.io/) visualizations. Import local data, review the automatically
+generated mapping, build a recording, and open it in Rerun without writing a custom
+visualization script.
+
+[Download DataScope Studio](https://github.com/MzKyle/DataScope-Studio/releases) |
+[Read the documentation](docs/README.md)
+
+## What You Can Do
+
+- Inspect heterogeneous data in one repeatable workflow.
+- Automatically map timestamps, scalar values, states, logs, images, detections, and point clouds.
+- Generate reusable Rerun `.rrd` recordings and `.rbl` blueprints.
+- Organize projects, recordings, jobs, tags, parameters, and query exports locally.
+- Search common conditions such as errors, low battery, detection failures, and state duration.
+- Export and reopen complete DataScope project packages.
+
+## Supported Data
+
+| Source | Examples |
 | --- | --- |
-| Data import | CSV, JSONL, image folders with detection sidecars, point clouds (`PLY`, `PCD`, `NPY`, `NPZ`), and MCAP metadata |
-| Visualization output | Rerun `.rrd` recordings plus `.rbl` blueprints |
-| Local catalog | Projects, sources, streams, mappings, recordings, jobs, tags, params, query exports |
-| Query workflows | Error search, low battery, detection failures, topic summary, state duration, time sync, compare |
-| Extensibility | Local plugin manifests, template registry, batch import, project package export/import |
-| User interfaces | Tauri desktop UI, FastAPI API, and `datascope` CLI |
+| Tables and logs | CSV, JSONL |
+| Computer vision | Image folders with detection sidecars |
+| Point clouds | PLY, PCD, NPY, NPZ files or frame directories |
+| Robotics recordings | MCAP metadata and conversion workflows |
 
-## Architecture
+DataScope is local-first. Source data, mappings, recordings, and the SQLite catalog remain
+in your local workspace unless you explicitly export a project package.
 
-```mermaid
-graph LR
-    UI["apps/desktop<br/>Tauri + React"] --> API["services/api<br/>FastAPI"]
-    CLI["packages/cli<br/>datascope CLI"] --> CORE["packages/core<br/>DataScope core"]
-    API --> CORE
-    CORE --> DB["SQLite workspace<br/>metadata.sqlite"]
-    CORE --> RAW["Workspace files<br/>raw / mappings / recordings / blueprints"]
-    CORE --> RERUN["Rerun SDK<br/>.rrd + .rbl"]
-```
+## Install
 
-## Repository Layout
+Download the installer for your computer from
+[GitHub Releases](https://github.com/MzKyle/DataScope-Studio/releases).
 
-| Path | Purpose |
+| System | Download |
 | --- | --- |
-| `apps/desktop/` | Tauri 2 desktop shell, React UI, Vite build, desktop scripts |
-| `services/api/` | FastAPI application exposing project/source/mapping/recording/query endpoints |
-| `packages/core/` | Python core package with adapters, inference, mapping, workspace, query, Rerun writers |
-| `packages/cli/` | Typer-based `datascope` command line interface |
-| `tests/` | Unit and integration tests plus small fixtures |
-| `docs/` | Docsify documentation site |
+| Windows 10/11 x64 | `DataScope-Studio-v0.1.0-windows-x86_64-setup.exe` |
+| macOS Apple Silicon | `DataScope-Studio-v0.1.0-macos-aarch64.dmg` |
+| macOS Intel | `DataScope-Studio-v0.1.0-macos-x86_64.dmg` |
+| Debian/Ubuntu x64 | `DataScope-Studio-v0.1.0-linux-amd64.deb` |
+| Other Linux x64 | `DataScope-Studio-v0.1.0-linux-x86_64.AppImage` |
 
-## Quick Start
+The installer includes the desktop application, local API, Python runtime, and Rerun.
+Python, Node.js, npm, and Rerun do not need to be installed separately.
 
-### Installable Desktop Builds
+The `v0.1.0` packages are unsigned prerelease builds:
 
-Release installers are built with the local API and Rerun runtime bundled inside the
-desktop app:
-
-| Platform | Artifact |
-| --- | --- |
-| Linux | `.deb` and `.AppImage` |
-| Windows | `.msi` |
-| macOS | `.dmg` |
-
-After installing, launch **DataScope Studio** from the system app menu. The desktop process
-starts the bundled FastAPI backend on a free localhost port and uses the bundled Rerun CLI
-when opening recordings or converting MCAP files. Users do not need to install Python,
-Node, npm, or Rerun separately.
-
-To build an installer on the current platform:
+- **Windows:** if SmartScreen appears, choose **More info** and then **Run anyway** after
+  confirming the installer came from this repository.
+- **macOS:** drag DataScope Studio to Applications. On first launch, Control-click the app,
+  choose **Open**, and confirm. You can also allow it under **System Settings > Privacy &
+  Security**.
+- **Linux AppImage:** make it executable before launching:
 
 ```bash
-cd apps/desktop
-npm install
-npm run runtime:build
-npm run tauri:build
+chmod +x DataScope-Studio-v0.1.0-linux-x86_64.AppImage
+./DataScope-Studio-v0.1.0-linux-x86_64.AppImage
 ```
 
-`npm run tauri:build` builds the expected bundle type for the current host platform
-instead of every Tauri target. Linux builds `.deb` and `.AppImage`; Windows builds `.msi`;
-macOS builds `.dmg`.
-
-For a faster development-only runtime that uses the current Python interpreter:
+For the Debian package:
 
 ```bash
-cd apps/desktop
-npm run runtime:build:dev
+sudo apt install ./DataScope-Studio-v0.1.0-linux-amd64.deb
 ```
 
-### Development
+## First Visualization
 
-```bash
-python3 -m venv .venv
-. .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r requirements-dev.txt
+1. Open DataScope Studio and create or select a project.
+2. Choose a CSV, JSONL, image folder, point cloud, or MCAP source.
+3. Select **Import & Auto Map**.
+4. Review the detected streams and preview. Correct the time field or semantic mapping if needed.
+5. Select **Validate Mapping**, then **Confirm Mapping**.
+6. Select **Build .rrd + .rbl**.
+7. Select **Open in Rerun** to inspect the result.
 
-cd apps/desktop
-npm install
-npm run tauri:dev
-```
-
-The Tauri process starts the local API automatically from the packaged runtime or the
-development `.venv`. For backend-only development:
-
-```bash
-. .venv/bin/activate
-uvicorn datascope_api.main:app --reload --host 127.0.0.1 --port 8000
-```
-
-## CLI Examples
-
-```bash
-datascope inspect tests/fixtures/sample_sensor.csv
-datascope import tests/fixtures/sample_sensor.csv --project demo --template sensor_monitor --out run_001
-datascope recordings --project demo
-datascope project export --project demo --out ~/DataScopeExports
-```
-
-## Validation
-
-```bash
-pytest -q
-cd apps/desktop && npm run build
-npm run runtime:build:dev
-cd apps/desktop/src-tauri && cargo check
-git diff --check
-```
+Projects are stored under `~/.datascope-studio` by default. Existing project packages can
+be reopened from **Open Package** on the dashboard.
 
 ## Documentation
 
-Open the documentation site locally:
-
-```bash
-cd docs
-python3 -m http.server 4173
-```
-
-Then visit `http://127.0.0.1:4173/`.
+- [Installation and packaging](docs/guide/package-install.md)
+- [Import and conversion workflow](docs/workflow/import-convert.md)
+- [Troubleshooting](docs/faq/troubleshooting.md)
+- [Developer setup](docs/guide/run-app.md)
+- [Architecture and API documentation](docs/architecture/README.md)
 
 ## License
 
-DataScope Studio is licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE).
+DataScope Studio is licensed under the [Apache License 2.0](LICENSE).

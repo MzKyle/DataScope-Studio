@@ -4,6 +4,8 @@
 
 DataScope Studio 是一个本地优先的数据可视化工作台，用来把 CSV、JSONL、图像检测数据、点云和 MCAP 元数据转换成 Rerun `.rrd` recording 与 `.rbl` blueprint，并在本地 SQLite catalog 中管理项目、recording、mapping、查询结果和导出包。
 
+[下载桌面安装包](https://github.com/MzKyle/DataScope-Studio/releases)
+
 ## 适用场景
 
 - 工业设备、机器人、传感器数据的本地检查与归档。
@@ -24,11 +26,11 @@ DataScope Studio 是一个本地优先的数据可视化工作台，用来把 CS
 
 ## 快速导航
 
-- [环境依赖](guide/prerequisites.md)
 - [安装与打包](guide/package-install.md)
+- [导入与转换](workflow/import-convert.md)
+- [故障排查](faq/troubleshooting.md)
+- [环境依赖](guide/prerequisites.md)
 - [开发运行](guide/run-app.md)
 - [架构总览](architecture/README.md)
-- [导入与转换](workflow/import-convert.md)
 - [HTTP API](interfaces/api.md)
 - [CLI 命令](interfaces/cli.md)
-- [故障排查](faq/troubleshooting.md)

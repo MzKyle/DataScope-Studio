@@ -28,7 +28,7 @@ def default_bundles() -> str:
     if system == "linux":
         return "deb,appimage"
     if system == "windows":
-        return "msi"
+        return "nsis"
     if system == "darwin":
         return "dmg"
     raise RuntimeError(f"Unsupported Tauri bundle platform: {platform.system()}")

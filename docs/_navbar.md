@@ -1,5 +1,5 @@
 - [首页](/)
-- [快速入门](guide/prerequisites.md)
+- [下载安装](guide/package-install.md)
 - [架构](architecture/README.md)
 - [模块](modules/README.md)
 - [接口](interfaces/api.md)

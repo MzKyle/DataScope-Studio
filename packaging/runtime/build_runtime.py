@@ -18,6 +18,7 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUTPUT = REPO_ROOT / "apps/desktop/src-tauri/resources/datascope-runtime"
 PBS_API = "https://api.github.com/repos/astral-sh/python-build-standalone/releases"
+DATASCOPE_VERSION = (REPO_ROOT / "VERSION").read_text(encoding="utf-8").strip()
 
 
 def main() -> None:
@@ -287,7 +288,7 @@ def build_manifest(
 
     return {
         "name": "datascope-runtime",
-        "datascope_version": "1.0.0",
+        "datascope_version": DATASCOPE_VERSION,
         "runtime_kind": runtime_kind,
         "source_asset": source_asset,
         "platform": platform.platform(),

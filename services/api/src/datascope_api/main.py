@@ -10,6 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+from datascope_core.version import __version__
+
 from datascope_core.mapping import mapping_from_yaml_dict, mapping_to_yaml_dict
 from datascope_core.mapping_validation import MappingValidationError
 from datascope_core.viewer import open_recording
@@ -130,7 +132,7 @@ class ProjectImportRequest(BaseModel):
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="DataScope Studio API", version="1.0.0")
+    app = FastAPI(title="DataScope Studio API", version=__version__)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[

@@ -2,9 +2,11 @@
   - [项目简介](/)
 
 - **快速入门**
+  - [下载安装](guide/package-install.md)
+  - [导入与转换](workflow/import-convert.md)
+  - [故障排查](faq/troubleshooting.md)
   - [环境依赖](guide/prerequisites.md)
   - [开发运行](guide/run-app.md)
-  - [安装与打包](guide/package-install.md)
 
 - **系统架构**
   - [架构总览](architecture/README.md)
@@ -34,10 +36,6 @@
   - [Mapping YAML](interfaces/mapping-yaml.md)
 
 - **工作流程**
-  - [导入与转换](workflow/import-convert.md)
   - [查询与导出](workflow/query-export.md)
   - [项目导出与导入](workflow/package-import-export.md)
   - [测试验收](workflow/testing.md)
-
-- **日志与诊断**
-  - [故障排查 FAQ](faq/troubleshooting.md)
