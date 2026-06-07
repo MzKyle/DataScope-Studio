@@ -192,6 +192,25 @@ def test_tabular_geometry_logging(monkeypatch) -> None:
     assert rec.logs == [("/world/point", ("Points3D", [[1.0, 2.0, 3.0]]))]
 
 
+def test_state_logging_falls_back_for_rerun_without_state_change(monkeypatch) -> None:
+    fake_rerun = SimpleNamespace(TextLog=lambda value: ("TextLog", value))
+    monkeypatch.setitem(sys.modules, "rerun", fake_rerun)
+    rec = FakeLogRecording()
+
+    _log_mapping(
+        rec,
+        pd.Series({"status": "RUNNING"}),
+        {
+            "enabled": True,
+            "semantic_type": "state",
+            "source_fields": ["status"],
+            "entity_path": "/states/status",
+        },
+    )
+
+    assert rec.logs == [("/states/status", ("TextLog", "RUNNING"))]
+
+
 def test_point_cloud_adapter_validation_reports_missing_xyz(tmp_path: Path) -> None:
     path = tmp_path / "invalid.ply"
     path.write_text(

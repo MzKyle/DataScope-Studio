@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
 
 import pytest
@@ -49,3 +50,15 @@ def test_default_bundles_uses_nsis_on_windows(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setattr(build_tauri.platform, "system", lambda: "Windows")
 
     assert build_tauri.default_bundles() == "nsis"
+
+
+def test_windows_nsis_bundle_has_required_icon() -> None:
+    repo_root = MODULE_PATH.parents[2]
+    config = json.loads(
+        (repo_root / "apps/desktop/src-tauri/tauri.conf.json").read_text(encoding="utf-8")
+    )
+
+    assert config["bundle"]["windows"]["nsis"]["installMode"] == "currentUser"
+    assert config["bundle"]["windows"]["webviewInstallMode"]["type"] == "embedBootstrapper"
+    assert "icons/icon.ico" in config["bundle"]["icon"]
+    assert (repo_root / "apps/desktop/src-tauri/icons/icon.ico").is_file()

@@ -15,7 +15,8 @@ dependencies = [
   "Pillow>=8.0,<13",
   "pydantic>=2.6,<3",
   "PyYAML>=6.0,<7",
-  "rerun-sdk>=0.32,<0.33",
+  "rerun-sdk>=0.32,<0.33; sys_platform != 'darwin' or platform_machine != 'x86_64'",
+  "rerun-sdk==0.26.2; sys_platform == 'darwin' and platform_machine == 'x86_64'",
 ]
 
 [tool.setuptools.packages.find]

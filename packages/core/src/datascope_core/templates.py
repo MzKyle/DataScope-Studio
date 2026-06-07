@@ -120,15 +120,14 @@ def save_sensor_monitor_blueprint(spec: MappingSpec, path: str | Path) -> None:
     if scalar_paths:
         views.append(rrb.TimeSeriesView(name="Metrics", origin="/metrics"))
     if state_paths:
-        views.append(rrb.TimeSeriesView(name="States", origin="/states"))
+        views.append(_state_view(rrb, name="States", origin="/states"))
     if log_paths:
         views.append(rrb.TextLogView(name="Logs", origin="/logs"))
     if not views:
         views.append(rrb.TimeSeriesView(name="Data", origin="/"))
 
     blueprint = rrb.Blueprint(rrb.Grid(*views), collapse_panels=True)
-    Path(path).parent.mkdir(parents=True, exist_ok=True)
-    blueprint.save(spec.app_id, path)
+    _save_blueprint(blueprint, spec.app_id, path)
 
 
 def save_cv_detection_blueprint(spec: MappingSpec, path: str | Path) -> None:
@@ -146,8 +145,7 @@ def save_cv_detection_blueprint(spec: MappingSpec, path: str | Path) -> None:
         views.append(rrb.TimeSeriesView(name="Prediction Scores", origin="/camera/pred/scores"))
 
     blueprint = rrb.Blueprint(rrb.Grid(*views, grid_columns=1), collapse_panels=True)
-    Path(path).parent.mkdir(parents=True, exist_ok=True)
-    blueprint.save(spec.app_id, path)
+    _save_blueprint(blueprint, spec.app_id, path)
 
 
 def save_robotics_debug_blueprint(spec: MappingSpec, path: str | Path) -> None:
@@ -169,8 +167,7 @@ def save_robotics_debug_blueprint(spec: MappingSpec, path: str | Path) -> None:
         views.append(rrb.TextLogView(name="Diagnostics", origin="/logs"))
 
     blueprint = rrb.Blueprint(rrb.Grid(*views, grid_columns=2), collapse_panels=True)
-    Path(path).parent.mkdir(parents=True, exist_ok=True)
-    blueprint.save(spec.app_id, path)
+    _save_blueprint(blueprint, spec.app_id, path)
 
 
 def save_experiment_compare_blueprint(spec: MappingSpec, path: str | Path) -> None:
@@ -179,18 +176,29 @@ def save_experiment_compare_blueprint(spec: MappingSpec, path: str | Path) -> No
     blueprint = rrb.Blueprint(
         rrb.Grid(
             rrb.TimeSeriesView(name="Comparison Metrics", origin="/metrics"),
-            rrb.TimeSeriesView(name="State Comparison", origin="/states"),
+            _state_view(rrb, name="State Comparison", origin="/states"),
             grid_columns=1,
         ),
         collapse_panels=True,
     )
-    Path(path).parent.mkdir(parents=True, exist_ok=True)
-    blueprint.save(spec.app_id, path)
+    _save_blueprint(blueprint, spec.app_id, path)
 
 
 def save_generic_blueprint(spec: MappingSpec, path: str | Path) -> None:
     import rerun.blueprint as rrb
 
     blueprint = rrb.Blueprint(rrb.Grid(rrb.TimeSeriesView(name="Data", origin="/")), collapse_panels=True)
-    Path(path).parent.mkdir(parents=True, exist_ok=True)
-    blueprint.save(spec.app_id, path)
+    _save_blueprint(blueprint, spec.app_id, path)
+
+
+def _state_view(rrb, *, name: str, origin: str):
+    import rerun as rr
+
+    view_type = rrb.TimeSeriesView if hasattr(rr, "StateChange") else rrb.TextLogView
+    return view_type(name=name, origin=origin)
+
+
+def _save_blueprint(blueprint, app_id: str, path: str | Path) -> None:
+    output = Path(path)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    blueprint.save(app_id, str(output))

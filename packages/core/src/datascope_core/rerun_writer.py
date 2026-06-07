@@ -88,7 +88,13 @@ def _log_mapping(rec: Any, row: pd.Series, mapping: dict[str, Any]) -> None:
     elif semantic_type == "state":
         value = _first_present(row, fields)
         if value is not None and pd.notna(value):
-            rec.log(entity_path, rr.StateChange(state=str(value)))
+            state_change = getattr(rr, "StateChange", None)
+            archetype = (
+                state_change(state=str(value))
+                if state_change is not None
+                else rr.TextLog(str(value))
+            )
+            rec.log(entity_path, archetype)
     elif semantic_type == "text_log":
         message = _message_from_fields(row, fields)
         if message:

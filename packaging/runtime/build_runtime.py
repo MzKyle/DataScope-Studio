@@ -2,23 +2,30 @@
 from __future__ import annotations
 
 import argparse
+import http.client
 import json
 import os
 import platform
 import shutil
+import ssl
 import subprocess
 import sys
 import tarfile
 import tempfile
+import time
+import urllib.error
 import urllib.request
 import venv
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, TypeVar
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUTPUT = REPO_ROOT / "apps/desktop/src-tauri/resources/datascope-runtime"
 PBS_API = "https://api.github.com/repos/astral-sh/python-build-standalone/releases"
 DATASCOPE_VERSION = (REPO_ROOT / "VERSION").read_text(encoding="utf-8").strip()
+NETWORK_ATTEMPTS = 5
+RETRYABLE_HTTP_STATUS = {408, 425, 429}
+T = TypeVar("T")
 
 
 def main() -> None:
@@ -103,11 +110,16 @@ def select_python_asset(python_version: str, release: str) -> dict[str, str]:
         release_url,
         headers={
             "Accept": "application/vnd.github+json",
+            "User-Agent": "DataScope-Studio-runtime-builder",
             **({"Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}"} if os.environ.get("GITHUB_TOKEN") else {}),
         },
     )
-    with urllib.request.urlopen(request, timeout=60) as response:
-        payload = json.loads(response.read().decode("utf-8"))
+    payload = json.loads(
+        retry_network_operation(
+            lambda: read_url(request, timeout=60),
+            description=f"fetch python-build-standalone release {release}",
+        ).decode("utf-8")
+    )
 
     target = target_triple()
     assets = payload.get("assets", [])
@@ -155,8 +167,60 @@ def target_triple() -> str:
 
 
 def download(url: str, path: Path) -> None:
-    with urllib.request.urlopen(url, timeout=300) as response, path.open("wb") as file:
-        shutil.copyfileobj(response, file)
+    partial = path.with_name(f"{path.name}.part")
+
+    def transfer() -> None:
+        partial.unlink(missing_ok=True)
+        request = urllib.request.Request(url, headers={"User-Agent": "DataScope-Studio-runtime-builder"})
+        with urllib.request.urlopen(request, timeout=300) as response, partial.open("wb") as file:
+            shutil.copyfileobj(response, file)
+
+    try:
+        retry_network_operation(transfer, description=f"download {path.name}")
+        partial.replace(path)
+    finally:
+        partial.unlink(missing_ok=True)
+
+
+def read_url(request: urllib.request.Request, timeout: int) -> bytes:
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        return response.read()
+
+
+def retry_network_operation(
+    operation: Callable[[], T],
+    description: str,
+    attempts: int = NETWORK_ATTEMPTS,
+    sleep: Callable[[float], None] = time.sleep,
+) -> T:
+    if attempts < 1:
+        raise ValueError("attempts must be at least 1")
+
+    for attempt in range(1, attempts + 1):
+        try:
+            return operation()
+        except (
+            urllib.error.URLError,
+            TimeoutError,
+            ConnectionError,
+            http.client.IncompleteRead,
+            http.client.RemoteDisconnected,
+            ssl.SSLError,
+        ) as error:
+            if isinstance(error, urllib.error.HTTPError):
+                if error.code < 500 and error.code not in RETRYABLE_HTTP_STATUS:
+                    raise
+            if attempt == attempts:
+                raise
+            delay = min(2 ** (attempt - 1), 30)
+            print(
+                f"Network error while trying to {description} "
+                f"(attempt {attempt}/{attempts}): {error}. Retrying in {delay}s.",
+                file=sys.stderr,
+            )
+            sleep(delay)
+
+    raise AssertionError("retry loop exited unexpectedly")
 
 
 def extract_tarball(archive: Path, destination: Path) -> None:
@@ -196,9 +260,30 @@ def python_executable(runtime_dir: Path) -> Path:
 
 def install_runtime_packages(python: Path, wheelhouse: Path | None, index_url: str | None) -> None:
     run([python, "-m", "ensurepip", "--upgrade"])
-    run([python, "-m", "pip", "install", "--upgrade", "pip", "setuptools", "wheel"])
+    pip_network_options = ["--retries", "10", "--timeout", "60"]
+    run(
+        [
+            python,
+            "-m",
+            "pip",
+            "install",
+            *pip_network_options,
+            "--upgrade",
+            "pip",
+            "setuptools",
+            "wheel",
+        ]
+    )
 
-    pip_install = [python, "-m", "pip", "install", "--no-cache-dir", "--ignore-installed"]
+    pip_install = [
+        python,
+        "-m",
+        "pip",
+        "install",
+        *pip_network_options,
+        "--no-cache-dir",
+        "--ignore-installed",
+    ]
     if index_url:
         pip_install.extend(["--index-url", index_url])
     if wheelhouse:
