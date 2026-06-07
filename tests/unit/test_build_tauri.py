@@ -52,6 +52,48 @@ def test_default_bundles_uses_nsis_on_windows(monkeypatch: pytest.MonkeyPatch) -
     assert build_tauri.default_bundles() == "nsis"
 
 
+def test_macos_dmg_builds_app_before_native_packaging(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(build_tauri.platform, "system", lambda: "Darwin")
+
+    assert build_tauri.build_bundles("dmg") == "app"
+    assert build_tauri.use_native_macos_dmg("dmg") is True
+
+
+def test_create_macos_dmg_uses_hdiutil_without_mounting(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    app = bundle_root / "macos/DataScope Studio.app"
+    app.mkdir(parents=True)
+    (app / "Contents").mkdir()
+    commands: list[list[str]] = []
+
+    def fake_run(command, check):
+        commands.append(command)
+        Path(command[-1]).write_bytes(b"dmg")
+
+    monkeypatch.setattr(build_tauri.platform, "machine", lambda: "x86_64")
+    monkeypatch.setattr(build_tauri.subprocess, "run", fake_run)
+
+    output = build_tauri.create_macos_dmg(bundle_root)
+
+    assert output.name == "DataScope Studio_0.1.0_x64.dmg"
+    assert app.is_dir()
+    assert len(commands) == 1
+    command = commands[0]
+    assert command[:5] == [
+        "hdiutil",
+        "create",
+        "-volname",
+        "DataScope Studio",
+        "-srcfolder",
+    ]
+    assert Path(command[5]).parent == bundle_root / "macos"
+    assert Path(command[5]).name.startswith(".datascope-dmg-")
+    assert command[6:] == ["-ov", "-format", "UDZO", str(output)]
+
+
 def test_windows_nsis_bundle_has_required_icon() -> None:
     repo_root = MODULE_PATH.parents[2]
     config = json.loads(
