@@ -2,7 +2,7 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-![DataScope Studio](docs/assets/cover.svg)
+![DataScope Studio](docs/assets/cover.png)
 
 DataScope Studio turns robotics, industrial, and sensor datasets into interactive
 [Rerun](https://rerun.io/) visualizations. Import local data, review the automatically

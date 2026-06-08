@@ -2,7 +2,7 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-![DataScope Studio](docs/assets/cover.svg)
+![DataScope Studio](docs/assets/cover.png)
 
 DataScope Studio 用于把机器人、工业设备和传感器数据转换成可交互的
 [Rerun](https://rerun.io/) 可视化。选择本地数据，检查自动生成的 Mapping，构建
