@@ -173,7 +173,7 @@ function App() {
     if (selectedProjectId && activeSection === "recordings") {
       refreshProjectData(selectedProjectId, true);
     }
-    if (activeSection === "templates" || activeSection === "settings") {
+    if (activeSection === "templates") {
       refreshExtensionData();
     }
   }, [activeSection]);
@@ -283,9 +283,9 @@ function App() {
   async function refreshAll() {
     await refreshProjects();
     if (selectedProjectId) await refreshProjectData(selectedProjectId);
-    if (activeSection === "templates" || activeSection === "settings") {
+    if (activeSection === "templates") {
       await refreshExtensionData();
-    } else {
+    } else if (activeSection !== "settings") {
       await refreshTemplateRegistry();
     }
   }
@@ -1652,7 +1652,7 @@ function App() {
           </section>
           )}
 
-          {(activeSection === "templates" || activeSection === "settings") && (
+          {activeSection === "templates" && (
           <section className="section-stack" id="templates">
             <SectionTitle
               eyebrow={t("workspace")}
@@ -1684,44 +1684,12 @@ function App() {
                 )}
               </section>
 
-              <section className="card" id="settings">
-                <CardHeader icon={<Settings size={18} />} title={t("settings")} subtitle={t("settingsSubtitle")} />
-                <div className="settings-block">
-                  <div>
-                    <strong>{t("language")}</strong>
-                    <span>{t("languageSubtitle")}</span>
-                  </div>
-                  <div className="segmented-control" role="group" aria-label={t("language")}>
-                    {languageOptions.map((option) => (
-                      <button
-                        key={option.value}
-                        className={language === option.value ? "is-selected" : ""}
-                        onClick={() => setLanguage(option.value)}
-                        type="button"
-                      >
-                        {option.value === "zh" ? t("chinese") : t("english")}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="settings-block vertical">
-                  <div>
-                    <strong>{t("defaultExportPath")}</strong>
-                    <span>{t("defaultExportPathSubtitle")}</span>
-                  </div>
-                  <div className="settings-path-control">
-                    <input
-                      placeholder={t("exportPathPlaceholder")}
-                      value={defaultExportDir}
-                      onChange={(event) => setDefaultExportDir(event.target.value)}
-                      onBlur={(event) => setDefaultExportDir(normalizeSourcePathInput(event.target.value))}
-                    />
-                    <button type="button" onClick={chooseExportFolder} disabled={isBusy}>
-                      <FolderOpen size={16} />
-                      {t("selectExportFolder")}
-                    </button>
-                  </div>
-                </div>
+              <section className="card">
+                <CardHeader
+                  icon={<Save size={18} />}
+                  title={t("extensionRegistry")}
+                  subtitle={t("extensionRegistrySubtitle")}
+                />
                 <div className="extension-form">
                   <input
                     placeholder={t("pluginPathPlaceholder")}
@@ -1860,6 +1828,59 @@ function App() {
               {!plugins.length && !templateRegistry.length && (
                 <EmptyState text={t("registryEmpty")} />
               )}
+            </section>
+          </section>
+          )}
+
+          {activeSection === "settings" && (
+          <section className="section-stack" id="settings">
+            <SectionTitle
+              eyebrow={t("workspace")}
+              title={t("settings")}
+              subtitle={t("settingsSubtitle")}
+            />
+            <section className="card">
+              <CardHeader
+                icon={<Settings size={18} />}
+                title={t("preferences")}
+                subtitle={t("preferencesSubtitle")}
+              />
+              <div className="settings-block">
+                <div>
+                  <strong>{t("language")}</strong>
+                  <span>{t("languageSubtitle")}</span>
+                </div>
+                <div className="segmented-control" role="group" aria-label={t("language")}>
+                  {languageOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      className={language === option.value ? "is-selected" : ""}
+                      onClick={() => setLanguage(option.value)}
+                      type="button"
+                    >
+                      {option.value === "zh" ? t("chinese") : t("english")}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="settings-block vertical">
+                <div>
+                  <strong>{t("defaultExportPath")}</strong>
+                  <span>{t("defaultExportPathSubtitle")}</span>
+                </div>
+                <div className="settings-path-control">
+                  <input
+                    placeholder={t("exportPathPlaceholder")}
+                    value={defaultExportDir}
+                    onChange={(event) => setDefaultExportDir(event.target.value)}
+                    onBlur={(event) => setDefaultExportDir(normalizeSourcePathInput(event.target.value))}
+                  />
+                  <button type="button" onClick={chooseExportFolder} disabled={isBusy}>
+                    <FolderOpen size={16} />
+                    {t("selectExportFolder")}
+                  </button>
+                </div>
+              </div>
             </section>
           </section>
           )}
