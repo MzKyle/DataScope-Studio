@@ -15,7 +15,7 @@ from datascope_core.version import __version__
 from datascope_core.mapping import mapping_from_yaml_dict, mapping_to_yaml_dict
 from datascope_core.mapping_validation import MappingValidationError
 from datascope_core.viewer import open_recording
-from datascope_core.workspace import Workspace
+from datascope_core.workspace import ArtifactConflictError, Workspace
 
 
 class ProjectCreate(BaseModel):
@@ -495,6 +495,18 @@ def _guard(operation):
         raise HTTPException(
             status_code=404,
             detail={"error": {"code": "not_found", "message": str(exc)}},
+        ) from exc
+    except ArtifactConflictError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": {
+                    "code": "artifact_name_conflict",
+                    "message": str(exc),
+                    "output_name": exc.output_name,
+                    "paths": exc.paths,
+                }
+            },
         ) from exc
     except ValueError as exc:
         raise HTTPException(

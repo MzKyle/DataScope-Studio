@@ -30,7 +30,8 @@ import {
   getInitialLanguage,
   languageOptions,
   saveLanguage,
-  type Language
+  type Language,
+  type TranslationKey
 } from "./i18n";
 import type {
   BatchResult,
@@ -38,8 +39,10 @@ import type {
   Job,
   MappingPayload,
   MappingDiff,
+  MappingSuggestion,
   MappingTemplateItem,
   MappingValidation,
+  MappingValidationIssue,
   Plugin,
   Project,
   ProjectExportResult,
@@ -57,17 +60,31 @@ const supportedFormats = ["CSV", "JSONL", "Images", "PLY", "PCD", "NPZ", "MCAP",
 const thresholdTemplates = new Set(["low_battery", "detection_failure"]);
 const TABLE_RENDER_LIMIT = 100;
 const DEFAULT_EXPORT_DIR_KEY = "datascope.defaultExportDir";
-const semanticTypes = [
-  "scalar",
-  "scalar_group",
-  "state",
-  "text_log",
-  "points2d",
-  "points3d",
-  "trajectory3d",
-  "boxes2d",
-  "transform3d"
-];
+const semanticTypesByFamily: Record<string, string[]> = {
+  tabular: [
+    "scalar",
+    "scalar_group",
+    "state",
+    "text_log",
+    "points2d",
+    "points3d",
+    "trajectory3d",
+    "boxes2d",
+    "transform3d"
+  ],
+  image_folder: ["image", "boxes2d", "points2d", "segmentation", "scalar"],
+  point_cloud: ["points3d"],
+  mcap: [
+    "mcap",
+    "image",
+    "points3d",
+    "transform3d",
+    "trajectory3d",
+    "asset3d",
+    "scalar_group",
+    "text_log"
+  ]
+};
 const timeUnits = ["auto", "relative_s", "unix_s", "unix_ms", "unix_us", "unix_ns", "datetime"];
 
 function App() {
@@ -155,6 +172,10 @@ function App() {
     () => (previewRows.length ? JSON.stringify(previewRows.slice(0, 8), null, 2) : ""),
     [previewRows]
   );
+  const supportedSemanticTypes =
+    mappingValidation?.supported_semantic_types ??
+    semanticTypesByFamily[schemaProfile?.source_family ?? "tabular"] ??
+    semanticTypesByFamily.tabular;
   const isBusy = Boolean(busy);
 
   useEffect(() => {
@@ -469,6 +490,9 @@ function App() {
         .split(",")
         .map((field) => field.trim())
         .filter(Boolean);
+      next.mapping.streams[index].match_ambiguous = false;
+      next.mapping.streams[index].match_candidates = [];
+      next.mapping.streams[index].template_missing_fields = [];
     } else if (key === "enabled") {
       next.mapping.streams[index].enabled = Boolean(value);
     } else {
@@ -486,16 +510,98 @@ function App() {
     setMappingValidation(null);
   }
 
-  function updateTimeline(key: "source_field" | "unit", value: string) {
+  function updateTimeline(key: "source_field" | "unit" | "sort", value: string) {
     if (!mapping) return;
     const next = structuredClone(mapping);
-    next.mapping.timelines.primary[key] = value;
+    if (key === "sort") {
+      next.mapping.timelines.primary.sort = value as "source" | "ascending";
+    } else {
+      next.mapping.timelines.primary[key] = value;
+    }
     if (key === "source_field") next.mapping.timelines.primary.name = value;
+    next.mapping.timelines.primary.effective_unit = null;
     next.mapping.status = "draft";
     setMapping(next);
     setSavedMappingId("");
     setMappingConfirmed(false);
     setMappingValidation(null);
+  }
+
+  async function applyMappingSuggestion(suggestion: MappingSuggestion) {
+    if (!source || !mapping) return;
+    const next = structuredClone(mapping);
+    const params = suggestion.params;
+    const streamIndex = params.stream_id
+      ? next.mapping.streams.findIndex((stream) => stream.stream_id === params.stream_id)
+      : -1;
+
+    switch (suggestion.action) {
+      case "set_timeline_field":
+        next.mapping.timelines.primary.source_field = params.field ?? "";
+        next.mapping.timelines.primary.name = params.field ?? "";
+        next.mapping.timelines.primary.effective_unit = null;
+        break;
+      case "set_timeline_unit":
+        if (params.unit) next.mapping.timelines.primary.unit = params.unit;
+        next.mapping.timelines.primary.effective_unit = null;
+        break;
+      case "set_timeline_sort":
+        next.mapping.timelines.primary.sort = params.sort ?? "source";
+        break;
+      case "replace_source_field":
+        if (streamIndex >= 0 && params.new_field) {
+          const stream = next.mapping.streams[streamIndex];
+          const fields = stream.source_fields;
+          const oldIndex = fields.indexOf(params.old_field ?? "");
+          if (oldIndex >= 0) {
+            fields[oldIndex] = params.new_field;
+          } else if (!fields.includes(params.new_field)) {
+            fields.push(params.new_field);
+          }
+          stream.template_missing_fields = (stream.template_missing_fields ?? []).filter(
+            (field) => field !== params.old_field
+          );
+          stream.match_candidates = (stream.match_candidates ?? []).filter(
+            (match) => match.field !== params.old_field
+          );
+          stream.match_ambiguous = Boolean(stream.match_candidates.length);
+        }
+        break;
+      case "set_source_fields":
+        if (streamIndex >= 0) {
+          next.mapping.streams[streamIndex].source_fields = params.fields ?? [];
+        }
+        break;
+      case "set_entity_path":
+        if (streamIndex >= 0 && params.entity_path) {
+          next.mapping.streams[streamIndex].entity_path = params.entity_path;
+        }
+        break;
+      case "set_semantic_type":
+        if (streamIndex >= 0 && params.semantic_type) {
+          const stream = next.mapping.streams[streamIndex];
+          const derived = derivedMappingFields(params.semantic_type);
+          stream.semantic_type = params.semantic_type;
+          stream.archetype = derived.archetype;
+          stream.view = derived.view;
+        }
+        break;
+      case "set_stream_enabled":
+        if (streamIndex >= 0 && typeof params.enabled === "boolean") {
+          next.mapping.streams[streamIndex].enabled = params.enabled;
+        }
+        break;
+    }
+
+    next.mapping.status = "draft";
+    setMapping(next);
+    setSavedMappingId("");
+    setMappingConfirmed(false);
+    setMappingValidation(null);
+    const result = await run(t("busyApplyingMappingFix"), () =>
+      api.validateMapping(source.id, next.mapping)
+    );
+    if (result) setMappingValidation(result);
   }
 
   async function changeTemplate(templateId: string) {
@@ -1259,6 +1365,16 @@ function App() {
                           ))}
                         </select>
                       </label>
+                      <label>
+                        <span>{t("timeSort")}</span>
+                        <select
+                          value={mapping.mapping.timelines.primary.sort ?? "source"}
+                          onChange={(event) => updateTimeline("sort", event.target.value)}
+                        >
+                          <option value="source">{t("sourceOrder")}</option>
+                          <option value="ascending">{t("sortAscending")}</option>
+                        </select>
+                      </label>
                       <span className="soft-status">
                         {t("effectiveUnit")}: {mappingValidation?.effective_timeline_unit ?? "pending"}
                       </span>
@@ -1306,10 +1422,10 @@ function App() {
                                     updateMappingStream(index, "semantic_type", event.target.value)
                                   }
                                 >
-                                  {semanticTypes.map((type) => (
+                                  {supportedSemanticTypes.map((type) => (
                                     <option key={type} value={type}>{type}</option>
                                   ))}
-                                  {!semanticTypes.includes(stream.semantic_type) && (
+                                  {!supportedSemanticTypes.includes(stream.semantic_type) && (
                                     <option value={stream.semantic_type}>{stream.semantic_type}</option>
                                   )}
                                 </select>
@@ -1336,18 +1452,24 @@ function App() {
                     </div>
                     {mappingValidation && (
                       <div className={`validation-panel ${mappingValidation.valid ? "is-valid" : "has-errors"}`}>
-                        <strong>
-                          {mappingValidation.valid ? t("mappingValid") : t("mappingInvalid")}
-                        </strong>
-                        <span>
-                          {mappingValidation.summary.errors} {t("errors")} /{" "}
-                          {mappingValidation.summary.warnings} {t("warnings")}
-                        </span>
+                        <div className="validation-summary">
+                          <strong>
+                            {mappingValidation.valid ? t("mappingValid") : t("mappingInvalid")}
+                          </strong>
+                          <span>
+                            {mappingValidation.summary.errors} {t("errors")} /{" "}
+                            {mappingValidation.summary.warnings} {t("warnings")}
+                          </span>
+                        </div>
                         {mappingValidation.issues.map((issue, index) => (
-                          <p key={`${issue.code}-${issue.stream_id ?? index}`}>
-                            <b>{issue.severity.toUpperCase()}</b> {issue.code}:{" "}
-                            {issue.message ?? issue.field ?? ""}
-                          </p>
+                          <MappingIssueCard
+                            key={`${issue.code}-${issue.stream_id ?? issue.field ?? index}-${index}`}
+                            issue={issue}
+                            language={language}
+                            t={t}
+                            isBusy={isBusy}
+                            onApply={applyMappingSuggestion}
+                          />
                         ))}
                       </div>
                     )}
@@ -1720,16 +1842,18 @@ function App() {
                 subtitle={`${mappingTemplates.length} ${t("mappingTemplates")}`}
               />
               <div className="mapping-template-manager-grid">
-                <div className="extension-form">
-                  <input
-                    placeholder={t("mappingTemplatePathPlaceholder")}
-                    value={mappingTemplatePath}
-                    onChange={(event) => setMappingTemplatePath(event.target.value)}
-                  />
-                  <button onClick={importMappingTemplate} disabled={isBusy}>
-                    <Upload size={16} />
-                    {t("importMappingTemplate")}
-                  </button>
+                <div className="mapping-template-controls">
+                  <div className="mapping-template-control-row">
+                    <input
+                      placeholder={t("mappingTemplatePathPlaceholder")}
+                      value={mappingTemplatePath}
+                      onChange={(event) => setMappingTemplatePath(event.target.value)}
+                    />
+                    <button onClick={importMappingTemplate} disabled={isBusy}>
+                      <Upload size={16} />
+                      {t("importMappingTemplate")}
+                    </button>
+                  </div>
                   <select
                     value={selectedMappingTemplateId}
                     onChange={(event) => setSelectedMappingTemplateId(event.target.value)}
@@ -1741,7 +1865,7 @@ function App() {
                       </option>
                     ))}
                   </select>
-                  <div className="inline-actions">
+                  <div className="mapping-template-control-row">
                     <input
                       placeholder={t("mappingTemplateExportPath")}
                       value={mappingTemplateExportPath}
@@ -1756,7 +1880,7 @@ function App() {
                     </button>
                   </div>
                 </div>
-                <div>
+                <div className="mapping-template-rules">
                   <label className="field-label">{t("mappingTemplateRules")}</label>
                   <textarea
                     className="mapping-template-json"
@@ -1944,6 +2068,177 @@ function formatDateTime(value: string, language: Language) {
   });
 }
 
+const validationIssueKeys: Record<string, TranslationKey> = {
+  missing_time_column: "issueMissingTimeColumn",
+  non_monotonic_time: "issueNonMonotonicTime",
+  time_nulls: "issueTimeNulls",
+  time_parse_failure: "issueTimeParseFailure",
+  mixed_time_units: "issueMixedTimeUnits",
+  time_unit_mismatch: "issueTimeUnitMismatch",
+  invalid_timeline_sort: "issueInvalidTimelineSort",
+  unsupported_semantic_type: "issueUnsupportedSemanticType",
+  required_field_missing: "issueRequiredFieldMissing",
+  field_missing: "issueFieldMissing",
+  ambiguous_field_match: "issueAmbiguousFieldMatch",
+  ambiguous_time_match: "issueAmbiguousTimeMatch",
+  required_fields_empty: "issueRequiredFieldsEmpty",
+  fields_empty: "issueFieldsEmpty",
+  field_nulls: "issueFieldNulls",
+  invalid_entity_path: "issueInvalidEntityPath",
+  duplicate_entity_path: "issueDuplicateEntityPath",
+  missing_coordinate_axes: "issueMissingCoordinateAxes",
+  incomplete_rotation: "issueIncompleteRotation",
+  field_unit_mismatch: "issueFieldUnitMismatch",
+  mcap_summary_unavailable: "issueMcapSummaryUnavailable",
+  mcap_topics_unavailable: "issueMcapTopicsUnavailable",
+  point_cloud_sample_warning: "issuePointCloudSampleWarning",
+  point_cloud_coordinates_missing: "issuePointCloudCoordinatesMissing",
+  image_stream_required: "issueImageStreamRequired"
+};
+
+const validationRecommendationKeys: Record<string, TranslationKey> = {
+  missing_time_column: "recommendMissingTimeColumn",
+  non_monotonic_time: "recommendNonMonotonicTime",
+  time_nulls: "recommendTimeNulls",
+  time_parse_failure: "recommendTimeParseFailure",
+  mixed_time_units: "recommendMixedTimeUnits",
+  time_unit_mismatch: "recommendTimeUnitMismatch",
+  invalid_timeline_sort: "recommendInvalidTimelineSort",
+  unsupported_semantic_type: "recommendUnsupportedSemanticType",
+  required_field_missing: "recommendRequiredFieldMissing",
+  field_missing: "recommendFieldMissing",
+  ambiguous_field_match: "recommendAmbiguousFieldMatch",
+  ambiguous_time_match: "recommendAmbiguousTimeMatch",
+  required_fields_empty: "recommendRequiredFieldsEmpty",
+  fields_empty: "recommendFieldsEmpty",
+  field_nulls: "recommendFieldNulls",
+  invalid_entity_path: "recommendInvalidEntityPath",
+  duplicate_entity_path: "recommendDuplicateEntityPath",
+  missing_coordinate_axes: "recommendMissingCoordinateAxes",
+  incomplete_rotation: "recommendIncompleteRotation",
+  field_unit_mismatch: "recommendFieldUnitMismatch",
+  mcap_summary_unavailable: "recommendMcapSummaryUnavailable",
+  mcap_topics_unavailable: "recommendMcapTopicsUnavailable",
+  point_cloud_sample_warning: "recommendPointCloudSampleWarning",
+  point_cloud_coordinates_missing: "recommendPointCloudCoordinatesMissing",
+  image_stream_required: "recommendImageStreamRequired"
+};
+
+function MappingIssueCard({
+  issue,
+  language,
+  t,
+  isBusy,
+  onApply
+}: {
+  issue: MappingValidationIssue;
+  language: Language;
+  t: (key: TranslationKey) => string;
+  isBusy: boolean;
+  onApply: (suggestion: MappingSuggestion) => Promise<void>;
+}) {
+  const suggestions = issue.suggestions ?? [];
+  const useSelector =
+    suggestions.length > 2 &&
+    new Set(suggestions.map((suggestion) => suggestion.action)).size === 1;
+  const location = [issue.stream_id, issue.field].filter(Boolean).join(" / ");
+  return (
+    <article className={`validation-issue is-${issue.severity}`}>
+      <div className="validation-issue-heading">
+        <span className="validation-severity">{issue.severity.toUpperCase()}</span>
+        <strong>{validationIssueKeys[issue.code] ? t(validationIssueKeys[issue.code]) : issue.code}</strong>
+        <code>{issue.code}</code>
+      </div>
+      {location && <span className="validation-location">{location}</span>}
+      {issue.message && <p className="validation-message">{issue.message}</p>}
+      <p className="validation-recommendation">
+        <b>{t("repairSuggestion")}</b>{" "}
+        {validationRecommendationKeys[issue.code]
+          ? t(validationRecommendationKeys[issue.code])
+          : issue.recommendation ?? issue.message ?? issue.code}
+      </p>
+      {suggestions.length > 0 && (
+        <div className="validation-fixes">
+          {useSelector ? (
+            <select
+              value=""
+              aria-label={t("chooseRepair")}
+              disabled={isBusy}
+              onChange={(event) => {
+                const suggestion = suggestions[Number(event.target.value)];
+                if (suggestion) void onApply(suggestion);
+              }}
+            >
+              <option value="">{t("chooseRepair")}</option>
+              {suggestions.map((suggestion, index) => (
+                <option key={`${suggestion.action}-${index}`} value={index}>
+                  {mappingSuggestionLabel(suggestion, language)}
+                </option>
+              ))}
+            </select>
+          ) : (
+            suggestions.map((suggestion, index) => (
+              <button
+                type="button"
+                key={`${suggestion.action}-${index}`}
+                disabled={isBusy}
+                onClick={() => void onApply(suggestion)}
+              >
+                {mappingSuggestionLabel(suggestion, language)}
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </article>
+  );
+}
+
+function mappingSuggestionLabel(suggestion: MappingSuggestion, language: Language) {
+  const params = suggestion.params;
+  const zh = language === "zh";
+  switch (suggestion.action) {
+    case "set_timeline_field":
+      return params.field
+        ? zh
+          ? `使用 ${params.field} 作为时间字段`
+          : `Use ${params.field} as time`
+        : zh
+          ? "使用行序列"
+          : "Use row sequence";
+    case "set_timeline_unit":
+      return zh ? `时间单位设为 ${params.unit}` : `Use ${params.unit}`;
+    case "set_timeline_sort":
+      return params.sort === "ascending"
+        ? zh
+          ? "按时间升序排序"
+          : "Sort by time ascending"
+        : zh
+          ? "保持源顺序"
+          : "Keep source order";
+    case "replace_source_field":
+      return zh ? `改用字段 ${params.new_field}` : `Use field ${params.new_field}`;
+    case "set_source_fields":
+      return zh
+        ? `使用字段 ${(params.fields ?? []).join(", ")}`
+        : `Use fields ${(params.fields ?? []).join(", ")}`;
+    case "set_entity_path":
+      return zh ? `改为 ${params.entity_path}` : `Use ${params.entity_path}`;
+    case "set_semantic_type":
+      return zh ? `类型改为 ${params.semantic_type}` : `Use ${params.semantic_type}`;
+    case "set_stream_enabled":
+      return params.enabled
+        ? zh
+          ? "启用该流"
+          : "Enable stream"
+        : zh
+          ? "禁用可选流"
+          : "Disable optional stream";
+    default:
+      return suggestion.label;
+  }
+}
+
 function renderLimitText(language: Language, shown: number, total: number) {
   return language === "zh" ? `已显示 ${shown} / 共 ${total} 条` : `Showing ${shown} of ${total}`;
 }
@@ -1954,14 +2249,18 @@ function derivedMappingFields(semanticType: string) {
     scalar_group: "Scalars",
     state: "StateChange",
     text_log: "TextLog",
+    image: "EncodedImage",
     points2d: "Points2D",
+    segmentation: "SegmentationImage",
     points3d: "Points3D",
+    asset3d: "Asset3D",
     trajectory3d: "LineStrips3D",
     boxes2d: "Boxes2D",
-    transform3d: "Transform3D"
+    transform3d: "Transform3D",
+    mcap: "AnyValues"
   };
   const view =
-    semanticType === "points2d" || semanticType === "boxes2d"
+    ["image", "points2d", "boxes2d", "segmentation"].includes(semanticType)
       ? "Spatial2DView"
       : ["points3d", "trajectory3d", "transform3d"].includes(semanticType)
         ? "Spatial3DView"

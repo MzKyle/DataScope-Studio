@@ -73,6 +73,7 @@ def mapping_to_yaml_dict(spec: MappingSpec) -> dict[str, Any]:
                     "name": spec.primary_timeline,
                     "source_field": spec.primary_timeline,
                     "unit": spec.timeline_unit,
+                    "sort": spec.timeline_sort,
                     "effective_unit": spec.effective_timeline_unit,
                 }
             },
@@ -87,16 +88,22 @@ def mapping_from_yaml_dict(data: dict[str, Any]) -> MappingSpec:
     primary = mapping.get("timelines", {}).get("primary", {})
     if isinstance(primary, str):
         primary = {"name": primary, "source_field": primary}
+    primary_timeline = (
+        primary.get("source_field")
+        if "source_field" in primary
+        else primary.get("name") or ""
+    )
     streams = [_normalize_stream(stream) for stream in mapping.get("streams", [])]
     return MappingSpec(
         mapping_id=mapping["id"],
         source_id=mapping["source"],
         app_id=mapping.get("app_id", "datascope.sensor_monitor.v1"),
         recording_id=mapping.get("recording_id", f"recording_{uuid4().hex[:12]}"),
-        primary_timeline=primary.get("source_field") or primary.get("name") or "time",
+        primary_timeline=primary_timeline,
         streams=streams,
         schema_version=2,
         timeline_unit=primary.get("unit", "auto") if schema_version >= 2 else "auto",
+        timeline_sort=primary.get("sort", "source") if schema_version >= 2 else "source",
         effective_timeline_unit=primary.get("effective_unit"),
         template_id=mapping.get("template_id"),
         mapping_template_id=mapping.get("mapping_template_id"),

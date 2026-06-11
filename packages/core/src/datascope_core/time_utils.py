@@ -73,6 +73,30 @@ def time_seconds_or_none(value: Any, unit: str = "auto") -> float | None:
     return normalized.seconds if normalized is not None else None
 
 
+def prepare_tabular_frame(
+    frame: pd.DataFrame,
+    *,
+    time_key: str | None,
+    time_unit: str = "auto",
+    timeline_sort: str = "source",
+) -> pd.DataFrame:
+    if timeline_sort != "ascending" or not time_key or time_key not in frame:
+        return frame
+    normalized = [
+        time_seconds_or_none(value, unit=time_unit)
+        for value in frame[time_key].tolist()
+    ]
+    order = sorted(
+        range(len(frame)),
+        key=lambda index: (
+            normalized[index] is None,
+            normalized[index] if normalized[index] is not None else 0.0,
+            index,
+        ),
+    )
+    return frame.iloc[order].reset_index(drop=True)
+
+
 def _parse_datetime(value: Any) -> NormalizedTime | None:
     parsed = pd.to_datetime(value, errors="coerce", utc=True)
     if pd.notna(parsed):

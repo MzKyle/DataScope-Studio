@@ -29,7 +29,11 @@ from datascope_core.mapping_templates import (
     template_from_mapping,
     validate_mapping_template,
 )
-from datascope_core.mapping_validation import MappingValidationError, validate_mapping
+from datascope_core.mapping_validation import (
+    MappingValidationError,
+    build_validation_report,
+    validate_mapping,
+)
 from datascope_core.models import (
     ConvertRequest,
     MappingSpec,
@@ -62,6 +66,17 @@ from datascope_core.version import __version__
 
 def default_workspace_path() -> Path:
     return Path.home() / ".datascope-studio"
+
+
+class ArtifactConflictError(RuntimeError):
+    def __init__(self, output_name: str, paths: list[Path]) -> None:
+        self.output_name = output_name
+        self.paths = [str(path) for path in paths]
+        joined_paths = ", ".join(self.paths)
+        super().__init__(
+            f"Output name '{output_name}' conflicts with existing artifacts: "
+            f"{joined_paths}. Choose a different output name."
+        )
 
 
 class Workspace:
@@ -360,31 +375,27 @@ class Workspace:
 
     def validate_mapping_spec(self, source_id: str, spec: MappingSpec) -> dict[str, Any]:
         source = self.get_source(source_id)
+        source_info = _source_info_from_row(source)
+        profile = self.get_schema_profile(source_id)
         report = validate_mapping(
-            _source_info_from_row(source),
+            source_info,
             spec,
-            self.get_schema_profile(source_id),
+            profile,
         )
         adapter = self._adapter_for_type(source["type"])
         adapter_validator = getattr(adapter, "validate_mapping", None)
         if callable(adapter_validator):
             adapter_issues = adapter_validator(
-                _source_info_from_row(source),
+                source_info,
                 spec,
-                self.get_schema_profile(source_id),
+                profile,
             )
-            report["issues"].extend(adapter_issues)
-            report["errors"] = [
-                issue for issue in report["issues"] if issue.get("severity") == "error"
-            ]
-            report["warnings"] = [
-                issue for issue in report["issues"] if issue.get("severity") == "warning"
-            ]
-            report["valid"] = not report["errors"]
-            report["summary"] = {
-                "errors": len(report["errors"]),
-                "warnings": len(report["warnings"]),
-            }
+            report = build_validation_report(
+                source_info,
+                spec,
+                profile,
+                [*report["issues"], *adapter_issues],
+            )
         spec.effective_timeline_unit = report["effective_timeline_unit"]
         return report
 
@@ -440,6 +451,14 @@ class Workspace:
             raise ValueError(f"Unsupported template: {template_id}")
         project = self.get_project(project_id)
         source_row = self.get_source(source_id)
+        output_base = _safe_output_name(output_name)
+        recording_path = Path(project["workspace_path"]) / "recordings" / f"{output_base}.rrd"
+        blueprint_path = Path(project["workspace_path"]) / "blueprints" / f"{output_base}.rbl"
+        self._assert_artifact_paths_available(
+            project_id,
+            recording_path,
+            blueprint_path,
+        )
         if mapping_id:
             mapping_row = self.get_mapping(mapping_id)
             spec = load_mapping_yaml(mapping_row["path"])
@@ -475,12 +494,12 @@ class Workspace:
                 ),
             )
 
+        reserved_paths: list[Path] = []
+        recording_db_id: str | None = None
         try:
             self._update_job(job_id, status="running", progress=0.1)
+            reserved_paths = self._reserve_artifact_paths(recording_path, blueprint_path)
             recording_id = spec.recording_id
-            output_base = _safe_output_name(output_name)
-            recording_path = Path(project["workspace_path"]) / "recordings" / f"{output_base}.rrd"
-            blueprint_path = Path(project["workspace_path"]) / "blueprints" / f"{output_base}.rbl"
             request = ConvertRequest(
                 source=_source_info_from_row(source_row),
                 mappings=spec.streams,
@@ -489,6 +508,7 @@ class Workspace:
                 recording_id=recording_id,
                 primary_timeline=spec.primary_timeline,
                 timeline_unit=spec.effective_timeline_unit or spec.timeline_unit,
+                timeline_sort=spec.timeline_sort,
             )
             self._adapter_for_path(source_row["uri"], source_row["type"]).convert(request)
             self._update_job(job_id, status="running", progress=0.8)
@@ -531,8 +551,71 @@ class Workspace:
                 "blueprint_path": str(blueprint_path),
             }
         except Exception as exc:
+            for path in reserved_paths:
+                path.unlink(missing_ok=True)
+            if recording_db_id is not None:
+                with self._connect() as conn:
+                    conn.execute("delete from query_rows where recording_id = ?", (recording_db_id,))
+                    conn.execute("delete from recordings where id = ?", (recording_db_id,))
             self._update_job(job_id, status="failed", progress=1.0, error_message=str(exc))
             raise
+
+    def _assert_artifact_paths_available(
+        self,
+        project_id: str,
+        recording_path: Path,
+        blueprint_path: Path,
+    ) -> None:
+        target_paths = (recording_path, blueprint_path)
+        conflicts = {path for path in target_paths if path.exists()}
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                select path, blueprint_path
+                from recordings
+                where project_id = ? and (path = ? or blueprint_path = ?)
+                """,
+                (project_id, str(recording_path), str(blueprint_path)),
+            ).fetchall()
+        for row in rows:
+            for key in ("path", "blueprint_path"):
+                value = row[key]
+                if value:
+                    path = Path(value)
+                    if path in target_paths:
+                        conflicts.add(path)
+        if conflicts:
+            raise ArtifactConflictError(
+                recording_path.stem,
+                sorted(conflicts, key=str),
+            )
+
+    def _reserve_artifact_paths(
+        self,
+        recording_path: Path,
+        blueprint_path: Path,
+    ) -> list[Path]:
+        reserved: list[Path] = []
+        try:
+            for path in (recording_path, blueprint_path):
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.touch(exist_ok=False)
+                reserved.append(path)
+        except Exception as exc:
+            for path in reserved:
+                path.unlink(missing_ok=True)
+            if isinstance(exc, FileExistsError):
+                conflicts = [
+                    path
+                    for path in (recording_path, blueprint_path)
+                    if path.exists()
+                ]
+                raise ArtifactConflictError(
+                    recording_path.stem,
+                    conflicts,
+                ) from exc
+            raise
+        return reserved
 
     def get_job(self, job_id: str) -> dict[str, Any]:
         with self._connect() as conn:
@@ -898,34 +981,36 @@ class Workspace:
         if not streams:
             self.inspect_source(source_id)
             streams = self.get_streams(source_id)
+        source_info = _source_info_from_row(source)
+        profile = self.get_schema_profile(source_id)
         spec, match_issues = apply_mapping_template(
             template["config"],
-            _source_info_from_row(source),
+            source_info,
             streams,
-            self.get_schema_profile(source_id),
+            profile,
         )
         spec.app_id = self.template_app_ids().get(
             spec.template_id or "",
             "datascope.sensor_monitor.v1",
         )
         report = self.validate_mapping_spec(source_id, spec)
-        report["issues"] = [*match_issues, *report["issues"]]
-        report["errors"] = [
-            issue for issue in report["issues"] if issue.get("severity") == "error"
-        ]
-        report["warnings"] = [
-            issue for issue in report["issues"] if issue.get("severity") == "warning"
-        ]
-        report["valid"] = not report["errors"]
-        report["summary"] = {
-            "errors": len(report["errors"]),
-            "warnings": len(report["warnings"]),
-        }
+        report = build_validation_report(
+            source_info,
+            spec,
+            profile,
+            [*match_issues, *report["issues"]],
+        )
+        enriched_match_issues = build_validation_report(
+            source_info,
+            spec,
+            profile,
+            match_issues,
+        )["issues"]
         spec.effective_timeline_unit = report["effective_timeline_unit"]
         return {
             "mapping": mapping_to_yaml_dict(spec)["mapping"],
             "validation": report,
-            "match_issues": match_issues,
+            "match_issues": enriched_match_issues,
         }
 
     def diff_mapping_template(

@@ -123,6 +123,14 @@ def test_api_mapping_template_flow_and_validation_gate(tmp_path: Path, monkeypat
     assert blocked.status_code == 409
     assert blocked.json()["error"]["code"] == "mapping_validation_failed"
     assert blocked.json()["error"]["validation"]["valid"] is False
+    invalid_path_issue = next(
+        issue
+        for issue in blocked.json()["error"]["validation"]["issues"]
+        if issue["code"] == "invalid_entity_path"
+    )
+    assert invalid_path_issue["recommendation"]
+    assert invalid_path_issue["suggestions"][0]["action"] == "set_entity_path"
+    assert "scalar" in blocked.json()["error"]["validation"]["supported_semantic_types"]
 
 
 def test_cli_mapping_validate_and_template_list(tmp_path: Path, monkeypatch) -> None:
@@ -151,3 +159,30 @@ def test_cli_mapping_validate_and_template_list(tmp_path: Path, monkeypatch) -> 
     assert "valid" in validation.output
     assert templates.exit_code == 0
     assert "cli_mapping" in templates.output
+
+
+def test_cli_mapping_validate_prints_repair_suggestions(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    workspace_path = tmp_path / "workspace"
+    source_path = tmp_path / "non_monotonic.csv"
+    source_path.write_text(
+        "timestamp,value\n"
+        "2,10\n"
+        "1,20\n",
+        encoding="utf-8",
+    )
+    workspace = Workspace(workspace_path)
+    project = workspace.create_project("Mapping Suggestions")
+    source = workspace.add_source(project["id"], str(source_path))
+    workspace.inspect_source(source["id"])
+    spec = workspace.suggest_mapping(source["id"])
+    mapping = workspace.save_mapping(project["id"], source["id"], spec)
+    monkeypatch.setenv("DATASCOPE_WORKSPACE", str(workspace_path))
+
+    result = CliRunner().invoke(cli_app, ["mapping", "validate", mapping["id"]])
+
+    assert result.exit_code == 0
+    assert "recommendation:" in result.output
+    assert "suggestion: Sort by time ascending" in result.output

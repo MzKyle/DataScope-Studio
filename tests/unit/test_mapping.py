@@ -13,6 +13,7 @@ def test_mapping_yaml_roundtrip(tmp_path: Path) -> None:
     source = adapter.inspect(str(FIXTURES / "sample_sensor.csv"), source_id="source_csv")
     streams = adapter.infer_streams(source)
     spec = suggest_mapping(source, streams, mapping_id="mapping_test", recording_id="run_test")
+    spec.timeline_sort = "ascending"
     path = tmp_path / "mapping.yaml"
 
     save_mapping_yaml(spec, path)
@@ -21,6 +22,7 @@ def test_mapping_yaml_roundtrip(tmp_path: Path) -> None:
     assert loaded.mapping_id == "mapping_test"
     assert loaded.source_id == "source_csv"
     assert loaded.primary_timeline == "timestamp"
+    assert loaded.timeline_sort == "ascending"
     assert any(stream["entity_path"].startswith("/metrics/") for stream in loaded.streams)
 
 
@@ -34,3 +36,15 @@ def test_sensor_monitor_template_scores_tabular_streams() -> None:
     assert matches[0]["template_id"] == "sensor_monitor"
     assert matches[0]["score"] > 0.8
 
+
+def test_explicit_row_sequence_survives_mapping_roundtrip(tmp_path: Path) -> None:
+    adapter = CsvAdapter()
+    source = adapter.inspect(str(FIXTURES / "sample_sensor.csv"), source_id="source_row")
+    spec = suggest_mapping(source, adapter.infer_streams(source), mapping_id="mapping_row")
+    spec.primary_timeline = ""
+    path = tmp_path / "row-sequence.yaml"
+
+    save_mapping_yaml(spec, path)
+    loaded = load_mapping_yaml(path)
+
+    assert loaded.primary_timeline == ""

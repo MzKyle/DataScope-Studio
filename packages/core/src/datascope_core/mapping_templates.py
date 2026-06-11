@@ -53,6 +53,7 @@ def template_from_mapping(
                 "aliases": [],
                 "pattern": None,
                 "unit": spec.timeline_unit,
+                "sort": spec.timeline_sort,
                 "required": False,
             },
             "rules": rules,
@@ -132,8 +133,11 @@ def apply_mapping_template(
     mapped_streams: list[dict[str, Any]] = []
     consumed: set[str] = set()
     for rule in template.get("rules", []):
+        stream_id = f"stream_{safe_slug(str(rule['key']))}"
         resolved: list[str] = []
         ambiguous = False
+        match_candidates: list[dict[str, Any]] = []
+        missing_fields: list[str] = []
         for canonical in rule.get("source_fields", []):
             matches = _match_field(
                 str(canonical),
@@ -146,16 +150,22 @@ def apply_mapping_template(
                 consumed.add(matches[0])
             elif len(matches) > 1:
                 ambiguous = True
+                match_candidates.append(
+                    {"field": str(canonical), "candidates": matches}
+                )
                 issues.append(
                     {
                         "severity": "error",
                         "code": "ambiguous_field_match",
+                        "message": "Template field matching produced multiple candidates.",
+                        "stream_id": stream_id,
                         "rule_key": rule["key"],
                         "field": canonical,
                         "candidates": matches,
                     }
                 )
             else:
+                missing_fields.append(str(canonical))
                 issues.append(
                     {
                         "severity": "error" if rule.get("required") else "warning",
@@ -164,13 +174,15 @@ def apply_mapping_template(
                             if rule.get("required")
                             else "field_missing"
                         ),
+                        "message": f"Mapped field is missing: {canonical}",
+                        "stream_id": stream_id,
                         "rule_key": rule["key"],
                         "field": canonical,
                         "candidates": [],
                     }
                 )
         stream = {
-            "stream_id": f"stream_{safe_slug(str(rule['key']))}",
+            "stream_id": stream_id,
             "name": rule.get("name") or rule["key"],
             "source_fields": resolved,
             "semantic_type": rule.get("semantic_type", "scalar"),
@@ -183,6 +195,8 @@ def apply_mapping_template(
             "enabled": bool(rule.get("enabled", True)),
             "expected_unit": rule.get("expected_unit"),
             "match_ambiguous": ambiguous,
+            "match_candidates": match_candidates,
+            "template_missing_fields": missing_fields,
         }
         stream.update(derived_stream_fields(stream["semantic_type"]))
         mapped_streams.append(stream)
@@ -225,6 +239,7 @@ def apply_mapping_template(
             {
                 "severity": "error",
                 "code": "ambiguous_time_match",
+                "message": "Template timeline matching produced multiple candidates.",
                 "rule_key": "timeline",
                 "field": timeline_rule.get("field"),
                 "candidates": timeline_matches,
@@ -243,6 +258,7 @@ def apply_mapping_template(
         primary_timeline=primary_timeline,
         streams=mapped_streams,
         timeline_unit=str(timeline_rule.get("unit") or "auto"),
+        timeline_sort=str(timeline_rule.get("sort") or "source"),
         template_id=template.get("visual_template_id") or "sensor_monitor",
         mapping_template_id=template["id"],
     )

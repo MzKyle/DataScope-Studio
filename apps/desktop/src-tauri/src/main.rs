@@ -150,15 +150,32 @@ fn start_backend(app: &AppHandle) -> Result<BackendState, String> {
         });
     }
 
-    let runtime_dir = find_runtime_dir(app);
-    let packaged_runtime = runtime_dir.is_some();
-    let python = runtime_dir
-        .as_ref()
-        .and_then(|dir| find_runtime_python(dir))
-        .or_else(find_dev_python)
-        .ok_or_else(|| {
-            "DataScope Python runtime was not found. Rebuild the packaged runtime or install the development .venv.".to_string()
+    let runtime_candidate = find_runtime_dir(app);
+    let explicit_runtime = env::var_os("DATASCOPE_RUNTIME_DIR").is_some();
+    let dev_python = if cfg!(debug_assertions) && !explicit_runtime {
+        find_dev_python()
+    } else {
+        None
+    };
+    let (python, runtime_dir, packaged_runtime) = if let Some(python) = dev_python {
+        // cargo run should execute editable workspace packages, not a stale bundled runtime.
+        (python, None, false)
+    } else if let Some(runtime_dir) = runtime_candidate {
+        let python = find_runtime_python(&runtime_dir).ok_or_else(|| {
+            format!(
+                "DataScope Python runtime is incomplete: {}",
+                runtime_dir.display()
+            )
         })?;
+        (python, Some(runtime_dir), true)
+    } else if let Some(python) = find_dev_python() {
+        (python, None, false)
+    } else {
+        return Err(
+            "DataScope Python runtime was not found. Rebuild the packaged runtime or install the development .venv."
+                .to_string(),
+        );
+    };
 
     let port = reserve_local_port()?;
     let log_path = backend_log_path(app)?;
@@ -250,7 +267,7 @@ fn find_runtime_python(runtime_dir: &Path) -> Option<PathBuf> {
 
 fn find_dev_python() -> Option<PathBuf> {
     let repo_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../..")
+        .join("../../..")
         .canonicalize()
         .ok()?;
     let candidates = [

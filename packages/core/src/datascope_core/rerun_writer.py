@@ -6,12 +6,18 @@ from typing import Any
 import pandas as pd
 
 from datascope_core.models import ConvertRequest
-from datascope_core.time_utils import normalize_time_value
+from datascope_core.time_utils import normalize_time_value, prepare_tabular_frame
 
 
 def write_tabular_recording(frame: pd.DataFrame, request: ConvertRequest) -> None:
     import rerun as rr
 
+    frame = prepare_tabular_frame(
+        frame,
+        time_key=request.primary_timeline,
+        time_unit=request.timeline_unit,
+        timeline_sort=request.timeline_sort,
+    )
     Path(request.output_rrd).parent.mkdir(parents=True, exist_ok=True)
     with rr.RecordingStream(
         request.app_id,
@@ -20,7 +26,7 @@ def write_tabular_recording(frame: pd.DataFrame, request: ConvertRequest) -> Non
     ) as rec:
         rec.save(request.output_rrd)
         rec.send_recording_name(request.recording_id)
-        for row_index, row in frame.iterrows():
+        for row_index, (_, row) in enumerate(frame.iterrows()):
             _set_row_time(
                 rec,
                 row,

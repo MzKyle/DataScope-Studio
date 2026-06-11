@@ -46,6 +46,9 @@ export type MappingStream = {
   role?: string | null;
   expected_unit?: string | null;
   source_unit?: string | null;
+  match_ambiguous?: boolean;
+  match_candidates?: Array<{ field: string; candidates: string[] }>;
+  template_missing_fields?: string[];
 };
 
 export type MappingPayload = {
@@ -63,6 +66,7 @@ export type MappingPayload = {
         name: string;
         source_field: string;
         unit: string;
+        sort: "source" | "ascending";
         effective_unit?: string | null;
       };
     };
@@ -97,6 +101,35 @@ export type MappingValidationIssue = {
   rule_key?: string | null;
   field?: string | null;
   candidates?: string[];
+  recommendation?: string;
+  suggestions?: MappingSuggestion[];
+};
+
+export type MappingSuggestionAction =
+  | "set_timeline_field"
+  | "set_timeline_unit"
+  | "set_timeline_sort"
+  | "replace_source_field"
+  | "set_source_fields"
+  | "set_entity_path"
+  | "set_semantic_type"
+  | "set_stream_enabled";
+
+export type MappingSuggestion = {
+  action: MappingSuggestionAction;
+  label: string;
+  params: {
+    field?: string;
+    unit?: string;
+    sort?: "source" | "ascending";
+    stream_id?: string;
+    old_field?: string;
+    new_field?: string;
+    fields?: string[];
+    entity_path?: string;
+    semantic_type?: string;
+    enabled?: boolean;
+  };
 };
 
 export type MappingValidation = {
@@ -105,6 +138,8 @@ export type MappingValidation = {
   warnings: MappingValidationIssue[];
   issues: MappingValidationIssue[];
   summary: { errors: number; warnings: number };
+  source_family?: string;
+  supported_semantic_types?: string[];
   effective_timeline_unit: string;
 };
 

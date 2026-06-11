@@ -1,6 +1,8 @@
 from pathlib import Path
 
-from datascope_core.workspace import Workspace
+import pytest
+
+from datascope_core.workspace import ArtifactConflictError, Workspace
 
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
@@ -26,6 +28,63 @@ def test_workspace_csv_to_rerun_artifacts(tmp_path: Path) -> None:
     assert Path(result["recording_path"]).exists()
     assert Path(result["blueprint_path"]).exists()
     assert workspace.get_job(result["job_id"])["status"] == "succeeded"
+
+
+@pytest.mark.parametrize(
+    ("directory", "suffix"),
+    [("recordings", ".rrd"), ("blueprints", ".rbl")],
+)
+def test_workspace_rejects_existing_artifact_path(
+    tmp_path: Path,
+    directory: str,
+    suffix: str,
+) -> None:
+    workspace = Workspace(tmp_path / "workspace")
+    project = workspace.create_project("Conflict Test")
+    source = workspace.add_source(project["id"], str(FIXTURES / "sample_sensor.csv"))
+    artifact_path = Path(project["workspace_path"]) / directory / f"existing{suffix}"
+    original_content = b"existing artifact"
+    artifact_path.write_bytes(original_content)
+
+    with pytest.raises(ArtifactConflictError, match="existing"):
+        workspace.build_recording(
+            project["id"],
+            source["id"],
+            output_name="existing",
+        )
+
+    assert artifact_path.read_bytes() == original_content
+    assert workspace.list_jobs(project["id"]) == []
+    assert workspace.list_recordings(project["id"]) == []
+
+
+def test_workspace_rejects_duplicate_recording_name_without_overwrite(tmp_path: Path) -> None:
+    workspace = Workspace(tmp_path / "workspace")
+    project = workspace.create_project("Duplicate Test")
+    source = workspace.add_source(project["id"], str(FIXTURES / "sample_sensor.csv"))
+    workspace.inspect_source(source["id"])
+
+    first = workspace.build_recording(
+        project["id"],
+        source["id"],
+        output_name="duplicate",
+    )
+    recording_path = Path(first["recording_path"])
+    blueprint_path = Path(first["blueprint_path"])
+    original_recording = recording_path.read_bytes()
+    original_blueprint = blueprint_path.read_bytes()
+
+    with pytest.raises(ArtifactConflictError, match="duplicate"):
+        workspace.build_recording(
+            project["id"],
+            source["id"],
+            output_name="duplicate",
+        )
+
+    assert recording_path.read_bytes() == original_recording
+    assert blueprint_path.read_bytes() == original_blueprint
+    assert len(workspace.list_jobs(project["id"])) == 1
+    assert len(workspace.list_recordings(project["id"])) == 1
 
 
 def test_workspace_fanuc_millisecond_timestamp_csv_to_rerun_artifacts(tmp_path: Path) -> None:

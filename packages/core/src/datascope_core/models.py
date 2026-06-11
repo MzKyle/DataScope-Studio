@@ -39,6 +39,7 @@ class ConvertRequest:
     recording_id: str
     primary_timeline: str | None = None
     timeline_unit: str = "auto"
+    timeline_sort: str = "source"
 
 
 @dataclass(slots=True)
@@ -51,6 +52,7 @@ class MappingSpec:
     streams: list[dict[str, Any]]
     schema_version: int = 2
     timeline_unit: str = "auto"
+    timeline_sort: str = "source"
     effective_timeline_unit: str | None = None
     template_id: str | None = None
     mapping_template_id: str | None = None

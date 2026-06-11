@@ -53,3 +53,19 @@ def test_api_project_source_mapping_build_flow(tmp_path: Path, monkeypatch) -> N
     assert Path(result["recording_path"]).exists()
     assert Path(result["blueprint_path"]).exists()
 
+    conflict_response = client.post(
+        "/api/recordings/build",
+        json={
+            "project_id": project["id"],
+            "source_id": source["id"],
+            "mapping_id": mapping["id"],
+            "template_id": "sensor_monitor",
+            "output_name": "api_run",
+        },
+    )
+    assert conflict_response.status_code == 409
+    error = conflict_response.json()["error"]
+    assert error["code"] == "artifact_name_conflict"
+    assert error["output_name"] == "api_run"
+    assert result["recording_path"] in error["paths"]
+    assert result["blueprint_path"] in error["paths"]

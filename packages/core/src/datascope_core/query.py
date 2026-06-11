@@ -16,7 +16,7 @@ from datascope_core.adapters.point_cloud_adapter import (
 )
 from datascope_core.cv_schema import load_annotations, load_predictions, sidecar_frame_map, supported_image_paths
 from datascope_core.models import MappingSpec, SourceInfo
-from datascope_core.time_utils import time_seconds_or_none
+from datascope_core.time_utils import prepare_tabular_frame, time_seconds_or_none
 
 
 QUERY_TEMPLATES = [
@@ -221,6 +221,12 @@ def _tabular_rows(
     frame: pd.DataFrame,
 ) -> list[QueryRow]:
     rows: list[QueryRow] = []
+    frame = prepare_tabular_frame(
+        frame,
+        time_key=spec.primary_timeline,
+        time_unit=spec.effective_timeline_unit or spec.timeline_unit,
+        timeline_sort=spec.timeline_sort,
+    )
     for row_index, row in frame.iterrows():
         timestamp = _row_time(
             row,

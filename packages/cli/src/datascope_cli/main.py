@@ -153,6 +153,9 @@ def mapping_validate(
     )
     for issue in report["issues"]:
         typer.echo(f"  {issue['severity']} {issue['code']}: {issue['message']}")
+        typer.echo(f"    recommendation: {issue['recommendation']}")
+        for suggestion in issue.get("suggestions", []):
+            typer.echo(f"    suggestion: {suggestion['label']}")
     if not report["valid"]:
         raise typer.Exit(code=1)
 
