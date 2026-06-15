@@ -31,6 +31,23 @@ def test_workspace_point_cloud_to_rerun_artifacts(tmp_path: Path) -> None:
     assert Path(result["blueprint_path"]).exists()
 
 
+def test_workspace_defaults_artifact_names_to_source_folder(tmp_path: Path) -> None:
+    cloud_dir = _make_point_cloud_fixture(tmp_path)
+    workspace = Workspace(tmp_path / "workspace")
+    project = workspace.create_project("Point Cloud Default Name")
+    source = workspace.add_source(project["id"], str(cloud_dir))
+    workspace.inspect_source(source["id"])
+
+    result = workspace.build_recording(
+        project["id"],
+        source["id"],
+        template_id="robotics_debug",
+    )
+
+    assert Path(result["recording_path"]).name == "clouds.rrd"
+    assert Path(result["blueprint_path"]).name == "clouds.rbl"
+
+
 def test_cli_point_cloud_inspect(tmp_path: Path, monkeypatch) -> None:
     cloud_dir = _make_point_cloud_fixture(tmp_path)
     monkeypatch.setenv("DATASCOPE_WORKSPACE", str(tmp_path / "cli_workspace"))

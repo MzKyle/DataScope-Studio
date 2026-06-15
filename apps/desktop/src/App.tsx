@@ -57,6 +57,7 @@ import type {
 } from "./types";
 
 const supportedFormats = ["CSV", "JSONL", "Images", "PLY", "PCD", "NPZ", "MCAP", "ROS2"];
+const sourceFileExtensions = new Set(["csv", "jsonl", "json", "mcap", "ply", "pcd", "npy", "npz"]);
 const thresholdTemplates = new Set(["low_battery", "detection_failure"]);
 const TABLE_RENDER_LIMIT = 100;
 const DEFAULT_EXPORT_DIR_KEY = "datascope.defaultExportDir";
@@ -92,7 +93,7 @@ function App() {
   const [projectName, setProjectName] = useState("Sensor Run");
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [sourcePath, setSourcePath] = useState("");
-  const [outputName, setOutputName] = useState("run_001");
+  const [outputName, setOutputName] = useState("");
   const [source, setSource] = useState<Source | null>(null);
   const [streams, setStreams] = useState<StreamInfo[]>([]);
   const [mapping, setMapping] = useState<MappingPayload | null>(null);
@@ -371,6 +372,7 @@ function App() {
         setSelectedProjectId(result.project.id);
       }
       setSource(result.added);
+      setOutputName(defaultOutputName(nextSourcePath));
       setStreams(result.streams);
       setTemplates(result.templateMatches);
       setSelectedTemplateId(result.nextTemplateId);
@@ -901,7 +903,11 @@ function App() {
       droppedFile?.path ??
       droppedFile?.webkitRelativePath ??
       normalizeDroppedPath(uriList || textPath);
-    if (droppedPath) setSourcePath(normalizeSourcePathInput(droppedPath));
+    if (droppedPath) {
+      const normalizedPath = normalizeSourcePathInput(droppedPath);
+      setSourcePath(normalizedPath);
+      setOutputName(defaultOutputName(normalizedPath));
+    }
   }
 
   async function chooseSource(kind: "file" | "folder") {
@@ -943,7 +949,9 @@ function App() {
     );
     const selectedPath = Array.isArray(selected) ? selected[0] : selected;
     if (selectedPath) {
-      setSourcePath(normalizeSourcePathInput(selectedPath));
+      const normalizedPath = normalizeSourcePathInput(selectedPath);
+      setSourcePath(normalizedPath);
+      setOutputName(defaultOutputName(normalizedPath, kind));
       setError("");
     }
   }
@@ -2036,6 +2044,16 @@ function normalizeSourcePathInput(value: string) {
     }
   }
   return trimmed;
+}
+
+function defaultOutputName(value: string, kind?: "file" | "folder") {
+  const normalized = normalizeSourcePathInput(value).replace(/[\\/]+$/, "");
+  const name = normalized.split(/[\\/]/).pop() ?? "";
+  if (!name || kind === "folder") return name;
+  const extensionIndex = name.lastIndexOf(".");
+  const extension = extensionIndex >= 0 ? name.slice(extensionIndex + 1).toLowerCase() : "";
+  const isFile = kind === "file" || sourceFileExtensions.has(extension);
+  return isFile && extensionIndex > 0 ? name.slice(0, extensionIndex) : name;
 }
 
 function isTauriRuntime() {

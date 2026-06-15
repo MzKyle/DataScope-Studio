@@ -40,6 +40,25 @@ def test_cli_import_builds_artifacts(tmp_path: Path, monkeypatch) -> None:
     assert (tmp_path / "workspace").exists()
 
 
+def test_cli_import_defaults_artifact_names_to_source_name(tmp_path: Path, monkeypatch) -> None:
+    workspace_path = tmp_path / "workspace"
+    monkeypatch.setenv("DATASCOPE_WORKSPACE", str(workspace_path))
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "import",
+            str(FIXTURES / "sample_sensor.csv"),
+            "--project",
+            "CLI Default Name",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert len(list(workspace_path.rglob("sample_sensor.rrd"))) == 1
+    assert len(list(workspace_path.rglob("sample_sensor.rbl"))) == 1
+
+
 def test_cli_project_import_package(tmp_path: Path, monkeypatch) -> None:
     package_workspace = Workspace(tmp_path / "package_workspace")
     project = package_workspace.create_project("CLI Package")

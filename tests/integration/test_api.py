@@ -69,3 +69,29 @@ def test_api_project_source_mapping_build_flow(tmp_path: Path, monkeypatch) -> N
     assert error["output_name"] == "api_run"
     assert result["recording_path"] in error["paths"]
     assert result["blueprint_path"] in error["paths"]
+
+
+def test_api_build_defaults_artifact_names_to_source_name(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("DATASCOPE_WORKSPACE", str(tmp_path / "workspace"))
+    client = TestClient(app)
+
+    project = client.post("/api/projects", json={"name": "API Default Name"}).json()
+    source = client.post(
+        f"/api/projects/{project['id']}/sources",
+        json={"path": str(FIXTURES / "sample_sensor.jsonl")},
+    ).json()
+    client.post(f"/api/sources/{source['id']}/inspect")
+
+    response = client.post(
+        "/api/recordings/build",
+        json={
+            "project_id": project["id"],
+            "source_id": source["id"],
+            "template_id": "sensor_monitor",
+        },
+    )
+
+    assert response.status_code == 200
+    result = response.json()
+    assert Path(result["recording_path"]).name == "sample_sensor.rrd"
+    assert Path(result["blueprint_path"]).name == "sample_sensor.rbl"

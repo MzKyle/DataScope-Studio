@@ -30,6 +30,19 @@ def test_workspace_csv_to_rerun_artifacts(tmp_path: Path) -> None:
     assert workspace.get_job(result["job_id"])["status"] == "succeeded"
 
 
+def test_workspace_defaults_artifact_names_to_source_file(tmp_path: Path) -> None:
+    workspace = Workspace(tmp_path / "workspace")
+    project = workspace.create_project("Default File Name")
+    source = workspace.add_source(project["id"], str(FIXTURES / "sample_sensor.csv"))
+    workspace.inspect_source(source["id"])
+
+    result = workspace.build_recording(project["id"], source["id"])
+
+    assert Path(result["recording_path"]).name == "sample_sensor.rrd"
+    assert Path(result["blueprint_path"]).name == "sample_sensor.rbl"
+    assert workspace.get_recording(result["recording_id"])["run_name"] == "sample_sensor"
+
+
 @pytest.mark.parametrize(
     ("directory", "suffix"),
     [("recordings", ".rrd"), ("blueprints", ".rbl")],

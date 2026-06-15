@@ -443,7 +443,7 @@ class Workspace:
         project_id: str,
         source_id: str,
         mapping_id: str | None = None,
-        output_name: str = "run",
+        output_name: str | None = None,
         template_id: str = "sensor_monitor",
     ) -> dict[str, Any]:
         template_app_ids = self.template_app_ids()
@@ -451,7 +451,11 @@ class Workspace:
             raise ValueError(f"Unsupported template: {template_id}")
         project = self.get_project(project_id)
         source_row = self.get_source(source_id)
-        output_base = _safe_output_name(output_name)
+        requested_output_name = output_name.strip() if output_name else ""
+        output_base = (
+            _safe_output_name(requested_output_name or _source_output_name(source_row["uri"]))
+            or "run"
+        )
         recording_path = Path(project["workspace_path"]) / "recordings" / f"{output_base}.rrd"
         blueprint_path = Path(project["workspace_path"]) / "blueprints" / f"{output_base}.rbl"
         self._assert_artifact_paths_available(
@@ -1929,3 +1933,8 @@ def _copy_parent_sidecars(source_path: Path, raw_dir: Path) -> None:
 
 def _safe_output_name(value: str) -> str:
     return "".join(character if character.isalnum() or character in {"_", "-"} else "_" for character in value)
+
+
+def _source_output_name(value: str | Path) -> str:
+    path = Path(value)
+    return path.name if path.is_dir() else path.stem

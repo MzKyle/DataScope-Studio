@@ -73,7 +73,11 @@ def import_source(
     path: Path,
     project: str = typer.Option(..., "--project", help="Project name."),
     template: str = typer.Option("sensor_monitor", "--template", help="Template id."),
-    out: str = typer.Option("run", "--out", help="Output recording base name."),
+    out: str | None = typer.Option(
+        None,
+        "--out",
+        help="Output recording base name. Defaults to the source file or folder name.",
+    ),
     json_output: bool = typer.Option(False, "--json", help="Print JSON."),
 ) -> None:
     """Import a source into a project and build .rrd/.rbl artifacts."""

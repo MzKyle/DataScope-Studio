@@ -69,7 +69,7 @@ class BuildRecordingRequest(BaseModel):
     source_id: str
     mapping_id: str | None = None
     template_id: str = "sensor_monitor"
-    output_name: str = "run"
+    output_name: str | None = None
 
 
 class ViewerOpenRequest(BaseModel):
