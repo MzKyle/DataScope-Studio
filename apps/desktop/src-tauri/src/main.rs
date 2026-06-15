@@ -202,6 +202,8 @@ fn start_backend(app: &AppHandle) -> Result<BackendState, String> {
         .env("DATASCOPE_API_PORT", &port_text)
         .env("DATASCOPE_RERUN_PYTHON", &python)
         .env("PYTHONNOUSERSITE", "1")
+        .env_remove("PYTHONHOME")
+        .env_remove("PYTHONPATH")
         .stdout(Stdio::from(log_file))
         .stderr(Stdio::from(err_file));
 
@@ -342,6 +344,8 @@ fn runtime_python_has_module(python: &Path, module: &str) -> bool {
     let status = Command::new(python)
         .args(["-c", &code])
         .env("PYTHONNOUSERSITE", "1")
+        .env_remove("PYTHONHOME")
+        .env_remove("PYTHONPATH")
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .status();

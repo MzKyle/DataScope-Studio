@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import struct
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, BinaryIO
 
 from datascope_core.inference import safe_slug
 from datascope_core.models import (
@@ -21,6 +22,16 @@ class PointCloudStats:
     point_count: int
     bounds: dict[str, list[float]] | None = None
     warning: str | None = None
+
+
+@dataclass(slots=True)
+class PcdHeader:
+    fields: list[str]
+    sizes: list[int]
+    types: list[str]
+    counts: list[int]
+    point_count: int | None
+    data: str
 
 
 class PointCloudAdapter:
@@ -212,23 +223,10 @@ def _point_count(path: Path) -> int:
                     break
         return len(_read_ply_points(path))
     if suffix == ".pcd":
-        with open(path, "r", encoding="utf-8", errors="ignore") as handle:
-            width = height = None
-            for line in handle:
-                parts = line.strip().split()
-                if not parts:
-                    continue
-                key = parts[0].upper()
-                if key == "POINTS" and len(parts) > 1:
-                    return int(parts[1])
-                if key == "WIDTH" and len(parts) > 1:
-                    width = int(parts[1])
-                elif key == "HEIGHT" and len(parts) > 1:
-                    height = int(parts[1])
-                elif key == "DATA":
-                    break
-            if width is not None and height is not None:
-                return width * height
+        with open(path, "rb") as handle:
+            header = _read_pcd_header(handle)
+            if header.point_count is not None:
+                return header.point_count
         return len(_read_pcd_points(path))
     if suffix in {".npy", ".npz"}:
         return len(_read_numpy_points(path))
@@ -288,35 +286,168 @@ def _ply_xyz_indices(header: list[str]) -> tuple[int, int, int]:
 
 
 def _read_pcd_points(path: Path) -> list[list[float]]:
-    fields: list[str] = []
-    data = ""
-    with open(path, "r", encoding="utf-8", errors="ignore") as handle:
-        for line in handle:
-            stripped = line.strip()
-            parts = stripped.split()
-            if not parts:
-                continue
-            key = parts[0].upper()
-            if key == "FIELDS":
-                fields = parts[1:]
-            elif key == "DATA":
-                data = parts[1].lower() if len(parts) > 1 else ""
-                break
-        if data != "ascii":
-            raise ValueError(f"Only ASCII PCD is supported: {path.name}")
+    with open(path, "rb") as handle:
+        header = _read_pcd_header(handle)
+        if header.data == "ascii":
+            return _read_ascii_pcd_points(handle, header)
+        if header.data == "binary":
+            return _read_binary_pcd_points(handle, header, path.name)
+        raise ValueError(f"Unsupported PCD DATA encoding '{header.data}': {path.name}")
+
+
+def _read_pcd_header(handle: BinaryIO) -> PcdHeader:
+    values: dict[str, list[str]] = {}
+    while True:
+        raw_line = handle.readline()
+        if not raw_line:
+            raise ValueError("PCD header missing DATA")
         try:
-            xyz_indices = (fields.index("x"), fields.index("y"), fields.index("z"))
-        except ValueError as exc:
-            raise ValueError("PCD fields must include x, y, z") from exc
-        points = []
-        for line in handle:
-            values = line.strip().split()
-            if len(values) <= max(xyz_indices):
-                continue
-            point = _finite_xyz(values[index] for index in xyz_indices)
-            if point is not None:
-                points.append(point)
+            parts = raw_line.decode("ascii").strip().split()
+        except UnicodeDecodeError as exc:
+            raise ValueError("PCD header must be ASCII") from exc
+        if not parts or parts[0].startswith("#"):
+            continue
+        key = parts[0].upper()
+        values[key] = parts[1:]
+        if key == "DATA":
+            break
+
+    fields = values.get("FIELDS", [])
+    if not fields:
+        raise ValueError("PCD header missing FIELDS")
+    try:
+        sizes = [int(value) for value in values["SIZE"]]
+        types = [value.upper() for value in values["TYPE"]]
+        counts = [int(value) for value in values.get("COUNT", ["1"] * len(fields))]
+    except KeyError as exc:
+        raise ValueError(f"PCD header missing {exc.args[0]}") from exc
+    except ValueError as exc:
+        raise ValueError("PCD SIZE and COUNT values must be integers") from exc
+
+    if not (len(fields) == len(sizes) == len(types) == len(counts)):
+        raise ValueError("PCD FIELDS, SIZE, TYPE, and COUNT lengths must match")
+    if any(size <= 0 for size in sizes) or any(count <= 0 for count in counts):
+        raise ValueError("PCD SIZE and COUNT values must be positive")
+
+    point_count = _pcd_header_point_count(values)
+    data_values = values.get("DATA", [])
+    data = data_values[0].lower() if data_values else ""
+    if not data:
+        raise ValueError("PCD header DATA encoding is missing")
+    return PcdHeader(
+        fields=fields,
+        sizes=sizes,
+        types=types,
+        counts=counts,
+        point_count=point_count,
+        data=data,
+    )
+
+
+def _pcd_header_point_count(values: dict[str, list[str]]) -> int | None:
+    try:
+        if values.get("POINTS"):
+            return int(values["POINTS"][0])
+        if values.get("WIDTH") and values.get("HEIGHT"):
+            return int(values["WIDTH"][0]) * int(values["HEIGHT"][0])
+    except ValueError as exc:
+        raise ValueError("PCD POINTS, WIDTH, and HEIGHT values must be integers") from exc
+    return None
+
+
+def _pcd_xyz_field_indices(header: PcdHeader) -> tuple[int, int, int]:
+    normalized_fields = [field.lower() for field in header.fields]
+    try:
+        return (
+            normalized_fields.index("x"),
+            normalized_fields.index("y"),
+            normalized_fields.index("z"),
+        )
+    except ValueError as exc:
+        raise ValueError("PCD fields must include x, y, z") from exc
+
+
+def _read_ascii_pcd_points(handle: BinaryIO, header: PcdHeader) -> list[list[float]]:
+    xyz_fields = _pcd_xyz_field_indices(header)
+    scalar_offsets: list[int] = []
+    offset = 0
+    for count in header.counts:
+        scalar_offsets.append(offset)
+        offset += count
+    xyz_indices = tuple(scalar_offsets[index] for index in xyz_fields)
+
+    points: list[list[float]] = []
+    for raw_line in handle:
+        values = raw_line.split()
+        if len(values) <= max(xyz_indices):
+            continue
+        point = _finite_xyz(values[index] for index in xyz_indices)
+        if point is not None:
+            points.append(point)
     return points
+
+
+def _read_binary_pcd_points(
+    handle: BinaryIO,
+    header: PcdHeader,
+    filename: str,
+) -> list[list[float]]:
+    xyz_fields = _pcd_xyz_field_indices(header)
+    byte_offsets: list[int] = []
+    stride = 0
+    for size, count in zip(header.sizes, header.counts):
+        byte_offsets.append(stride)
+        stride += size * count
+    if stride <= 0:
+        raise ValueError("PCD binary point stride must be positive")
+
+    coordinate_formats = [
+        _pcd_struct_format(header.types[index], header.sizes[index]) for index in xyz_fields
+    ]
+    coordinate_offsets = [byte_offsets[index] for index in xyz_fields]
+    payload = handle.read()
+    point_count = header.point_count
+    if point_count is None:
+        point_count, remainder = divmod(len(payload), stride)
+        if remainder:
+            raise ValueError(f"PCD binary payload is not aligned to point size: {filename}")
+    expected_size = point_count * stride
+    if len(payload) < expected_size:
+        raise ValueError(
+            f"PCD binary payload is truncated: expected {expected_size} bytes, "
+            f"found {len(payload)} in {filename}"
+        )
+
+    points: list[list[float]] = []
+    for point_index in range(point_count):
+        base_offset = point_index * stride
+        coordinates = [
+            struct.unpack_from(f"<{format_code}", payload, base_offset + coordinate_offset)[0]
+            for format_code, coordinate_offset in zip(coordinate_formats, coordinate_offsets)
+        ]
+        point = _finite_xyz(coordinates)
+        if point is not None:
+            points.append(point)
+    return points
+
+
+def _pcd_struct_format(field_type: str, size: int) -> str:
+    formats = {
+        ("F", 4): "f",
+        ("F", 8): "d",
+        ("I", 1): "b",
+        ("I", 2): "h",
+        ("I", 4): "i",
+        ("I", 8): "q",
+        ("U", 1): "B",
+        ("U", 2): "H",
+        ("U", 4): "I",
+        ("U", 8): "Q",
+    }
+    try:
+        return formats[(field_type, size)]
+    except KeyError as exc:
+        raise ValueError(f"Unsupported PCD field type/size: {field_type}{size}") from exc
 
 
 def _read_numpy_points(path: Path) -> list[list[float]]:

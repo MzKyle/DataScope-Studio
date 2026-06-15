@@ -1,3 +1,4 @@
+import struct
 from pathlib import Path
 
 from datascope_core.adapters.point_cloud_adapter import PointCloudAdapter, read_point_cloud_points
@@ -49,6 +50,27 @@ def test_read_point_cloud_points_filters_nan(tmp_path: Path) -> None:
     assert read_point_cloud_points(path) == [[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]]
 
 
+def test_read_binary_pcd_points_with_extra_field_and_nan(tmp_path: Path) -> None:
+    path = tmp_path / "cloud.pcd"
+    _write_binary_pcd(
+        path,
+        [
+            (7, 1.5, 2.5, 3.5),
+            (8, float("nan"), 4.0, 5.0),
+            (9, -1.0, -2.0, -3.0),
+        ],
+    )
+
+    assert read_point_cloud_points(path) == [
+        [1.5, 2.5, 3.5],
+        [-1.0, -2.0, -3.0],
+    ]
+
+    source = PointCloudAdapter().inspect(str(path))
+    assert source.metadata["sampled"][0]["point_count"] == 3
+    assert source.metadata["sampled"][0]["warning"] is None
+
+
 def _make_point_cloud_fixture(tmp_path: Path) -> Path:
     cloud_dir = tmp_path / "clouds"
     cloud_dir.mkdir()
@@ -69,3 +91,23 @@ def _write_ply(path: Path, points: list[list[float]]) -> None:
     ]
     lines.extend(" ".join(str(value) for value in point) for point in points)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _write_binary_pcd(path: Path, points: list[tuple[int, float, float, float]]) -> None:
+    header = "\n".join(
+        [
+            "# .PCD v0.7 - Point Cloud Data file format",
+            "VERSION 0.7",
+            "FIELDS intensity x y z",
+            "SIZE 2 4 4 4",
+            "TYPE U F F F",
+            "COUNT 1 1 1 1",
+            f"WIDTH {len(points)}",
+            "HEIGHT 1",
+            f"POINTS {len(points)}",
+            "DATA binary",
+            "",
+        ]
+    ).encode("ascii")
+    payload = b"".join(struct.pack("<Hfff", *point) for point in points)
+    path.write_bytes(header + payload)
