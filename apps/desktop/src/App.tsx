@@ -1,4 +1,12 @@
-import { memo, type DragEvent, type ReactNode, useEffect, useMemo, useState } from "react";
+import {
+  memo,
+  type DragEvent,
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from "react";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import {
   Activity,
@@ -21,10 +29,11 @@ import {
   Settings,
   Tags,
   Upload,
+  X,
   Zap
 } from "lucide-react";
 
-import { api } from "./api";
+import { api, ApiError, asApiError } from "./api";
 import {
   createTranslator,
   getInitialLanguage,
@@ -61,6 +70,31 @@ const sourceFileExtensions = new Set(["csv", "jsonl", "json", "mcap", "ply", "pc
 const thresholdTemplates = new Set(["low_battery", "detection_failure"]);
 const TABLE_RENDER_LIMIT = 100;
 const DEFAULT_EXPORT_DIR_KEY = "datascope.defaultExportDir";
+export type ErrorArea =
+  | "project"
+  | "import"
+  | "dashboard"
+  | "mappingToolbar"
+  | "mapping"
+  | "mappingDiff"
+  | "build"
+  | "recordings"
+  | "query"
+  | "compare"
+  | "batch"
+  | "extensions"
+  | "mappingTemplates"
+  | "settings";
+type RunOptions = {
+  area?: ErrorArea | "global";
+  retry?: () => void;
+  onError?: (error: ApiError) => void;
+};
+type GlobalNotification = {
+  error: ApiError;
+  retry?: () => void;
+};
+export type AreaErrors = Partial<Record<ErrorArea, ApiError>>;
 const semanticTypesByFamily: Record<string, string[]> = {
   tabular: [
     "scalar",
@@ -138,11 +172,13 @@ function App() {
   const [defaultExportDir, setDefaultExportDir] = useState(getInitialDefaultExportDir);
   const [tagInput, setTagInput] = useState("");
   const [busy, setBusy] = useState("");
-  const [error, setError] = useState("");
+  const [areaErrors, setAreaErrors] = useState<AreaErrors>({});
+  const [globalNotification, setGlobalNotification] = useState<GlobalNotification | null>(null);
   const [activeSection, setActiveSection] = useState("dashboard");
   const [dragActive, setDragActive] = useState(false);
   const [sourcePickerOpen, setSourcePickerOpen] = useState(false);
   const [language, setLanguage] = useState<Language>(getInitialLanguage);
+  const outputNameRef = useRef<HTMLInputElement>(null);
   const t = useMemo(() => createTranslator(language), [language]);
 
   const selectedProject = useMemo(
@@ -213,40 +249,78 @@ function App() {
     setMappingTemplateJson(selected ? JSON.stringify(selected.config, null, 2) : "");
   }, [mappingTemplates, selectedMappingTemplateId]);
 
-  async function run<T>(label: string, task: () => Promise<T>): Promise<T | null> {
+  function clearAreaError(area: ErrorArea) {
+    setAreaErrors((current) => clearErrorAreaState(current, area));
+  }
+
+  function showAreaError(area: ErrorArea, message: string, code = "client_validation") {
+    setAreaErrors((current) => ({
+      ...current,
+      [area]: new ApiError(message, 0, code)
+    }));
+  }
+
+  async function run<T>(
+    label: string,
+    task: () => Promise<T>,
+    options: RunOptions = {}
+  ): Promise<T | null> {
+    const area = options.area ?? "global";
     setBusy(label);
-    setError("");
+    if (area === "global") {
+      setGlobalNotification(null);
+    } else {
+      clearAreaError(area);
+    }
     try {
       return await task();
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      const apiError = asApiError(err);
+      if (area === "global") {
+        setGlobalNotification({ error: apiError, retry: options.retry });
+      } else {
+        setAreaErrors((current) => ({ ...current, [area]: apiError }));
+      }
+      options.onError?.(apiError);
       return null;
     } finally {
       setBusy("");
     }
   }
 
-  async function refreshProjects() {
-    const result = await run(t("busyRefreshingProjects"), () => api.projects());
+  async function refreshProjects(): Promise<boolean> {
+    const result = await run(t("busyRefreshingProjects"), () => api.projects(), {
+      retry: () => void refreshProjects()
+    });
     if (result) {
       setProjects(result);
       if (!selectedProjectId && result[0]) {
         setSelectedProjectId(result[0].id);
       }
     }
+    return result !== null;
   }
 
-  async function refreshProjectData(projectId = selectedProjectId, includeQueryTemplates = false) {
-    if (!projectId) return;
-    const result = await run(t("busyRefreshingWorkspace"), async () => {
-      const [recordingRows, jobRows, sourceRows] = await Promise.all([
-        api.recordings(projectId),
-        api.jobs(projectId),
-        api.sources(projectId)
-      ]);
-      const templatesRows = includeQueryTemplates ? await api.queryTemplates(projectId) : null;
-      return { recordingRows, jobRows, sourceRows, templatesRows };
-    });
+  async function refreshProjectData(
+    projectId = selectedProjectId,
+    includeQueryTemplates = false
+  ): Promise<boolean> {
+    if (!projectId) return true;
+    const result = await run(
+      t("busyRefreshingWorkspace"),
+      async () => {
+        const [recordingRows, jobRows, sourceRows] = await Promise.all([
+          api.recordings(projectId),
+          api.jobs(projectId),
+          api.sources(projectId)
+        ]);
+        const templatesRows = includeQueryTemplates ? await api.queryTemplates(projectId) : null;
+        return { recordingRows, jobRows, sourceRows, templatesRows };
+      },
+      {
+        retry: () => void refreshProjectData(projectId, includeQueryTemplates)
+      }
+    );
     if (result) {
       setRecordings(result.recordingRows);
       setJobs(result.jobRows);
@@ -268,43 +342,58 @@ function App() {
         }
       }
     }
+    return result !== null;
   }
 
-  async function refreshTemplateRegistry() {
-    const result = await run(t("busyLoadingRegistry"), async () => {
-      const [templateRows, mappingTemplateRows] = await Promise.all([
-        api.templates(),
-        api.mappingTemplates()
-      ]);
-      return { templateRows, mappingTemplateRows };
-    });
+  async function refreshTemplateRegistry(): Promise<boolean> {
+    const result = await run(
+      t("busyLoadingRegistry"),
+      async () => {
+        const [templateRows, mappingTemplateRows] = await Promise.all([
+          api.templates(),
+          api.mappingTemplates()
+        ]);
+        return { templateRows, mappingTemplateRows };
+      },
+      {
+        retry: () => void refreshTemplateRegistry()
+      }
+    );
     if (result) {
       setTemplateRegistry(result.templateRows);
       setMappingTemplates(result.mappingTemplateRows);
       setSelectedMappingTemplateId((current) => current || result.mappingTemplateRows[0]?.id || "");
     }
+    return result !== null;
   }
 
-  async function refreshExtensionData() {
-    const result = await run(t("busyLoadingRegistry"), async () => {
-      const [pluginRows, templateRows, mappingTemplateRows] = await Promise.all([
-        api.plugins(),
-        api.templates(),
-        api.mappingTemplates()
-      ]);
-      return { pluginRows, templateRows, mappingTemplateRows };
-    });
+  async function refreshExtensionData(): Promise<boolean> {
+    const result = await run(
+      t("busyLoadingRegistry"),
+      async () => {
+        const [pluginRows, templateRows, mappingTemplateRows] = await Promise.all([
+          api.plugins(),
+          api.templates(),
+          api.mappingTemplates()
+        ]);
+        return { pluginRows, templateRows, mappingTemplateRows };
+      },
+      {
+        retry: () => void refreshExtensionData()
+      }
+    );
     if (result) {
       setPlugins(result.pluginRows);
       setTemplateRegistry(result.templateRows);
       setMappingTemplates(result.mappingTemplateRows);
       setSelectedMappingTemplateId((current) => current || result.mappingTemplateRows[0]?.id || "");
     }
+    return result !== null;
   }
 
   async function refreshAll() {
-    await refreshProjects();
-    if (selectedProjectId) await refreshProjectData(selectedProjectId);
+    if (!(await refreshProjects())) return;
+    if (selectedProjectId && !(await refreshProjectData(selectedProjectId))) return;
     if (activeSection === "templates") {
       await refreshExtensionData();
     } else if (activeSection !== "settings") {
@@ -313,7 +402,9 @@ function App() {
   }
 
   async function createProject() {
-    const result = await run(t("busyCreatingProject"), () => api.createProject(projectName));
+    const result = await run(t("busyCreatingProject"), () => api.createProject(projectName), {
+      area: "project"
+    });
     if (result) {
       setProjects((current) => [result, ...current]);
       setSelectedProjectId(result.id);
@@ -323,49 +414,53 @@ function App() {
   async function importAndInspect() {
     const nextSourcePath = normalizeSourcePathInput(sourcePath);
     if (!nextSourcePath) {
-      setError(t("errorMissingSourcePath"));
+      showAreaError("import", t("errorMissingSourcePath"));
       return;
     }
     if (nextSourcePath !== sourcePath) {
       setSourcePath(nextSourcePath);
     }
-    const result = await run(t("busyInspectingSource"), async () => {
-      let projectRows = projects;
-      let projectForImport = selectedProject;
-      let projectIdForImport = selectedProjectId;
-      if (!projectIdForImport) {
-        const fallbackName = projectName.trim() || "Sensor Run";
-        if (!projectRows.length) {
-          projectRows = await api.projects();
+    const result = await run(
+      t("busyInspectingSource"),
+      async () => {
+        let projectRows = projects;
+        let projectForImport = selectedProject;
+        let projectIdForImport = selectedProjectId;
+        if (!projectIdForImport) {
+          const fallbackName = projectName.trim() || "Sensor Run";
+          if (!projectRows.length) {
+            projectRows = await api.projects();
+          }
+          projectForImport =
+            projectRows.find((project) => project.name === fallbackName) ??
+            (await api.createProject(fallbackName));
+          projectRows = upsertProject(projectRows, projectForImport);
+          projectIdForImport = projectForImport.id;
         }
-        projectForImport =
-          projectRows.find((project) => project.name === fallbackName) ??
-          (await api.createProject(fallbackName));
-        projectRows = upsertProject(projectRows, projectForImport);
-        projectIdForImport = projectForImport.id;
-      }
 
-      const added = await api.addSource(projectIdForImport, nextSourcePath);
-      const inspection = await api.inspect(added.id);
-      const templateMatches = await api.suggestTemplates(added.id);
-      const nextTemplateId = templateMatches[0]?.template_id ?? "sensor_monitor";
-      const suggested = await api.suggestMappingForTemplate(added.id, nextTemplateId);
-      const savedMapping = await api.saveMapping(added.id, suggested.mapping);
-      const mappingPreview = await api.previewMapping(added.id, suggested.mapping);
-      return {
-        added,
-        project: projectForImport,
-        projectRows,
-        streams: inspection.streams,
-        templateMatches,
-        nextTemplateId,
-        suggested,
-        savedMappingId: savedMapping.id,
-        previewRows: mappingPreview.preview.rows,
-        schemaProfile: mappingPreview.schema_profile,
-        validation: mappingPreview.validation
-      };
-    });
+        const added = await api.addSource(projectIdForImport, nextSourcePath);
+        const inspection = await api.inspect(added.id);
+        const templateMatches = await api.suggestTemplates(added.id);
+        const nextTemplateId = templateMatches[0]?.template_id ?? "sensor_monitor";
+        const suggested = await api.suggestMappingForTemplate(added.id, nextTemplateId);
+        const savedMapping = await api.saveMapping(added.id, suggested.mapping);
+        const mappingPreview = await api.previewMapping(added.id, suggested.mapping);
+        return {
+          added,
+          project: projectForImport,
+          projectRows,
+          streams: inspection.streams,
+          templateMatches,
+          nextTemplateId,
+          suggested,
+          savedMappingId: savedMapping.id,
+          previewRows: mappingPreview.preview.rows,
+          schemaProfile: mappingPreview.schema_profile,
+          validation: mappingPreview.validation
+        };
+      },
+      { area: "import" }
+    );
     if (result) {
       setProjects(result.projectRows);
       if (result.project) {
@@ -383,13 +478,18 @@ function App() {
       setSavedMappingId(result.savedMappingId);
       setMappingConfirmed(false);
       setBuildResult(null);
+      clearAreaError("build");
       setActiveSection("import");
     }
   }
 
   async function saveMapping() {
     if (!source || !mapping) return;
-    const saved = await run(t("busySavingMapping"), () => api.saveMapping(source.id, mapping.mapping));
+    const saved = await run(
+      t("busySavingMapping"),
+      () => api.saveMapping(source.id, mapping.mapping),
+      { area: "mapping" }
+    );
     if (saved) {
       setSavedMappingId(saved.id);
       setMappingConfirmed(false);
@@ -403,8 +503,10 @@ function App() {
 
   async function validateCurrentMapping() {
     if (!source || !mapping) return null;
-    const result = await run(t("busyValidatingMapping"), () =>
-      api.validateMapping(source.id, mapping.mapping)
+    const result = await run(
+      t("busyValidatingMapping"),
+      () => api.validateMapping(source.id, mapping.mapping),
+      { area: "mapping" }
     );
     if (result) setMappingValidation(result);
     return result;
@@ -412,12 +514,23 @@ function App() {
 
   async function confirmCurrentMapping() {
     if (!source || !mapping) return;
-    const result = await run(t("busyConfirmingMapping"), async () => {
-      const saved = savedMappingId
-        ? { id: savedMappingId }
-        : await api.saveMapping(source.id, mapping.mapping);
-      return api.confirmMapping(saved.id);
-    });
+    const result = await run(
+      t("busyConfirmingMapping"),
+      async () => {
+        const saved = savedMappingId
+          ? { id: savedMappingId }
+          : await api.saveMapping(source.id, mapping.mapping);
+        return api.confirmMapping(saved.id);
+      },
+      {
+        area: "mapping",
+        onError: (error) => {
+          if (error.code === "mapping_validation_failed" && error.details.validation) {
+            setMappingValidation(error.details.validation);
+          }
+        }
+      }
+    );
     if (result) {
       setSavedMappingId(result.mapping.id);
       setMappingValidation(result.validation);
@@ -443,18 +556,38 @@ function App() {
 
   async function buildRecording() {
     if (!selectedProject || !source || !mapping) {
-      setError(t("errorMappingUnavailable"));
+      showAreaError("build", t("errorMappingUnavailable"));
       return;
     }
     if (!mappingConfirmed) {
-      setError(t("errorConfirmMappingFirst"));
+      showAreaError("build", t("errorConfirmMappingFirst"));
       return;
     }
-    const result = await run(t("busyBuildingRecording"), async () => {
-      const mappingId = savedMappingId || (await api.saveMapping(source.id, mapping.mapping)).id;
-      const built = await api.build(selectedProject.id, source.id, mappingId, outputName, selectedTemplateId);
-      return { built, mappingId };
-    });
+    const result = await run(
+      t("busyBuildingRecording"),
+      async () => {
+        const mappingId = savedMappingId || (await api.saveMapping(source.id, mapping.mapping)).id;
+        const built = await api.build(
+          selectedProject.id,
+          source.id,
+          mappingId,
+          outputName,
+          selectedTemplateId
+        );
+        return { built, mappingId };
+      },
+      {
+        area: "build",
+        onError: (error) => {
+          if (error.code === "artifact_name_conflict") {
+            window.requestAnimationFrame(() => {
+              outputNameRef.current?.focus();
+              outputNameRef.current?.select();
+            });
+          }
+        }
+      }
+    );
     if (result) {
       setSavedMappingId(result.mappingId);
       setBuildResult(result.built);
@@ -466,17 +599,19 @@ function App() {
     const recordingPath = buildResult?.recording_path ?? latestRecording?.path;
     const blueprintPath = buildResult?.blueprint_path ?? latestRecording?.blueprint_path ?? undefined;
     if (!recordingPath) {
-      setError(t("errorNoRecordingToOpen"));
+      showAreaError(activeSection === "import" ? "build" : "dashboard", t("errorNoRecordingToOpen"));
       return;
     }
-    await run(t("busyOpeningRerun"), () =>
-      api.open(recordingPath, blueprintPath)
-    );
+    await run(t("busyOpeningRerun"), () => api.open(recordingPath, blueprintPath), {
+      area: activeSection === "import" ? "build" : "dashboard"
+    });
   }
 
   async function openRecording(recording: Recording) {
-    await run(t("busyOpeningRerun"), () =>
-      api.open(recording.path, recording.blueprint_path ?? undefined)
+    await run(
+      t("busyOpeningRerun"),
+      () => api.open(recording.path, recording.blueprint_path ?? undefined),
+      { area: activeSection === "dashboard" ? "dashboard" : "recordings" }
     );
   }
 
@@ -510,6 +645,7 @@ function App() {
     setSavedMappingId("");
     setMappingConfirmed(false);
     setMappingValidation(null);
+    clearAreaError("mapping");
   }
 
   function updateTimeline(key: "source_field" | "unit" | "sort", value: string) {
@@ -527,6 +663,7 @@ function App() {
     setSavedMappingId("");
     setMappingConfirmed(false);
     setMappingValidation(null);
+    clearAreaError("mapping");
   }
 
   async function applyMappingSuggestion(suggestion: MappingSuggestion) {
@@ -600,8 +737,10 @@ function App() {
     setSavedMappingId("");
     setMappingConfirmed(false);
     setMappingValidation(null);
-    const result = await run(t("busyApplyingMappingFix"), () =>
-      api.validateMapping(source.id, next.mapping)
+    const result = await run(
+      t("busyApplyingMappingFix"),
+      () => api.validateMapping(source.id, next.mapping),
+      { area: "mapping" }
     );
     if (result) setMappingValidation(result);
   }
@@ -610,12 +749,16 @@ function App() {
     setSelectedTemplateId(templateId);
     setSavedMappingId("");
     if (!source) return;
-    const result = await run(t("busySuggestingMapping"), async () => {
-      const suggested = await api.suggestMappingForTemplate(source.id, templateId);
-      const savedMapping = await api.saveMapping(source.id, suggested.mapping);
-      const validation = await api.validateMapping(source.id, suggested.mapping);
-      return { suggested, savedMappingId: savedMapping.id, validation };
-    });
+    const result = await run(
+      t("busySuggestingMapping"),
+      async () => {
+        const suggested = await api.suggestMappingForTemplate(source.id, templateId);
+        const savedMapping = await api.saveMapping(source.id, suggested.mapping);
+        const validation = await api.validateMapping(source.id, suggested.mapping);
+        return { suggested, savedMappingId: savedMapping.id, validation };
+      },
+      { area: "mappingToolbar" }
+    );
     if (result) {
       setMapping(result.suggested);
       setSavedMappingId(result.savedMappingId);
@@ -626,8 +769,10 @@ function App() {
 
   async function applySelectedMappingTemplate() {
     if (!source || !selectedMappingTemplateId) return;
-    const result = await run(t("busyApplyingMappingTemplate"), () =>
-      api.applyMappingTemplate(selectedMappingTemplateId, source.id)
+    const result = await run(
+      t("busyApplyingMappingTemplate"),
+      () => api.applyMappingTemplate(selectedMappingTemplateId, source.id),
+      { area: "mappingToolbar" }
     );
     if (result) {
       setMapping({ mapping: result.mapping });
@@ -640,17 +785,21 @@ function App() {
 
   async function createCurrentMappingTemplate() {
     if (!source || !mapping) return;
-    const result = await run(t("busySavingMappingTemplate"), async () => {
-      const saved = savedMappingId
-        ? { id: savedMappingId }
-        : await api.saveMapping(source.id, mapping.mapping);
-      const template = await api.createMappingTemplate(
-        mappingTemplateName.trim(),
-        source.id,
-        saved.id
-      );
-      return { template, mappingId: saved.id };
-    });
+    const result = await run(
+      t("busySavingMappingTemplate"),
+      async () => {
+        const saved = savedMappingId
+          ? { id: savedMappingId }
+          : await api.saveMapping(source.id, mapping.mapping);
+        const template = await api.createMappingTemplate(
+          mappingTemplateName.trim(),
+          source.id,
+          saved.id
+        );
+        return { template, mappingId: saved.id };
+      },
+      { area: "mappingToolbar" }
+    );
     if (result) {
       setSavedMappingId(result.mappingId);
       await refreshTemplateRegistry();
@@ -660,8 +809,10 @@ function App() {
 
   async function importMappingTemplate() {
     if (!mappingTemplatePath.trim()) return;
-    const result = await run(t("busyImportingMappingTemplate"), () =>
-      api.importMappingTemplate(mappingTemplatePath.trim())
+    const result = await run(
+      t("busyImportingMappingTemplate"),
+      () => api.importMappingTemplate(mappingTemplatePath.trim()),
+      { area: "mappingTemplates" }
     );
     if (result) {
       setMappingTemplatePath("");
@@ -672,19 +823,24 @@ function App() {
 
   async function saveMappingTemplateConfig() {
     if (!selectedMappingTemplateId || !mappingTemplateJson.trim()) return;
-    const result = await run(t("busySavingMappingTemplate"), () =>
-      api.saveMappingTemplate(selectedMappingTemplateId, JSON.parse(mappingTemplateJson))
+    const result = await run(
+      t("busySavingMappingTemplate"),
+      () => api.saveMappingTemplate(selectedMappingTemplateId, JSON.parse(mappingTemplateJson)),
+      { area: "mappingTemplates" }
     );
     if (result) await refreshTemplateRegistry();
   }
 
   async function exportSelectedMappingTemplate() {
     if (!selectedMappingTemplateId) return;
-    const result = await run(t("busyExportingMappingTemplate"), () =>
-      api.exportMappingTemplate(
-        selectedMappingTemplateId,
-        mappingTemplateExportPath.trim() || undefined
-      )
+    const result = await run(
+      t("busyExportingMappingTemplate"),
+      () =>
+        api.exportMappingTemplate(
+          selectedMappingTemplateId,
+          mappingTemplateExportPath.trim() || undefined
+        ),
+      { area: "mappingTemplates" }
     );
     if (result) setMappingTemplateExportPath(result.path);
   }
@@ -696,13 +852,16 @@ function App() {
       !diffLeftSourceId ||
       !diffRightSourceId
     ) return;
-    const result = await run(t("busyDiffingMapping"), () =>
-      api.diffMappingTemplate(
-        selectedProjectId,
-        selectedMappingTemplateId,
-        diffLeftSourceId,
-        diffRightSourceId
-      )
+    const result = await run(
+      t("busyDiffingMapping"),
+      () =>
+        api.diffMappingTemplate(
+          selectedProjectId,
+          selectedMappingTemplateId,
+          diffLeftSourceId,
+          diffRightSourceId
+        ),
+      { area: "mappingDiff" }
     );
     if (result) setMappingDiff(result);
   }
@@ -710,8 +869,10 @@ function App() {
   async function addTagToRecording(recordingId: string) {
     const tag = tagInput.trim();
     if (!tag) return;
-    const updated = await run(t("busyUpdatingTag"), () =>
-      api.patchRecording(recordingId, { add_tags: [tag] })
+    const updated = await run(
+      t("busyUpdatingTag"),
+      () => api.patchRecording(recordingId, { add_tags: [tag] }),
+      { area: "recordings" }
     );
     if (updated) {
       setTagInput("");
@@ -724,13 +885,16 @@ function App() {
     const params = thresholdTemplates.has(selectedQueryTemplate)
       ? { threshold: Number(queryThreshold) }
       : {};
-    const result = await run(t("busyRunningQuery"), () =>
-      api.query(
-        selectedProjectId,
-        selectedQueryTemplate,
-        selectedQueryRecording ? [selectedQueryRecording] : [],
-        params
-      )
+    const result = await run(
+      t("busyRunningQuery"),
+      () =>
+        api.query(
+          selectedProjectId,
+          selectedQueryTemplate,
+          selectedQueryRecording ? [selectedQueryRecording] : [],
+          params
+        ),
+      { area: "query" }
     );
     if (result) setQueryResult(result);
   }
@@ -740,21 +904,28 @@ function App() {
     const params = thresholdTemplates.has(selectedQueryTemplate)
       ? { threshold: Number(queryThreshold) }
       : {};
-    const result = await run(t("busyExportingQuery"), () =>
-      api.exportQuery(
-        selectedProjectId,
-        selectedQueryTemplate,
-        selectedQueryRecording ? [selectedQueryRecording] : [],
-        params,
-        "csv"
-      )
+    const result = await run(
+      t("busyExportingQuery"),
+      () =>
+        api.exportQuery(
+          selectedProjectId,
+          selectedQueryTemplate,
+          selectedQueryRecording ? [selectedQueryRecording] : [],
+          params,
+          "csv"
+        ),
+      { area: "query" }
     );
     if (result) setExportPath(result.path);
   }
 
   async function installPlugin() {
     if (!pluginPath.trim()) return;
-    const result = await run(t("busyInstallingPlugin"), () => api.installPlugin(pluginPath.trim()));
+    const result = await run(
+      t("busyInstallingPlugin"),
+      () => api.installPlugin(pluginPath.trim()),
+      { area: "extensions" }
+    );
     if (result) {
       setPluginPath("");
       refreshExtensionData();
@@ -763,7 +934,11 @@ function App() {
 
   async function installTemplate() {
     if (!templatePath.trim()) return;
-    const result = await run(t("busyInstallingTemplate"), () => api.installTemplate(templatePath.trim()));
+    const result = await run(
+      t("busyInstallingTemplate"),
+      () => api.installTemplate(templatePath.trim()),
+      { area: "extensions" }
+    );
     if (result) {
       setTemplatePath("");
       refreshExtensionData();
@@ -776,8 +951,10 @@ function App() {
       .split("\n")
       .map((value) => value.trim())
       .filter(Boolean);
-    const result = await run(t("busyRunningBatch"), () =>
-      api.batchImport(selectedProjectId, patterns, selectedTemplateId, batchOutputPrefix)
+    const result = await run(
+      t("busyRunningBatch"),
+      () => api.batchImport(selectedProjectId, patterns, selectedTemplateId, batchOutputPrefix),
+      { area: "batch" }
     );
     if (result) {
       setBatchResult(result);
@@ -795,8 +972,10 @@ function App() {
       .split(/[,\s]+/)
       .map((value) => value.trim())
       .filter(Boolean);
-    const result = await run(t("busyComparing"), () =>
-      api.compare(selectedProjectId, recordingIds, metricKeys, "summary")
+    const result = await run(
+      t("busyComparing"),
+      () => api.compare(selectedProjectId, recordingIds, metricKeys, "summary"),
+      { area: "compare" }
     );
     if (result) setCompareResult(result);
   }
@@ -807,53 +986,65 @@ function App() {
     if (outputPath !== defaultExportDir) {
       setDefaultExportDir(outputPath);
     }
-    const result = await run(t("busyExportingProject"), () =>
-      api.exportProject(selectedProjectId, outputPath || undefined)
+    const result = await run(
+      t("busyExportingProject"),
+      () => api.exportProject(selectedProjectId, outputPath || undefined),
+      { area: "dashboard" }
     );
     if (result) setProjectExport(result);
   }
 
   async function chooseExportFolder() {
     if (!isTauriRuntime()) {
-      setError(t("errorPickerUnavailable"));
+      showAreaError("settings", t("errorPickerUnavailable"));
       return;
     }
-    const selected = await run(t("busySelectingExportFolder"), () =>
-      openDialog({
-        title: t("selectExportFolder"),
-        directory: true,
-        multiple: false,
-        recursive: false
-      })
+    const selected = await run(
+      t("busySelectingExportFolder"),
+      () =>
+        openDialog({
+          title: t("selectExportFolder"),
+          directory: true,
+          multiple: false,
+          recursive: false
+        }),
+      { area: "settings" }
     );
     const selectedPath = Array.isArray(selected) ? selected[0] : selected;
     if (selectedPath) {
       setDefaultExportDir(normalizeSourcePathInput(selectedPath));
-      setError("");
+      clearAreaError("settings");
     }
   }
 
   async function openProjectPackage() {
     if (!isTauriRuntime()) {
-      setError(t("errorPickerUnavailable"));
+      showAreaError("dashboard", t("errorPickerUnavailable"));
       return;
     }
-    const selected = await run(t("busyOpeningPackage"), () =>
-      openDialog({
-        title: t("selectProjectPackage"),
-        multiple: false,
-        filters: [
-          {
-            name: "DataScope Project Package",
-            extensions: ["zip"]
-          }
-        ]
-      })
+    const selected = await run(
+      t("busyOpeningPackage"),
+      () =>
+        openDialog({
+          title: t("selectProjectPackage"),
+          multiple: false,
+          filters: [
+            {
+              name: "DataScope Project Package",
+              extensions: ["zip"]
+            }
+          ]
+        }),
+      { area: "dashboard" }
     );
     const selectedPath = Array.isArray(selected) ? selected[0] : selected;
     if (!selectedPath) return;
     const packagePath = normalizeSourcePathInput(selectedPath);
-    const result = await run(t("busyOpeningPackage"), () => api.importProjectPackage(packagePath));
+    const result = await run(
+      t("busyOpeningPackage"),
+      () => api.importProjectPackage(packagePath),
+      { area: "dashboard" }
+    );
     if (result) {
       setProjects((current) => upsertProject(current, result.project));
       setSelectedProjectId(result.project.id);
@@ -871,7 +1062,7 @@ function App() {
       setProjectSources([]);
       setMappingDiff(null);
       setOpenedPackagePath(result.package_path);
-      setError("");
+      clearAreaError("dashboard");
       setActiveSection("dashboard");
     }
   }
@@ -907,13 +1098,14 @@ function App() {
       const normalizedPath = normalizeSourcePathInput(droppedPath);
       setSourcePath(normalizedPath);
       setOutputName(defaultOutputName(normalizedPath));
+      clearAreaError("import");
     }
   }
 
   async function chooseSource(kind: "file" | "folder") {
     setSourcePickerOpen(false);
     if (!isTauriRuntime()) {
-      setError(t("errorPickerUnavailable"));
+      showAreaError("import", t("errorPickerUnavailable"));
       return;
     }
     const selected = await run(
@@ -945,14 +1137,15 @@ function App() {
                   }
                 ]
               : undefined
-        })
+        }),
+      { area: "import" }
     );
     const selectedPath = Array.isArray(selected) ? selected[0] : selected;
     if (selectedPath) {
       const normalizedPath = normalizeSourcePathInput(selectedPath);
       setSourcePath(normalizedPath);
       setOutputName(defaultOutputName(normalizedPath, kind));
-      setError("");
+      clearAreaError("import");
     }
   }
 
@@ -967,7 +1160,7 @@ function App() {
           <span>{t("localCatalog")}</span>
         </div>
         <div className="topbar-spacer" />
-        <StatusBadge tone={error ? "danger" : "success"} label={error ? t("needsAttention") : t("online")} />
+        <StatusBadge tone="success" label={t("online")} />
         {busy && <span className="busy-indicator">{busy}</span>}
         <button className="icon-button" onClick={refreshAll} title={t("refreshWorkspace")}>
           <RefreshCcw size={16} />
@@ -1038,12 +1231,16 @@ function App() {
               <input
                 aria-label={t("createProject")}
                 value={projectName}
-                onChange={(event) => setProjectName(event.target.value)}
+                onChange={(event) => {
+                  setProjectName(event.target.value);
+                  clearAreaError("project");
+                }}
               />
               <button className="icon-button" onClick={createProject} title={t("createProject")}>
                 <FolderPlus size={16} />
               </button>
             </div>
+            <InlineError error={areaErrors.project} t={t} />
             {selectedProject && <p className="path-line">{selectedProject.workspace_path}</p>}
           </section>
 
@@ -1064,13 +1261,6 @@ function App() {
         </aside>
 
         <section className="workspace">
-          {(busy || error) && (
-            <div className={`notice ${error ? "notice-error" : "notice-info"}`} role="status">
-              {error ? <AlertCircle size={17} /> : <Activity size={17} />}
-              <span>{error || busy}</span>
-            </div>
-          )}
-
           {activeSection === "dashboard" && (
           <section className="dashboard" id="dashboard">
             <div className="hero-card project-summary-card">
@@ -1170,11 +1360,17 @@ function App() {
                 ))}
               </div>
               <input
+                aria-describedby={areaErrors.import ? "import-error" : undefined}
+                aria-invalid={Boolean(areaErrors.import)}
                 placeholder={t("sourcePathPlaceholder")}
                 value={sourcePath}
-                onChange={(event) => setSourcePath(event.target.value)}
+                onChange={(event) => {
+                  setSourcePath(event.target.value);
+                  clearAreaError("import");
+                }}
                 onBlur={(event) => setSourcePath(normalizeSourcePathInput(event.target.value))}
               />
+              <InlineError id="import-error" error={areaErrors.import} t={t} />
             </section>
 
             <section className="card quick-actions-card">
@@ -1197,6 +1393,7 @@ function App() {
                   {t("openInRerun")}
                 </button>
               </div>
+              <InlineError error={areaErrors.dashboard} t={t} />
               {projectExport && <p className="path-line light">{t("packagePath")}: {projectExport.path}</p>}
               {openedPackagePath && <p className="path-line light">{t("importedPackage")}: {openedPackagePath}</p>}
               {latestJob && (
@@ -1269,7 +1466,10 @@ function App() {
               <div className="inline-actions">
                 <select
                   value={selectedMappingTemplateId}
-                  onChange={(event) => setSelectedMappingTemplateId(event.target.value)}
+                  onChange={(event) => {
+                    setSelectedMappingTemplateId(event.target.value);
+                    clearAreaError("mappingToolbar");
+                  }}
                 >
                   <option value="">{t("automaticMapping")}</option>
                   {mappingTemplates.map((item) => (
@@ -1286,7 +1486,10 @@ function App() {
                 </button>
                 <input
                   value={mappingTemplateName}
-                  onChange={(event) => setMappingTemplateName(event.target.value)}
+                  onChange={(event) => {
+                    setMappingTemplateName(event.target.value);
+                    clearAreaError("mappingToolbar");
+                  }}
                   placeholder={t("mappingTemplateName")}
                 />
                 <button
@@ -1297,6 +1500,7 @@ function App() {
                   {t("saveAsMappingTemplate")}
                 </button>
               </div>
+              <InlineError error={areaErrors.mappingToolbar} t={t} />
             </section>
 
             <div className="two-column">
@@ -1502,6 +1706,7 @@ function App() {
                         {mappingConfirmed ? t("mappingConfirmed") : t("mappingDraft")}
                       </span>
                     </div>
+                    <InlineError error={areaErrors.mapping} t={t} />
                   </>
                 ) : (
                   <EmptyState text={t("mappingEmpty")} />
@@ -1516,13 +1721,25 @@ function App() {
                 subtitle={t("mappingDiffSubtitle")}
               />
               <div className="diff-controls">
-                <select value={diffLeftSourceId} onChange={(event) => setDiffLeftSourceId(event.target.value)}>
+                <select
+                  value={diffLeftSourceId}
+                  onChange={(event) => {
+                    setDiffLeftSourceId(event.target.value);
+                    clearAreaError("mappingDiff");
+                  }}
+                >
                   <option value="">{t("leftSource")}</option>
                   {projectSources.map((item) => (
                     <option key={item.id} value={item.id}>{item.id} / {item.type}</option>
                   ))}
                 </select>
-                <select value={diffRightSourceId} onChange={(event) => setDiffRightSourceId(event.target.value)}>
+                <select
+                  value={diffRightSourceId}
+                  onChange={(event) => {
+                    setDiffRightSourceId(event.target.value);
+                    clearAreaError("mappingDiff");
+                  }}
+                >
                   <option value="">{t("rightSource")}</option>
                   {projectSources.map((item) => (
                     <option key={item.id} value={item.id}>{item.id} / {item.type}</option>
@@ -1541,6 +1758,7 @@ function App() {
                   {t("compareMappings")}
                 </button>
               </div>
+              <InlineError error={areaErrors.mappingDiff} t={t} />
               {mappingDiff ? (
                 <div className="table-wrap">
                   <table>
@@ -1575,7 +1793,16 @@ function App() {
               <section className="card">
                 <CardHeader icon={<Play size={18} />} title={t("conversionJob")} />
                 <div className="build-row">
-                  <input value={outputName} onChange={(event) => setOutputName(event.target.value)} />
+                  <input
+                    ref={outputNameRef}
+                    aria-describedby={areaErrors.build ? "build-error" : undefined}
+                    aria-invalid={Boolean(areaErrors.build)}
+                    value={outputName}
+                    onChange={(event) => {
+                      setOutputName(event.target.value);
+                      clearAreaError("build");
+                    }}
+                  />
                   <button className="button-primary" disabled={isBusy || !mappingConfirmed} onClick={buildRecording}>
                     <Play size={16} />
                     {t("buildArtifacts")}
@@ -1585,6 +1812,7 @@ function App() {
                     {t("openInRerun")}
                   </button>
                 </div>
+                <InlineError id="build-error" error={areaErrors.build} t={t} />
                 {buildResult ? (
                   <dl className="artifact-list">
                     <div>
@@ -1635,9 +1863,13 @@ function App() {
                       <input
                         placeholder={t("tagPlaceholder")}
                         value={tagInput}
-                        onChange={(event) => setTagInput(event.target.value)}
+                        onChange={(event) => {
+                          setTagInput(event.target.value);
+                          clearAreaError("recordings");
+                        }}
                       />
                     </div>
+                    <InlineError error={areaErrors.recordings} t={t} />
                     <div className="table-wrap responsive-table">
                       <table>
                         <thead>
@@ -1690,7 +1922,10 @@ function App() {
                 <div className="query-controls">
                   <select
                     value={selectedQueryTemplate}
-                    onChange={(event) => setSelectedQueryTemplate(event.target.value)}
+                    onChange={(event) => {
+                      setSelectedQueryTemplate(event.target.value);
+                      clearAreaError("query");
+                    }}
                   >
                     {queryTemplates.length ? (
                       queryTemplates.map((template) => (
@@ -1704,7 +1939,10 @@ function App() {
                   </select>
                   <select
                     value={selectedQueryRecording}
-                    onChange={(event) => setSelectedQueryRecording(event.target.value)}
+                    onChange={(event) => {
+                      setSelectedQueryRecording(event.target.value);
+                      clearAreaError("query");
+                    }}
                   >
                     <option value="">{t("allRecordings")}</option>
                     {queryRecordingOptions.map((recording) => (
@@ -1722,7 +1960,10 @@ function App() {
                     <input
                       aria-label={t("queryThreshold")}
                       value={queryThreshold}
-                      onChange={(event) => setQueryThreshold(event.target.value)}
+                      onChange={(event) => {
+                        setQueryThreshold(event.target.value);
+                        clearAreaError("query");
+                      }}
                     />
                   )}
                   <button className="button-primary" onClick={runQuery} disabled={!selectedProjectId || isBusy}>
@@ -1734,6 +1975,7 @@ function App() {
                     {t("exportCsv")}
                   </button>
                 </div>
+                <InlineError error={areaErrors.query} t={t} />
                 {exportPath && <p className="path-line light">{t("exported")}: {exportPath}</p>}
                 <ResultTable result={queryResult} emptyText={t("queryEmpty")} />
               </section>
@@ -1746,18 +1988,25 @@ function App() {
                   <input
                     placeholder={t("recordingIdsPlaceholder")}
                     value={compareRecordingIds}
-                    onChange={(event) => setCompareRecordingIds(event.target.value)}
+                    onChange={(event) => {
+                      setCompareRecordingIds(event.target.value);
+                      clearAreaError("compare");
+                    }}
                   />
                   <input
                     placeholder={t("metricPlaceholder")}
                     value={compareMetric}
-                    onChange={(event) => setCompareMetric(event.target.value)}
+                    onChange={(event) => {
+                      setCompareMetric(event.target.value);
+                      clearAreaError("compare");
+                    }}
                   />
                   <button className="button-primary" onClick={runCompare} disabled={!selectedProjectId || isBusy}>
                     <Search size={16} />
                     {t("compare")}
                   </button>
                 </div>
+                <InlineError error={areaErrors.compare} t={t} />
                 <ResultTable
                   result={compareResult}
                   emptyText={t("compareEmpty")}
@@ -1795,18 +2044,25 @@ function App() {
                 <textarea
                   placeholder={t("batchPlaceholder")}
                   value={batchPattern}
-                  onChange={(event) => setBatchPattern(event.target.value)}
+                  onChange={(event) => {
+                    setBatchPattern(event.target.value);
+                    clearAreaError("batch");
+                  }}
                 />
                 <div className="inline-actions">
                   <input
                     value={batchOutputPrefix}
-                    onChange={(event) => setBatchOutputPrefix(event.target.value)}
+                    onChange={(event) => {
+                      setBatchOutputPrefix(event.target.value);
+                      clearAreaError("batch");
+                    }}
                   />
                   <button onClick={runBatchImport} disabled={!selectedProjectId || isBusy}>
                     <Upload size={16} />
                     {t("runBatch")}
                   </button>
                 </div>
+                <InlineError error={areaErrors.batch} t={t} />
                 {batchResult && (
                   <p className="path-line light">
                     {batchResult.id}: {batchResult.succeeded}/{batchResult.total} succeeded
@@ -1824,7 +2080,10 @@ function App() {
                   <input
                     placeholder={t("pluginPathPlaceholder")}
                     value={pluginPath}
-                    onChange={(event) => setPluginPath(event.target.value)}
+                    onChange={(event) => {
+                      setPluginPath(event.target.value);
+                      clearAreaError("extensions");
+                    }}
                   />
                   <button onClick={installPlugin} disabled={isBusy}>
                     <Save size={16} />
@@ -1833,13 +2092,17 @@ function App() {
                   <input
                     placeholder={t("templatePathPlaceholder")}
                     value={templatePath}
-                    onChange={(event) => setTemplatePath(event.target.value)}
+                    onChange={(event) => {
+                      setTemplatePath(event.target.value);
+                      clearAreaError("extensions");
+                    }}
                   />
                   <button onClick={installTemplate} disabled={isBusy}>
                     <Save size={16} />
                     {t("installTemplate")}
                   </button>
                 </div>
+                <InlineError error={areaErrors.extensions} t={t} />
               </section>
             </div>
 
@@ -1855,7 +2118,10 @@ function App() {
                     <input
                       placeholder={t("mappingTemplatePathPlaceholder")}
                       value={mappingTemplatePath}
-                      onChange={(event) => setMappingTemplatePath(event.target.value)}
+                      onChange={(event) => {
+                        setMappingTemplatePath(event.target.value);
+                        clearAreaError("mappingTemplates");
+                      }}
                     />
                     <button onClick={importMappingTemplate} disabled={isBusy}>
                       <Upload size={16} />
@@ -1864,7 +2130,10 @@ function App() {
                   </div>
                   <select
                     value={selectedMappingTemplateId}
-                    onChange={(event) => setSelectedMappingTemplateId(event.target.value)}
+                    onChange={(event) => {
+                      setSelectedMappingTemplateId(event.target.value);
+                      clearAreaError("mappingTemplates");
+                    }}
                   >
                     <option value="">{t("selectMappingTemplate")}</option>
                     {mappingTemplates.map((item) => (
@@ -1877,7 +2146,10 @@ function App() {
                     <input
                       placeholder={t("mappingTemplateExportPath")}
                       value={mappingTemplateExportPath}
-                      onChange={(event) => setMappingTemplateExportPath(event.target.value)}
+                      onChange={(event) => {
+                        setMappingTemplateExportPath(event.target.value);
+                        clearAreaError("mappingTemplates");
+                      }}
                     />
                     <button
                       onClick={exportSelectedMappingTemplate}
@@ -1891,9 +2163,14 @@ function App() {
                 <div className="mapping-template-rules">
                   <label className="field-label">{t("mappingTemplateRules")}</label>
                   <textarea
+                    aria-describedby={areaErrors.mappingTemplates ? "mapping-template-error" : undefined}
+                    aria-invalid={Boolean(areaErrors.mappingTemplates)}
                     className="mapping-template-json"
                     value={mappingTemplateJson}
-                    onChange={(event) => setMappingTemplateJson(event.target.value)}
+                    onChange={(event) => {
+                      setMappingTemplateJson(event.target.value);
+                      clearAreaError("mappingTemplates");
+                    }}
                     placeholder={t("mappingTemplateRulesHint")}
                   />
                   <div className="actions">
@@ -1907,6 +2184,11 @@ function App() {
                   </div>
                 </div>
               </div>
+              <InlineError
+                id="mapping-template-error"
+                error={areaErrors.mappingTemplates}
+                t={t}
+              />
             </section>
 
             <section className="card registry-card">
@@ -2004,7 +2286,10 @@ function App() {
                   <input
                     placeholder={t("exportPathPlaceholder")}
                     value={defaultExportDir}
-                    onChange={(event) => setDefaultExportDir(event.target.value)}
+                    onChange={(event) => {
+                      setDefaultExportDir(event.target.value);
+                      clearAreaError("settings");
+                    }}
                     onBlur={(event) => setDefaultExportDir(normalizeSourcePathInput(event.target.value))}
                   />
                   <button type="button" onClick={chooseExportFolder} disabled={isBusy}>
@@ -2012,14 +2297,34 @@ function App() {
                     {t("selectExportFolder")}
                   </button>
                 </div>
+                <InlineError error={areaErrors.settings} t={t} />
               </div>
             </section>
           </section>
           )}
         </section>
       </div>
+      {globalNotification && (
+        <GlobalErrorToast
+          notification={globalNotification}
+          t={t}
+          onDismiss={() => setGlobalNotification(null)}
+          onRetry={() => {
+            const retry = globalNotification.retry;
+            setGlobalNotification(null);
+            retry?.();
+          }}
+        />
+      )}
     </main>
   );
+}
+
+export function clearErrorAreaState(current: AreaErrors, area: ErrorArea): AreaErrors {
+  if (!current[area]) return current;
+  const next = { ...current };
+  delete next[area];
+  return next;
 }
 
 function normalizeDroppedPath(value: string) {
@@ -2084,6 +2389,88 @@ function formatDateTime(value: string, language: Language) {
     hour: "2-digit",
     minute: "2-digit"
   });
+}
+
+export function InlineError({
+  id,
+  error,
+  t
+}: {
+  id?: string;
+  error?: ApiError;
+  t: (key: TranslationKey) => string;
+}) {
+  if (!error) return null;
+  const isArtifactConflict = error.code === "artifact_name_conflict";
+  const paths = Array.isArray(error.details.paths) ? error.details.paths : [];
+  const outputName =
+    typeof error.details.output_name === "string" ? error.details.output_name : "";
+
+  return (
+    <div className="inline-error" id={id} role="alert">
+      <AlertCircle size={17} aria-hidden="true" />
+      <div>
+        <strong>{isArtifactConflict ? t("artifactNameConflict") : t("operationFailed")}</strong>
+        <p>
+          {isArtifactConflict ? t("artifactNameConflictHint") : error.message}
+          {isArtifactConflict && outputName ? ` (${outputName})` : ""}
+        </p>
+        {paths.length > 0 && (
+          <div className="inline-error-paths">
+            <span>{t("conflictingFiles")}</span>
+            {paths.map((path) => (
+              <code key={path}>{path}</code>
+            ))}
+          </div>
+        )}
+        {!isArtifactConflict && error.code && (
+          <span className="inline-error-code">
+            {t("errorCode")}: {error.code}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function GlobalErrorToast({
+  notification,
+  t,
+  onDismiss,
+  onRetry
+}: {
+  notification: GlobalNotification;
+  t: (key: TranslationKey) => string;
+  onDismiss: () => void;
+  onRetry: () => void;
+}) {
+  return (
+    <aside className="error-toast" role="alert" aria-live="assertive">
+      <AlertCircle size={19} aria-hidden="true" />
+      <div className="error-toast-content">
+        <strong>{t("workspaceError")}</strong>
+        <p>{notification.error.message}</p>
+        <span>
+          {t("errorCode")}: {notification.error.code}
+        </span>
+        {notification.retry && (
+          <button type="button" onClick={onRetry}>
+            <RefreshCcw size={14} />
+            {t("retry")}
+          </button>
+        )}
+      </div>
+      <button
+        className="error-toast-close"
+        type="button"
+        onClick={onDismiss}
+        title={t("close")}
+        aria-label={t("close")}
+      >
+        <X size={16} />
+      </button>
+    </aside>
+  );
 }
 
 const validationIssueKeys: Record<string, TranslationKey> = {

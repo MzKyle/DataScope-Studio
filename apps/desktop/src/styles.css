@@ -210,6 +210,20 @@ textarea {
   resize: vertical;
 }
 
+input[aria-invalid="true"],
+select[aria-invalid="true"],
+textarea[aria-invalid="true"] {
+  background: var(--color-danger-soft);
+  border-color: rgba(217, 45, 32, 0.52);
+}
+
+input[aria-invalid="true"]:focus-visible,
+select[aria-invalid="true"]:focus-visible,
+textarea[aria-invalid="true"]:focus-visible {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 4px rgba(217, 45, 32, 0.12);
+}
+
 .app-shell {
   background: var(--color-bg);
   display: flex;
@@ -443,25 +457,121 @@ dt {
   scrollbar-gutter: stable;
 }
 
-.notice {
-  align-items: center;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-12);
-  display: flex;
-  gap: var(--space-8);
-  min-height: 44px;
-  padding: var(--space-12) var(--space-16);
-}
-
-.notice-info {
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
-}
-
-.notice-error {
+.inline-error {
+  align-items: flex-start;
   background: var(--color-danger-soft);
-  border-color: rgba(217, 45, 32, 0.18);
+  border: 1px solid rgba(217, 45, 32, 0.2);
+  border-radius: var(--radius-12);
   color: var(--color-danger);
+  display: flex;
+  gap: var(--space-10);
+  margin-top: var(--space-12);
+  padding: var(--space-12);
+}
+
+.inline-error > svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.inline-error > div {
+  min-width: 0;
+}
+
+.inline-error strong,
+.inline-error p,
+.inline-error code,
+.inline-error span {
+  overflow-wrap: anywhere;
+}
+
+.inline-error p {
+  color: var(--color-text);
+  font-size: 13px;
+  margin: 2px 0 0;
+}
+
+.inline-error-code {
+  color: var(--color-text-muted);
+  display: block;
+  font-size: 11px;
+  margin-top: 6px;
+}
+
+.inline-error-paths {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-8);
+}
+
+.inline-error-paths span {
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.inline-error-paths code {
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: var(--radius-10);
+  color: var(--color-text);
+  display: block;
+  font-size: 11px;
+  padding: 6px var(--space-8);
+}
+
+.error-toast {
+  align-items: flex-start;
+  background: var(--color-surface);
+  border: 1px solid rgba(217, 45, 32, 0.24);
+  border-radius: var(--radius-16);
+  bottom: var(--space-20);
+  box-shadow: 0 14px 40px rgba(20, 24, 32, 0.18);
+  color: var(--color-danger);
+  display: flex;
+  gap: var(--space-12);
+  max-width: min(420px, calc(100vw - 32px));
+  padding: var(--space-16);
+  position: fixed;
+  right: var(--space-20);
+  width: 100%;
+  z-index: 100;
+}
+
+.error-toast > svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.error-toast-content {
+  min-width: 0;
+}
+
+.error-toast-content p {
+  color: var(--color-text);
+  margin: var(--space-4) 0;
+  overflow-wrap: anywhere;
+}
+
+.error-toast-content > span {
+  color: var(--color-text-muted);
+  display: block;
+  font-size: 11px;
+}
+
+.error-toast-content button {
+  margin-top: var(--space-12);
+  min-height: 32px;
+  padding: 0 var(--space-12);
+}
+
+.error-toast-close {
+  border: 0;
+  box-shadow: none;
+  flex: 0 0 auto;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  width: 32px;
 }
 
 .dashboard {
@@ -1494,6 +1604,13 @@ td {
     min-width: 0;
     right: 0;
     width: 100%;
+  }
+
+  .error-toast {
+    bottom: var(--space-16);
+    left: var(--space-16);
+    right: var(--space-16);
+    width: auto;
   }
 
   .drop-zone {
