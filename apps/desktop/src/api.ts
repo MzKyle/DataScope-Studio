@@ -43,6 +43,33 @@ export type ApiStatus = {
   rerun_available: boolean;
 };
 
+export type ApiErrorDetails = {
+  output_name?: string;
+  paths?: string[];
+  validation?: MappingValidation;
+  [key: string]: unknown;
+};
+
+export class ApiError extends Error {
+  status: number;
+  code: string;
+  details: ApiErrorDetails;
+
+  constructor(message: string, status = 0, code = "request_failed", details: ApiErrorDetails = {}) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.code = code;
+    this.details = details;
+  }
+}
+
+export function asApiError(error: unknown): ApiError {
+  if (error instanceof ApiError) return error;
+  if (error instanceof Error) return new ApiError(error.message);
+  return new ApiError(String(error));
+}
+
 function delay(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
@@ -76,9 +103,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     });
     const parsedBody = parseBody(result.body);
     if (result.status < 200 || result.status >= 300) {
-      const message =
-        parsedBody?.error?.message ?? parsedBody?.detail?.error?.message ?? `HTTP ${result.status}`;
-      throw new Error(message);
+      throw apiErrorFromResponse(parsedBody, result.status, `HTTP ${result.status}`);
     }
     return parsedBody as T;
   }
@@ -88,8 +113,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = body?.error?.message ?? body?.detail?.error?.message ?? response.statusText;
-    throw new Error(message);
+    throw apiErrorFromResponse(body, response.status, response.statusText);
   }
   return body as T;
 }
@@ -98,9 +122,29 @@ function isTauriRuntime() {
   return Boolean((window as TauriInternalsWindow).__TAURI_INTERNALS__);
 }
 
-function parseBody(body: string) {
+function parseBody(body: string): unknown {
   if (!body) return {};
   return JSON.parse(body);
+}
+
+export function apiErrorFromResponse(body: unknown, status: number, fallbackMessage: string) {
+  const responseBody = isRecord(body) ? body : {};
+  const detail = isRecord(responseBody.detail) ? responseBody.detail : {};
+  const rawError = isRecord(responseBody.error)
+    ? responseBody.error
+    : isRecord(detail.error)
+      ? detail.error
+      : {};
+  const message = typeof rawError.message === "string" ? rawError.message : fallbackMessage;
+  const code = typeof rawError.code === "string" ? rawError.code : "http_error";
+  const details = Object.fromEntries(
+    Object.entries(rawError).filter(([key]) => key !== "message" && key !== "code")
+  );
+  return new ApiError(message, status, code, details);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
 
 export const api = {
