@@ -215,9 +215,20 @@ jobs:
         shell: pwsh
         run: |
           $installer = Get-ChildItem release-assets -Filter "*-setup.exe" | Select-Object -First 1
+          if (-not $installer) { throw "Windows installer was not found" }
           Start-Process -FilePath $installer.FullName -ArgumentList "/S" -Wait
-          $exe = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Filter "datascope-studio.exe" -Recurse |
-            Select-Object -First 1
+
+          $searchRoots = @(
+            "$env:LOCALAPPDATA\Programs",
+            "$env:ProgramFiles",
+            "${env:ProgramFiles(x86)}"
+          ) | Where-Object { $_ -and (Test-Path $_) }
+          $expectedNames = @("datascope-studio.exe", "DataScope Studio.exe")
+          $candidates = foreach ($root in $searchRoots) {
+            Get-ChildItem -Path $root -File -Recurse -ErrorAction SilentlyContinue |
+              Where-Object { $expectedNames -contains $_.Name }
+          }
+          $exe = $candidates | Select-Object -First 1
           if (-not $exe) { throw "Installed DataScope executable was not found" }
           & $exe.FullName --smoke-test
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -230,7 +241,17 @@ jobs:
           mount_dir="$RUNNER_TEMP/datascope-dmg"
           mkdir -p "$mount_dir"
           hdiutil attach "$dmg" -mountpoint "$mount_dir" -nobrowse
-          trap 'hdiutil detach "$mount_dir"' EXIT
+          detach_dmg() {
+            sync || true
+            for attempt in 1 2 3 4 5; do
+              if hdiutil detach "$mount_dir"; then
+                return 0
+              fi
+              sleep 2
+            done
+            hdiutil detach "$mount_dir" -force || true
+          }
+          trap detach_dmg EXIT
           "$mount_dir/DataScope Studio.app/Contents/MacOS/datascope-studio" --smoke-test
 
       - name: Upload installer artifacts
