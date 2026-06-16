@@ -216,20 +216,31 @@ jobs:
         run: |
           $installer = Get-ChildItem release-assets -Filter "*-setup.exe" | Select-Object -First 1
           if (-not $installer) { throw "Windows installer was not found" }
-          Start-Process -FilePath $installer.FullName -ArgumentList "/S" -Wait
 
-          $searchRoots = @(
-            "$env:LOCALAPPDATA\Programs",
-            "$env:ProgramFiles",
-            "${env:ProgramFiles(x86)}"
+          $installDir = Join-Path $env:RUNNER_TEMP "datascope-studio-install"
+          New-Item -ItemType Directory -Force -Path $installDir | Out-Null
+          Start-Process -FilePath $installer.FullName -ArgumentList "/S", "/D=$installDir" -Wait
+
+          $candidateRoots = @(
+            $installDir,
+            "$env:LOCALAPPDATA\DataScope Studio",
+            "$env:LOCALAPPDATA\Programs\DataScope Studio",
+            "$env:ProgramFiles\DataScope Studio",
+            "${env:ProgramFiles(x86)}\DataScope Studio"
           ) | Where-Object { $_ -and (Test-Path $_) }
           $expectedNames = @("datascope-studio.exe", "DataScope Studio.exe")
-          $candidates = foreach ($root in $searchRoots) {
-            Get-ChildItem -Path $root -File -Recurse -ErrorAction SilentlyContinue |
-              Where-Object { $expectedNames -contains $_.Name }
+          $candidates = foreach ($root in $candidateRoots) {
+            foreach ($name in $expectedNames) {
+              $path = Join-Path $root $name
+              if (Test-Path $path) { Get-Item $path }
+            }
           }
           $exe = $candidates | Select-Object -First 1
-          if (-not $exe) { throw "Installed DataScope executable was not found" }
+          if (-not $exe) {
+            Write-Host "Checked install roots:"
+            $candidateRoots | ForEach-Object { Write-Host "  $_" }
+            throw "Installed DataScope executable was not found"
+          }
           & $exe.FullName --smoke-test
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
