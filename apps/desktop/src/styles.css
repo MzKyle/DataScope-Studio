@@ -1286,6 +1286,113 @@ td {
   min-height: 320px;
 }
 
+.diagnostics-thresholds {
+  display: grid;
+  gap: var(--space-12);
+  grid-template-columns: repeat(2, minmax(160px, 1fr));
+}
+
+.diagnostics-thresholds label {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.diagnostics-thresholds span {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.diagnostics-recordings {
+  display: grid;
+  gap: var(--space-8);
+  max-height: 260px;
+  overflow: auto;
+}
+
+.diagnostic-recording-option {
+  align-items: center;
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-12);
+  display: grid;
+  gap: var(--space-10);
+  grid-template-columns: auto 1fr;
+  padding: var(--space-10);
+}
+
+.diagnostic-recording-option span {
+  display: grid;
+  gap: 2px;
+}
+
+.diagnostic-recording-option small {
+  color: var(--color-text-muted);
+}
+
+.diagnostics-summary {
+  align-items: center;
+  display: grid;
+  gap: var(--space-16);
+  grid-template-columns: minmax(180px, 0.35fr) 1fr;
+}
+
+.diagnostics-score {
+  align-items: center;
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-20);
+  display: grid;
+  justify-items: center;
+  min-height: 132px;
+}
+
+.diagnostics-score strong {
+  font-size: 52px;
+  line-height: 1;
+}
+
+.diagnostics-score span {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.diagnostic-check-grid {
+  display: grid;
+  gap: var(--space-16);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.diagnostic-check {
+  gap: var(--space-8);
+}
+
+.diagnostic-check-heading {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.diagnostic-check-heading span {
+  background: var(--color-surface-soft);
+  border-radius: var(--radius-pill);
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 8px;
+  text-transform: uppercase;
+}
+
+.severity-critical {
+  border-color: rgba(248, 113, 113, 0.55);
+}
+
+.severity-warning {
+  border-color: rgba(251, 191, 36, 0.55);
+}
+
 .actions {
   margin-top: var(--space-16);
 }
@@ -1647,6 +1754,8 @@ td {
 
   .timeline-editor,
   .diff-controls,
+  .diagnostics-summary,
+  .diagnostics-thresholds,
   .mapping-template-manager-grid {
     grid-template-columns: 1fr;
   }

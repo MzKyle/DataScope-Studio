@@ -165,6 +165,61 @@ def open(
 
 
 @app.command()
+def diagnose(
+    project: str = typer.Option(..., "--project", help="Project name or id."),
+    recording: list[str] | None = typer.Option(
+        None,
+        "--recording",
+        help="Recording id to include. Repeat to include multiple recordings.",
+    ),
+    out: Path | None = typer.Option(None, "--out", help="Write full JSON report to this path."),
+    json_output: bool = typer.Option(False, "--json", help="Print JSON."),
+) -> None:
+    """Run an offline robot diagnostics report."""
+    workspace = Workspace(os.environ.get("DATASCOPE_WORKSPACE"))
+    project_row = _project_by_name_or_id(workspace, project)
+    report = workspace.run_diagnostics(
+        project_row["id"],
+        recording_ids=recording or None,
+    )
+    if out is not None:
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(
+            json.dumps(report, ensure_ascii=False, indent=2, default=str),
+            encoding="utf-8",
+        )
+    if json_output:
+        _echo_json(report)
+        return
+    summary = report["summary"]
+    typer.echo(
+        f"Diagnostics: {summary['severity']} "
+        f"score={summary['health_score']} "
+        f"findings={summary['finding_count']}"
+    )
+    typer.echo(
+        f"Recordings: {summary['recording_count']}  "
+        f"Sources: {summary['source_count']}  "
+        f"Topics: {summary['topic_count']}"
+    )
+    typer.echo("Checks:")
+    for check in report["checks"]:
+        typer.echo(
+            f"  {check['id']}: {check['status']} "
+            f"severity={check['severity']} score={check['score']}"
+        )
+    if report["findings"]:
+        typer.echo("Findings:")
+        for finding in report["findings"][:20]:
+            typer.echo(
+                f"  {finding['severity']} {finding['category']}: "
+                f"{finding['message']}"
+            )
+    if out is not None:
+        typer.echo(f"Report: {out}")
+
+
+@app.command()
 def suggest_mapping(path: Path) -> None:
     """Print the mapping YAML that would be generated for a source."""
     adapter = _adapter_for_cli_path(path)

@@ -31,6 +31,7 @@ export type ErrorArea =
   | "recordings"
   | "query"
   | "compare"
+  | "diagnostics"
   | "batch"
   | "extensions"
   | "mappingTemplates"

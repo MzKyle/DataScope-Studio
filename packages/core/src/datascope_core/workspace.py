@@ -72,6 +72,7 @@ from datascope_core.workspace_storage import (
 )
 from datascope_core.workspace_jobs import JobCancelled, WorkspaceJobsMixin
 from datascope_core.workspace_query import WorkspaceQueryMixin
+from datascope_core.workspace_diagnostics import WorkspaceDiagnosticsMixin
 from datascope_core.workspace_package import WorkspacePackageMixin
 from datascope_core.workspace_registry import WorkspaceRegistryMixin
 from datascope_core.workspace_utils import (
@@ -121,6 +122,7 @@ class ArtifactConflictError(RuntimeError):
 class Workspace(
     WorkspaceRegistryMixin,
     WorkspacePackageMixin,
+    WorkspaceDiagnosticsMixin,
     WorkspaceQueryMixin,
     WorkspaceJobsMixin,
     WorkspaceStorageMixin,

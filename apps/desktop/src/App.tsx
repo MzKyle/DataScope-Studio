@@ -28,6 +28,7 @@ import {
   type GlobalNotification
 } from "./app-support";
 import { DashboardSection } from "./DashboardSection";
+import { DiagnosticsSection } from "./DiagnosticsSection";
 import { ExtensionsSections } from "./ExtensionsSections";
 import { ImportWorkflowSection } from "./ImportWorkflowSection";
 import { RecordingsQueriesSection } from "./RecordingsQueriesSection";
@@ -41,6 +42,8 @@ import {
 import type {
   BatchResult,
   BuildResult,
+  DiagnosticReport,
+  DiagnosticThresholds,
   Job,
   MappingPayload,
   MappingDiff,
@@ -142,6 +145,7 @@ function App() {
   const [selectedQueryRecording, setSelectedQueryRecording] = useState("");
   const [queryThreshold, setQueryThreshold] = useState("0.5");
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
+  const [diagnosticReport, setDiagnosticReport] = useState<DiagnosticReport | null>(null);
   const [compareRecordingIds, setCompareRecordingIds] = useState("");
   const [compareMetric, setCompareMetric] = useState("battery");
   const [compareResult, setCompareResult] = useState<QueryResult | null>(null);
@@ -213,7 +217,7 @@ function App() {
   }, [selectedProjectId]);
 
   useEffect(() => {
-    if (selectedProjectId && activeSection === "recordings") {
+    if (selectedProjectId && ["recordings", "diagnostics"].includes(activeSection)) {
       refreshProjectData(selectedProjectId, true);
     }
     if (activeSection === "templates") {
@@ -994,6 +998,19 @@ function App() {
     if (result) setExportPath(result.path);
   }
 
+  async function runDiagnostics(
+    recordingIds: string[],
+    thresholds: DiagnosticThresholds
+  ) {
+    if (!selectedProjectId) return;
+    const result = await run(
+      t("busyRunningDiagnostics"),
+      () => api.diagnostics(selectedProjectId, recordingIds, thresholds),
+      { area: "diagnostics" }
+    );
+    if (result) setDiagnosticReport(result);
+  }
+
   async function installPlugin() {
     if (!pluginPath.trim()) return;
     const result = await run(
@@ -1401,6 +1418,18 @@ function App() {
               onRunCompare={() => void runCompare()}
               onCancelJob={(job) => void cancelJob(job)}
               onRetryJob={(job) => void retryJob(job)}
+            />
+          )}
+
+          {activeSection === "diagnostics" && (
+            <DiagnosticsSection
+              selectedProjectId={selectedProjectId}
+              recordings={recordings}
+              report={diagnosticReport}
+              isBusy={isBusy}
+              errors={areaErrors}
+              t={t}
+              onRun={(recordingIds, thresholds) => void runDiagnostics(recordingIds, thresholds)}
             />
           )}
 

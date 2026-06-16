@@ -1,4 +1,5 @@
 import {
+  Activity,
   Database,
   FolderPlus,
   Image,
@@ -86,6 +87,12 @@ export function AppSidebar(props: AppNavigationProps) {
             icon={<ListChecks size={17} />}
             label={props.t("recordings")}
             onClick={() => props.onSectionChange("recordings")}
+          />
+          <NavButton
+            active={props.activeSection === "diagnostics"}
+            icon={<Activity size={17} />}
+            label={props.t("diagnostics")}
+            onClick={() => props.onSectionChange("diagnostics")}
           />
           <NavButton
             active={props.activeSection === "templates"}

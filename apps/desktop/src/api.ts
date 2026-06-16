@@ -1,6 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import type {
+  DiagnosticReport,
+  DiagnosticThresholds,
   DiskEstimate,
   Job,
   MappingPayload,
@@ -281,6 +283,20 @@ export const api = {
         recording_ids: recordingIds.length ? recordingIds : null,
         params,
         format,
+        limit
+      })
+    }),
+  diagnostics: (
+    projectId: string,
+    recordingIds: string[],
+    thresholds: DiagnosticThresholds,
+    limit = 1000
+  ) =>
+    request<DiagnosticReport>(`/api/projects/${projectId}/diagnostics`, {
+      method: "POST",
+      body: JSON.stringify({
+        recording_ids: recordingIds.length ? recordingIds : null,
+        thresholds,
         limit
       })
     }),

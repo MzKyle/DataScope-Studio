@@ -107,6 +107,21 @@ datascope query --project cv_demo --template detection_failure --threshold 0.5
 datascope query --project robot_demo --template topic_summary
 datascope query --project robot_demo --template time_sync
 datascope export-query --project demo --template low_battery --threshold 0.2 --format csv
+datascope diagnose --project robot_demo
+datascope diagnose --project robot_demo --recording <recording_id> --json
+datascope diagnose --project robot_demo --out robot_diagnostics.json
+```
+
+离线机器人诊断报告不会写入项目数据库。它基于已生成 recording 的 query index 和 source metadata，
+汇总 topic coverage、ROS2 可转换性、message volume、time sync、日志/状态、低电量和 CV detection
+问题。桌面端可在左侧 “Diagnostics / 诊断” 页面选择 recording、调整阈值并导出 JSON。
+
+HTTP API 示例：
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/projects/<project_id>/diagnostics \
+  -H 'Content-Type: application/json' \
+  -d '{"recording_ids":["<recording_id>"],"thresholds":{"battery_low":0.2}}'
 ```
 
 v0.2.0 插件、模板、批量导入、Run 对比和项目打包示例：

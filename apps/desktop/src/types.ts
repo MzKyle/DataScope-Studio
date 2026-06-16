@@ -281,6 +281,55 @@ export type QueryExportResult = {
   rows: number;
 };
 
+export type DiagnosticSeverity = "ok" | "warning" | "critical" | "info";
+
+export type DiagnosticThresholds = {
+  battery_low?: number;
+  detection_confidence?: number;
+  time_sync_warn_s?: number;
+  time_sync_critical_s?: number;
+};
+
+export type DiagnosticSummary = {
+  health_score: number;
+  severity: "ok" | "warning" | "critical";
+  recording_count: number;
+  source_count: number;
+  topic_count: number;
+  finding_count: number;
+};
+
+export type DiagnosticCheck = {
+  id: string;
+  name: string;
+  status: "pass" | "warn" | "fail";
+  severity: "ok" | "warning" | "critical";
+  score: number;
+  evidence: Record<string, unknown>;
+  recommendation: string;
+};
+
+export type DiagnosticFinding = {
+  id: string;
+  category: string;
+  severity: Exclude<DiagnosticSeverity, "ok">;
+  recording_id?: string | null;
+  source_id?: string | null;
+  entity_path?: string | null;
+  key?: string | null;
+  message: string;
+  evidence: Record<string, unknown>;
+  recommendation: string;
+};
+
+export type DiagnosticReport = {
+  project_id: string;
+  thresholds: Required<DiagnosticThresholds>;
+  summary: DiagnosticSummary;
+  checks: DiagnosticCheck[];
+  findings: DiagnosticFinding[];
+};
+
 export type Plugin = {
   id: string;
   name: string;

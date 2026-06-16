@@ -134,6 +134,12 @@ class CompareRequest(BaseModel):
     limit: int = Field(default=1000, ge=1, le=10000)
 
 
+class DiagnosticsRequest(BaseModel):
+    recording_ids: list[str] | None = None
+    thresholds: dict[str, float] = Field(default_factory=dict)
+    limit: int = Field(default=1000, ge=1, le=10000)
+
+
 class ProjectExportRequest(BaseModel):
     output_path: str | None = None
 
@@ -405,6 +411,17 @@ def create_app() -> FastAPI:
                 limit=payload.limit,
                 fmt=payload.format,
                 output_path=payload.output_path,
+            )
+        )
+
+    @app.post("/api/projects/{project_id}/diagnostics")
+    def diagnostics(project_id: str, payload: DiagnosticsRequest) -> dict[str, Any]:
+        return _guard(
+            lambda: _workspace().run_diagnostics(
+                project_id,
+                recording_ids=payload.recording_ids,
+                thresholds=payload.thresholds,
+                limit=payload.limit,
             )
         )
 
