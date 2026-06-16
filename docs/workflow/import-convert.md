@@ -32,3 +32,4 @@ datascope recordings --project demo
 | 点云文件 | `/data/frame_001.ply` |
 | 点云目录 | `/data/point_cloud_run` |
 | MCAP | `/data/run.mcap` |
+| ROS2 SQLite Bag | `/data/run.db3` 或 `/data/rosbag2_run/` |

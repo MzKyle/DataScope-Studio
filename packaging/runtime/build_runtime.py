@@ -313,6 +313,7 @@ def prune_runtime(output: Path) -> None:
         python_root / "lib/python3.10/tkinter",
         python_root / "lib/python3.10/turtledemo",
         python_root / "lib/python3.10/test",
+        python_root / "lib/python3.10/site-packages/apsw/sqlite_extra_binaries",
     ]
     for path in removable_paths:
         remove_path(path)
@@ -364,7 +365,7 @@ def build_manifest(
         [
             python,
             "-c",
-            "import datascope_api.launcher, datascope_core, datascope_cli, rerun_cli",
+            "import datascope_api.launcher, datascope_core, datascope_cli, rerun_cli, rosbags",
         ],
         check=False,
     ).returncode == 0

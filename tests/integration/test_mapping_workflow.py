@@ -6,6 +6,7 @@ from typer.testing import CliRunner
 from datascope_api.main import app
 from datascope_core.mapping import mapping_from_yaml_dict
 from datascope_core.workspace import Workspace
+from tests.api_helpers import wait_for_job
 from datascope_cli.main import app as cli_app
 
 
@@ -120,17 +121,19 @@ def test_api_mapping_template_flow_and_validation_gate(tmp_path: Path, monkeypat
         },
     )
 
-    assert blocked.status_code == 409
-    assert blocked.json()["error"]["code"] == "mapping_validation_failed"
-    assert blocked.json()["error"]["validation"]["valid"] is False
+    assert blocked.status_code == 202
+    blocked_job = wait_for_job(client, blocked.json()["id"])
+    assert blocked_job["status"] == "failed"
+    assert blocked_job["error"]["code"] == "mapping_validation_failed"
+    assert blocked_job["error"]["validation"]["valid"] is False
     invalid_path_issue = next(
         issue
-        for issue in blocked.json()["error"]["validation"]["issues"]
+        for issue in blocked_job["error"]["validation"]["issues"]
         if issue["code"] == "invalid_entity_path"
     )
     assert invalid_path_issue["recommendation"]
     assert invalid_path_issue["suggestions"][0]["action"] == "set_entity_path"
-    assert "scalar" in blocked.json()["error"]["validation"]["supported_semantic_types"]
+    assert "scalar" in blocked_job["error"]["validation"]["supported_semantic_types"]
 
 
 def test_cli_mapping_validate_and_template_list(tmp_path: Path, monkeypatch) -> None:

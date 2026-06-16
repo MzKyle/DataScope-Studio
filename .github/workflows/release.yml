@@ -158,7 +158,8 @@ jobs:
             librsvg2-dev \
             libxdo-dev \
             libssl-dev \
-            libfuse2
+            libfuse2 \
+            xvfb
 
       - name: Install desktop dependencies
         working-directory: apps/desktop
@@ -195,6 +196,43 @@ jobs:
             --runtime-manifest \
               apps/desktop/src-tauri/resources/datascope-runtime/runtime-manifest.json
 
+      - name: Smoke test installed Debian package
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get install -y ./release-assets/DataScope-Studio-v*-linux-amd64.deb
+          xvfb-run -a datascope-studio --smoke-test
+
+      - name: Smoke test AppImage
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          chmod +x release-assets/DataScope-Studio-v*-linux-x86_64.AppImage
+          xvfb-run -a ./release-assets/DataScope-Studio-v*-linux-x86_64.AppImage --smoke-test
+
+      - name: Smoke test installed Windows package
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem release-assets -Filter "*-setup.exe" | Select-Object -First 1
+          Start-Process -FilePath $installer.FullName -ArgumentList "/S" -Wait
+          $exe = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Filter "datascope-studio.exe" -Recurse |
+            Select-Object -First 1
+          if (-not $exe) { throw "Installed DataScope executable was not found" }
+          & $exe.FullName --smoke-test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Smoke test mounted macOS package
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          dmg="$(find release-assets -name '*.dmg' -print -quit)"
+          mount_dir="$RUNNER_TEMP/datascope-dmg"
+          mkdir -p "$mount_dir"
+          hdiutil attach "$dmg" -mountpoint "$mount_dir" -nobrowse
+          trap 'hdiutil detach "$mount_dir"' EXIT
+          "$mount_dir/DataScope Studio.app/Contents/MacOS/datascope-studio" --smoke-test
+
       - name: Upload installer artifacts
         uses: actions/upload-artifact@v7
         with:
@@ -204,10 +242,35 @@ jobs:
           compression-level: 0
           retention-days: 14
 
+  ros2-corpus:
+    name: External ROS2 corpus
+    if: ${{ vars.DATASCOPE_ROS2_CORPUS != '' }}
+    needs: quality
+    runs-on: self-hosted
+    env:
+      DATASCOPE_ROS2_CORPUS: ${{ vars.DATASCOPE_ROS2_CORPUS }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+      - name: Validate Humble and Jazzy bags
+        run: python -m pytest tests/integration/test_ros2_corpus.py -q
+
   release:
     name: Publish prerelease
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
+    if: >-
+      ${{
+        always() &&
+        startsWith(github.ref, 'refs/tags/v') &&
+        needs.build.result == 'success' &&
+        (needs.ros2-corpus.result == 'success' || needs.ros2-corpus.result == 'skipped')
+      }}
+    needs: [build, ros2-corpus]
     runs-on: ubuntu-22.04
 
     steps:

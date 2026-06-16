@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from dataclasses import asdict
 from pathlib import Path
 
@@ -9,6 +10,7 @@ import typer
 
 from datascope_core.adapters.registry import adapter_for_path
 from datascope_core.mapping import mapping_to_yaml_dict
+from datascope_core.job_supervisor import JobSupervisor
 from datascope_core.viewer import open_recording
 from datascope_core.workspace import Workspace
 
@@ -20,18 +22,20 @@ batch_app = typer.Typer(help="Run batch import workflows.")
 project_app = typer.Typer(help="Project packaging tools.")
 mapping_app = typer.Typer(help="Validate mappings and manage reusable mapping templates.")
 mapping_template_app = typer.Typer(help="Manage reusable mapping templates.")
+job_app = typer.Typer(help="Inspect, cancel, and retry background jobs.")
 
 app.add_typer(plugin_app, name="plugin")
 app.add_typer(template_app, name="template")
 app.add_typer(batch_app, name="batch")
 app.add_typer(project_app, name="project")
 app.add_typer(mapping_app, name="mapping")
+app.add_typer(job_app, name="job")
 mapping_app.add_typer(mapping_template_app, name="template")
 
 
 @app.command()
 def inspect(path: Path, json_output: bool = typer.Option(False, "--json", help="Print JSON.")) -> None:
-    """Inspect a CSV, JSONL, image folder, point cloud, or MCAP source."""
+    """Inspect a CSV, JSONL, image folder, point cloud, MCAP, or ROS2 DB3 source."""
     adapter = _adapter_for_cli_path(path)
     source = adapter.inspect(str(path))
     streams = adapter.infer_streams(source)
@@ -43,9 +47,22 @@ def inspect(path: Path, json_output: bool = typer.Option(False, "--json", help="
         typer.echo(f"Images: {source.metadata.get('image_count', 0)}")
         typer.echo(f"Annotation frames: {source.metadata.get('annotation_frame_count', 0)}")
         typer.echo(f"Prediction frames: {source.metadata.get('prediction_frame_count', 0)}")
-    elif source.source_type == "mcap":
+    elif source.source_type in {"mcap", "ros2_db3"}:
         typer.echo(f"Topics: {source.metadata.get('topic_count', 0)}")
         typer.echo(f"Messages: {source.metadata.get('message_count', 0)}")
+        if source.source_type == "ros2_db3":
+            typer.echo(
+                "ROS distribution: "
+                f"{source.metadata.get('effective_ros_distro', 'humble')}"
+            )
+            typer.echo(
+                "Convertible topics: "
+                f"{source.metadata.get('convertible_topic_count', 0)}"
+            )
+            if source.metadata.get("skipped_topic_count"):
+                typer.echo(
+                    f"Skipped topics: {source.metadata.get('skipped_topic_count', 0)}"
+                )
         if source.metadata.get("inspect_warning"):
             typer.echo(f"Warning: {source.metadata['inspect_warning']}")
     elif source.source_type == "point_cloud":
@@ -78,23 +95,38 @@ def import_source(
         "--out",
         help="Output recording base name. Defaults to the source file or folder name.",
     ),
+    storage_mode: str = typer.Option(
+        "copy",
+        "--storage-mode",
+        help="copy or reference.",
+    ),
+    no_wait: bool = typer.Option(
+        False,
+        "--no-wait",
+        help="Return after the job starts.",
+    ),
     json_output: bool = typer.Option(False, "--json", help="Print JSON."),
 ) -> None:
     """Import a source into a project and build .rrd/.rbl artifacts."""
     workspace = Workspace(os.environ.get("DATASCOPE_WORKSPACE"))
     existing = next((item for item in workspace.list_projects() if item["name"] == project), None)
     project_row = existing or workspace.create_project(project)
-    source = workspace.add_source(project_row["id"], str(path))
+    source = workspace.add_source(
+        project_row["id"],
+        str(path),
+        storage_mode=storage_mode,
+    )
     inspection = workspace.inspect_source(source["id"])
     spec = workspace.suggest_mapping(source["id"], template_id=template)
     saved_mapping = workspace.save_mapping(project_row["id"], source["id"], spec)
-    result = workspace.build_recording(
+    job = workspace.enqueue_build_recording(
         project_row["id"],
         source["id"],
         mapping_id=saved_mapping["id"],
         output_name=out,
         template_id=template,
     )
+    result = _run_job(workspace, job, no_wait=no_wait)
 
     if json_output:
         _echo_json(
@@ -103,16 +135,20 @@ def import_source(
                 "source": source,
                 "streams": inspection["streams"],
                 "mapping": saved_mapping,
-                "result": result,
+                "job": result,
             }
         )
         return
+    if no_wait:
+        typer.echo(f"Job: {result['id']} / {result['status']}")
+        return
+    build_result = result.get("result") or {}
     typer.echo(f"Project: {project_row['name']} ({project_row['id']})")
     typer.echo(f"Source: {source['id']}")
     typer.echo(f"Streams: {len(inspection['streams'])}")
     typer.echo(f"Mapping: {saved_mapping['path']}")
-    typer.echo(f"Recording: {result['recording_path']}")
-    typer.echo(f"Blueprint: {result['blueprint_path']}")
+    typer.echo(f"Recording: {build_result['recording_path']}")
+    typer.echo(f"Blueprint: {build_result['blueprint_path']}")
 
 
 @app.command()
@@ -432,19 +468,82 @@ def batch_import(
     project: str = typer.Option(..., "--project", help="Project name or id."),
     template: str = typer.Option("sensor_monitor", "--template", help="Template id."),
     out: str = typer.Option("batch_run", "--out", help="Output recording prefix."),
+    storage_mode: str = typer.Option(
+        "copy",
+        "--storage-mode",
+        help="copy or reference.",
+    ),
+    no_wait: bool = typer.Option(
+        False,
+        "--no-wait",
+        help="Return after the job starts.",
+    ),
     json_output: bool = typer.Option(False, "--json", help="Print JSON."),
 ) -> None:
     """Import multiple sources into a project."""
     workspace = Workspace(os.environ.get("DATASCOPE_WORKSPACE"))
     project_row = _project_by_name_or_id(workspace, project)
-    result = workspace.batch_import(project_row["id"], pattern, template_id=template, output_prefix=out)
+    job = workspace.enqueue_batch_import(
+        project_row["id"],
+        pattern,
+        template_id=template,
+        output_prefix=out,
+        storage_mode=storage_mode,
+    )
+    result = _run_job(workspace, job, no_wait=no_wait)
     if json_output:
         _echo_json(result)
         return
+    if no_wait:
+        typer.echo(f"Job: {result['id']} / {result['status']}")
+        return
+    batch = result.get("result") or {}
     typer.echo(
-        f"{result['id']}  {result['status']}  total={result['total']}  "
-        f"succeeded={result['succeeded']}  failed={result['failed']}"
+        f"{batch['id']}  {batch['status']}  total={batch['total']}  "
+        f"succeeded={batch['succeeded']}  failed={batch['failed']}"
     )
+
+
+@job_app.command("status")
+def job_status(
+    job_id: str,
+    json_output: bool = typer.Option(False, "--json", help="Print JSON."),
+) -> None:
+    workspace = Workspace(os.environ.get("DATASCOPE_WORKSPACE"))
+    job = workspace.get_job(job_id)
+    if json_output:
+        _echo_json(job)
+        return
+    typer.echo(
+        f"{job['id']}  {job['status']}  {job.get('stage') or ''}  "
+        f"{round(float(job['progress']) * 100)}%"
+    )
+
+
+@job_app.command("cancel")
+def job_cancel(job_id: str) -> None:
+    workspace = Workspace(os.environ.get("DATASCOPE_WORKSPACE"))
+    job = workspace.cancel_job(job_id)
+    typer.echo(f"{job['id']}  {job['status']}")
+
+
+@job_app.command("retry")
+def job_retry(
+    job_id: str,
+    no_wait: bool = typer.Option(
+        False,
+        "--no-wait",
+        help="Return after the retry starts.",
+    ),
+    json_output: bool = typer.Option(False, "--json", help="Print JSON."),
+) -> None:
+    workspace = Workspace(os.environ.get("DATASCOPE_WORKSPACE"))
+    job = workspace.retry_job(job_id)
+    result = _run_job(workspace, job, no_wait=no_wait)
+    if json_output:
+        _echo_json(result)
+        return
+    typer.echo(f"{result['id']}  {result['status']}")
 
 
 @project_app.command("export")
@@ -498,6 +597,50 @@ def _adapter_for_cli_path(path: Path):
 
 def _echo_json(value) -> None:
     typer.echo(json.dumps(value, ensure_ascii=False, indent=2, default=str))
+
+
+def _run_job(
+    workspace: Workspace,
+    job: dict,
+    *,
+    no_wait: bool,
+) -> dict:
+    supervisor = JobSupervisor(workspace)
+    supervisor.start()
+    if no_wait:
+        deadline = time.monotonic() + 2
+        current = job
+        while current["status"] == "pending" and time.monotonic() < deadline:
+            time.sleep(0.05)
+            current = workspace.get_job(job["id"])
+        return current
+
+    last_progress = -1
+    try:
+        while True:
+            current = workspace.get_job(job["id"])
+            progress = round(float(current["progress"]) * 100)
+            if progress != last_progress:
+                typer.echo(
+                    f"{current.get('stage') or current['status']}: {progress}%",
+                    err=True,
+                )
+                last_progress = progress
+            if current["status"] in {
+                "cancelled",
+                "succeeded",
+                "failed",
+                "interrupted",
+            }:
+                if current["status"] != "succeeded":
+                    error = current.get("error") or {}
+                    raise typer.BadParameter(
+                        error.get("message") or current["status"]
+                    )
+                return current
+            time.sleep(0.2)
+    finally:
+        supervisor.stop()
 
 
 if __name__ == "__main__":

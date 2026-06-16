@@ -2,10 +2,18 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Callable, Protocol
 
 
-JOB_STATUSES = {"pending", "running", "succeeded", "failed"}
+JOB_STATUSES = {
+    "pending",
+    "running",
+    "cancel_requested",
+    "cancelled",
+    "succeeded",
+    "failed",
+    "interrupted",
+}
 TIME_COLUMN_CANDIDATES = {"timestamp", "time", "t", "datetime"}
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 POINT_CLOUD_EXTENSIONS = {".ply", ".pcd", ".npy", ".npz"}
@@ -40,6 +48,10 @@ class ConvertRequest:
     primary_timeline: str | None = None
     timeline_unit: str = "auto"
     timeline_sort: str = "source"
+    cache_dir: str | None = None
+    progress_callback: Callable[[str, float], None] | None = None
+    cancel_check: Callable[[], None] | None = None
+    poll_subprocess: bool = False
 
 
 @dataclass(slots=True)
@@ -80,6 +92,10 @@ class DataAdapter(Protocol):
 def detect_source_type(path: str | Path) -> str:
     source_path = Path(path)
     if source_path.is_dir():
+        from datascope_core.adapters.ros2_db3_adapter import is_ros2_db3_source
+
+        if is_ros2_db3_source(source_path):
+            return "ros2_db3"
         if any(
             child.is_file() and child.suffix.lower() in IMAGE_EXTENSIONS
             for child in source_path.rglob("*")
@@ -99,6 +115,8 @@ def detect_source_type(path: str | Path) -> str:
         return "jsonl"
     if suffix == ".mcap":
         return "mcap"
+    if suffix == ".db3":
+        return "ros2_db3"
     if suffix in POINT_CLOUD_EXTENSIONS:
         return "point_cloud"
     raise ValueError(f"Unsupported source type for path: {path}")

@@ -6,7 +6,7 @@ import pandas as pd
 
 from datascope_core.inference import detect_time_column, infer_semantic_streams, safe_slug
 from datascope_core.models import ConvertRequest, SourceInfo, StreamInfo
-from datascope_core.rerun_writer import write_tabular_recording
+from datascope_core.rerun_writer import write_tabular_chunks
 
 
 class CsvAdapter:
@@ -56,5 +56,7 @@ class CsvAdapter:
         }
 
     def convert(self, request: ConvertRequest) -> None:
-        frame = pd.read_csv(request.source.path)
-        write_tabular_recording(frame, request)
+        write_tabular_chunks(
+            pd.read_csv(request.source.path, chunksize=50_000),
+            request,
+        )

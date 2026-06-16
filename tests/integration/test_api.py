@@ -3,6 +3,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from datascope_api.main import app
+from tests.api_helpers import wait_for_job
 
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
@@ -48,8 +49,10 @@ def test_api_project_source_mapping_build_flow(tmp_path: Path, monkeypatch) -> N
             "output_name": "api_run",
         },
     )
-    assert build_response.status_code == 200
-    result = build_response.json()
+    assert build_response.status_code == 202
+    job = wait_for_job(client, build_response.json()["id"])
+    assert job["status"] == "succeeded"
+    result = job["result"]
     assert Path(result["recording_path"]).exists()
     assert Path(result["blueprint_path"]).exists()
 
@@ -63,8 +66,10 @@ def test_api_project_source_mapping_build_flow(tmp_path: Path, monkeypatch) -> N
             "output_name": "api_run",
         },
     )
-    assert conflict_response.status_code == 409
-    error = conflict_response.json()["error"]
+    assert conflict_response.status_code == 202
+    conflict_job = wait_for_job(client, conflict_response.json()["id"])
+    assert conflict_job["status"] == "failed"
+    error = conflict_job["error"]
     assert error["code"] == "artifact_name_conflict"
     assert error["output_name"] == "api_run"
     assert result["recording_path"] in error["paths"]
@@ -91,7 +96,9 @@ def test_api_build_defaults_artifact_names_to_source_name(tmp_path: Path, monkey
         },
     )
 
-    assert response.status_code == 200
-    result = response.json()
+    assert response.status_code == 202
+    job = wait_for_job(client, response.json()["id"])
+    assert job["status"] == "succeeded"
+    result = job["result"]
     assert Path(result["recording_path"]).name == "sample_sensor.rrd"
     assert Path(result["blueprint_path"]).name == "sample_sensor.rbl"

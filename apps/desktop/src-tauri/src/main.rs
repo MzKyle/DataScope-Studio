@@ -81,7 +81,7 @@ async fn api_status(state: tauri::State<'_, BackendState>) -> Result<ApiStatus, 
 
 fn perform_api_request(request: ApiRequest, port: u16) -> Result<ApiResponse, String> {
     let method = request.method.to_uppercase();
-    if !matches!(method.as_str(), "GET" | "POST" | "PATCH") {
+    if !api_method_supported(&method) {
         return Err(format!("unsupported API method: {method}"));
     }
     if !request.path.starts_with("/api/")
@@ -133,6 +133,10 @@ fn perform_api_request(request: ApiRequest, port: u16) -> Result<ApiResponse, St
         status,
         body: body.to_string(),
     })
+}
+
+fn api_method_supported(method: &str) -> bool {
+    matches!(method, "GET" | "POST" | "PUT" | "PATCH" | "DELETE")
 }
 
 fn start_backend(app: &AppHandle) -> Result<BackendState, String> {
@@ -388,17 +392,96 @@ fn configure_webkit_environment() {
     }
 }
 
+fn smoke_test_requested() -> bool {
+    env::args().any(|arg| arg == "--smoke-test")
+}
+
 fn main() {
     configure_webkit_environment();
+    let smoke_test = smoke_test_requested();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .setup(|app| {
+        .setup(move |app| {
             let backend_state = start_backend(app.handle())?;
+            let smoke_ok = api_ready(backend_state.port)
+                && backend_state.packaged_runtime
+                && backend_state.runtime_dir.is_some()
+                && backend_state.rerun_available;
             app.manage(backend_state);
+            if smoke_test {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.hide();
+                }
+                let handle = app.handle().clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(Duration::from_millis(100));
+                    handle.exit(if smoke_ok { 0 } else { 1 });
+                });
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![api_request, api_status])
         .run(tauri::generate_context!())
         .expect("error while running DataScope Studio");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::thread;
+
+    fn assert_forwarded(method: &str) {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("bind test server");
+        let port = listener.local_addr().expect("test server address").port();
+        let expected = method.to_string();
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().expect("accept request");
+            let mut request = Vec::new();
+            stream
+                .set_read_timeout(Some(Duration::from_secs(2)))
+                .expect("set timeout");
+            loop {
+                let mut chunk = [0_u8; 1024];
+                let count = stream.read(&mut chunk).expect("read request");
+                if count == 0 {
+                    break;
+                }
+                request.extend_from_slice(&chunk[..count]);
+                if request.windows(4).any(|window| window == b"\r\n\r\n") {
+                    break;
+                }
+            }
+            let request = String::from_utf8(request).expect("utf8 request");
+            assert!(request.starts_with(&format!("{expected} /api/test HTTP/1.1")));
+            stream
+                .write_all(
+                    b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 11\r\nConnection: close\r\n\r\n{\"ok\":true}",
+                )
+                .expect("write response");
+        });
+
+        let response = perform_api_request(
+            ApiRequest {
+                method: method.to_string(),
+                path: "/api/test".to_string(),
+                body: Some("{}".to_string()),
+            },
+            port,
+        )
+        .expect("forward API request");
+        assert_eq!(response.status, 200);
+        assert_eq!(response.body, "{\"ok\":true}");
+        server.join().expect("join test server");
+    }
+
+    #[test]
+    fn forwards_put_requests() {
+        assert_forwarded("PUT");
+    }
+
+    #[test]
+    fn forwards_delete_requests() {
+        assert_forwarded("DELETE");
+    }
 }

@@ -1,23 +1,24 @@
 from __future__ import annotations
 
+import pickle
+import sqlite3
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
 
 from datascope_core.models import ConvertRequest
-from datascope_core.time_utils import normalize_time_value, prepare_tabular_frame
+from datascope_core.time_utils import normalize_time_value, time_seconds_or_none
 
 
 def write_tabular_recording(frame: pd.DataFrame, request: ConvertRequest) -> None:
+    write_tabular_chunks([frame], request)
+
+
+def write_tabular_chunks(frames: Iterable[pd.DataFrame], request: ConvertRequest) -> None:
     import rerun as rr
 
-    frame = prepare_tabular_frame(
-        frame,
-        time_key=request.primary_timeline,
-        time_unit=request.timeline_unit,
-        timeline_sort=request.timeline_sort,
-    )
     Path(request.output_rrd).parent.mkdir(parents=True, exist_ok=True)
     with rr.RecordingStream(
         request.app_id,
@@ -26,7 +27,13 @@ def write_tabular_recording(frame: pd.DataFrame, request: ConvertRequest) -> Non
     ) as rec:
         rec.save(request.output_rrd)
         rec.send_recording_name(request.recording_id)
-        for row_index, (_, row) in enumerate(frame.iterrows()):
+        rows = (
+            _externally_sorted_rows(frames, request)
+            if request.timeline_sort == "ascending"
+            else _source_order_rows(frames, request)
+        )
+        for row_index, row in enumerate(rows):
+            _check_cancel(request)
             _set_row_time(
                 rec,
                 row,
@@ -37,6 +44,94 @@ def write_tabular_recording(frame: pd.DataFrame, request: ConvertRequest) -> Non
             )
             for mapping in request.mappings:
                 _log_mapping(rec, row, mapping)
+            if row_index % 1_000 == 0:
+                _report_progress(request, "converting", _fraction(row_index, request))
+
+
+def _source_order_rows(
+    frames: Iterable[pd.DataFrame],
+    request: ConvertRequest,
+) -> Iterable[pd.Series]:
+    processed = 0
+    for frame in frames:
+        _check_cancel(request)
+        for _, row in frame.iterrows():
+            processed += 1
+            yield row
+        _report_progress(request, "converting", _fraction(processed, request))
+
+
+def _externally_sorted_rows(
+    frames: Iterable[pd.DataFrame],
+    request: ConvertRequest,
+) -> Iterable[pd.Series]:
+    cache_dir = Path(request.cache_dir or Path(request.output_rrd).parent)
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    sort_db = cache_dir / "tabular-sort.sqlite"
+    sort_db.unlink(missing_ok=True)
+    try:
+        with sqlite3.connect(sort_db) as conn:
+            conn.execute(
+                "create table rows (sort_missing integer not null, sort_time real not null, ordinal integer primary key, payload blob not null)"
+            )
+            ordinal = 0
+            for frame in frames:
+                _check_cancel(request)
+                values = []
+                for _, row in frame.iterrows():
+                    timestamp = (
+                        time_seconds_or_none(row[request.primary_timeline], unit=request.timeline_unit)
+                        if request.primary_timeline
+                        and request.primary_timeline in row
+                        and pd.notna(row[request.primary_timeline])
+                        else None
+                    )
+                    values.append(
+                        (
+                            int(timestamp is None),
+                            float(timestamp or 0.0),
+                            ordinal,
+                            sqlite3.Binary(pickle.dumps(row.to_dict(), protocol=pickle.HIGHEST_PROTOCOL)),
+                        )
+                    )
+                    ordinal += 1
+                conn.executemany(
+                    "insert into rows (sort_missing, sort_time, ordinal, payload) values (?, ?, ?, ?)",
+                    values,
+                )
+                conn.commit()
+                _report_progress(request, "sorting", _fraction(ordinal, request) * 0.5)
+            cursor = conn.execute(
+                "select payload from rows order by sort_missing, sort_time, ordinal"
+            )
+            for index, (payload,) in enumerate(cursor):
+                _check_cancel(request)
+                if index % 1_000 == 0:
+                    _report_progress(
+                        request,
+                        "converting",
+                        0.5 + (_fraction(index, request) * 0.5),
+                    )
+                yield pd.Series(pickle.loads(payload))
+    finally:
+        sort_db.unlink(missing_ok=True)
+
+
+def _fraction(processed: int, request: ConvertRequest) -> float:
+    total = int(request.source.metadata.get("rows") or 0)
+    if total <= 0:
+        return 0.0
+    return min(max(processed / total, 0.0), 1.0)
+
+
+def _report_progress(request: ConvertRequest, stage: str, progress: float) -> None:
+    if request.progress_callback is not None:
+        request.progress_callback(stage, min(max(progress, 0.0), 1.0))
+
+
+def _check_cancel(request: ConvertRequest) -> None:
+    if request.cancel_check is not None:
+        request.cancel_check()
 
 
 def _set_row_time(

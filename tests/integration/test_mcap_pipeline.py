@@ -8,6 +8,7 @@ import datascope_core.adapters.mcap_adapter as mcap_adapter
 from datascope_api.main import app as api_app
 from datascope_cli.main import app as cli_app
 from datascope_core.workspace import Workspace
+from tests.api_helpers import install_fake_rerun, wait_for_job
 
 
 def test_workspace_mcap_build_uses_rerun_converter(tmp_path: Path, monkeypatch) -> None:
@@ -39,6 +40,7 @@ def test_workspace_mcap_build_uses_rerun_converter(tmp_path: Path, monkeypatch) 
 def test_api_mcap_flow(tmp_path: Path, monkeypatch) -> None:
     mcap_path = _make_mcap_fixture(tmp_path)
     _mock_rerun_converter(monkeypatch)
+    install_fake_rerun(tmp_path, monkeypatch)
     monkeypatch.setenv("DATASCOPE_WORKSPACE", str(tmp_path / "api_workspace"))
     client = TestClient(api_app)
 
@@ -73,13 +75,16 @@ def test_api_mcap_flow(tmp_path: Path, monkeypatch) -> None:
         },
     )
 
-    assert build_response.status_code == 200
-    assert Path(build_response.json()["recording_path"]).exists()
+    assert build_response.status_code == 202
+    job = wait_for_job(client, build_response.json()["id"])
+    assert job["status"] == "succeeded"
+    assert Path(job["result"]["recording_path"]).exists()
 
 
 def test_cli_mcap_import(tmp_path: Path, monkeypatch) -> None:
     mcap_path = _make_mcap_fixture(tmp_path)
     _mock_rerun_converter(monkeypatch)
+    install_fake_rerun(tmp_path, monkeypatch)
     monkeypatch.setenv("DATASCOPE_WORKSPACE", str(tmp_path / "cli_workspace"))
     runner = CliRunner()
 

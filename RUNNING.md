@@ -1,4 +1,4 @@
-# DataScope Studio V1.0 运行与安装说明
+# DataScope Studio v0.2.0 运行与安装说明
 
 ## 安装版
 
@@ -109,7 +109,7 @@ datascope query --project robot_demo --template time_sync
 datascope export-query --project demo --template low_battery --threshold 0.2 --format csv
 ```
 
-V1.0 插件、模板、批量导入、Run 对比和项目打包示例：
+v0.2.0 插件、模板、批量导入、Run 对比和项目打包示例：
 
 ```bash
 datascope plugin validate ./my_plugin

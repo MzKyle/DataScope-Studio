@@ -12,6 +12,9 @@ export type Source = {
   project_id: string;
   type: string;
   uri: string;
+  storage_mode: "copy" | "reference";
+  original_uri?: string | null;
+  available?: boolean;
   checksum: string;
   size_bytes: number;
   status: string;
@@ -217,12 +220,46 @@ export type Job = {
   id: string;
   project_id: string;
   type: string;
-  status: string;
+  status:
+    | "pending"
+    | "running"
+    | "cancel_requested"
+    | "cancelled"
+    | "succeeded"
+    | "failed"
+    | "interrupted";
   progress: number;
+  stage?: string | null;
+  payload: Record<string, unknown>;
+  result: BuildResult | BatchResult | null;
+  error?: {
+    code: string;
+    message: string;
+    details?: Record<string, unknown>;
+  } | null;
+  attempt: number;
+  retry_of_job_id?: string | null;
+  resource_type?: string | null;
+  resource_id?: string | null;
+  worker_pid?: number | null;
+  heartbeat_at?: string | null;
+  started_at?: string | null;
+  finished_at?: string | null;
   log_path?: string | null;
   error_message?: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type DiskEstimate = {
+  kind: "source_import" | "build" | "project_export";
+  estimated: number;
+  margin: number;
+  required: number;
+  free: number | null;
+  confidence: "high" | "medium" | "low";
+  sufficient: boolean | null;
+  warnings: string[];
 };
 
 export type QueryTemplate = {

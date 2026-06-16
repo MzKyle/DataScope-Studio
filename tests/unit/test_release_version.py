@@ -17,14 +17,14 @@ SPEC.loader.exec_module(check_version)
 def test_repository_product_versions_match() -> None:
     versions = check_version.collect_versions(REPO_ROOT)
 
-    assert check_version.validate_versions(versions, "v0.1.0") == "0.1.0"
+    assert check_version.validate_versions(versions, "v0.2.0") == "0.2.0"
 
 
 def test_version_validation_rejects_mismatch() -> None:
     with pytest.raises(RuntimeError, match="Version mismatch"):
-        check_version.validate_versions({"VERSION": "0.1.0", "desktop": "1.0.0"})
+        check_version.validate_versions({"VERSION": "0.2.0", "desktop": "1.0.0"})
 
 
 def test_version_validation_rejects_wrong_tag() -> None:
     with pytest.raises(RuntimeError, match="does not match"):
-        check_version.validate_versions({"VERSION": "0.1.0"}, "v0.2.0")
+        check_version.validate_versions({"VERSION": "0.2.0"}, "v0.1.0")

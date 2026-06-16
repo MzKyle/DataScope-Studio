@@ -242,6 +242,8 @@ class ImageFolderAdapter:
                 rec.log("/camera", rr.AnnotationContext(_annotation_context(classes)), static=True)
 
             for index, image in enumerate(images):
+                if request.cancel_check is not None:
+                    request.cancel_check()
                 key = str(image.resolve())
                 annotation_frame = annotation_map.get(key)
                 prediction_frame = prediction_map.get(key)
@@ -264,6 +266,11 @@ class ImageFolderAdapter:
                 if prediction_frame and prediction_frame.masks:
                     for mask_index, mask in enumerate(prediction_frame.masks):
                         rec.log(f"{pred_masks_path}/{mask_index}", _segmentation_image(root, mask.path))
+                if request.progress_callback is not None:
+                    request.progress_callback(
+                        "converting",
+                        (index + 1) / max(len(images), 1),
+                    )
 
     def validate_mapping(
         self,

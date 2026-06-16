@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import os
+from contextlib import asynccontextmanager
 from dataclasses import asdict
 from typing import Any
 
@@ -10,12 +10,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from datascope_core.version import __version__
-
 from datascope_core.mapping import mapping_from_yaml_dict, mapping_to_yaml_dict
 from datascope_core.mapping_validation import MappingValidationError
+from datascope_core.version import __version__
 from datascope_core.viewer import open_recording
-from datascope_core.workspace import ArtifactConflictError, Workspace
+from datascope_core.workspace import (
+    ArtifactConflictError,
+    DiskSpaceError,
+    SourceUnavailableError,
+    Workspace,
+)
+from datascope_api.services import services
 
 
 class ProjectCreate(BaseModel):
@@ -26,6 +31,12 @@ class ProjectCreate(BaseModel):
 
 class SourceCreate(BaseModel):
     path: str = Field(min_length=1)
+    storage_mode: str = "copy"
+
+
+class SourceEstimateRequest(BaseModel):
+    path: str = Field(min_length=1)
+    storage_mode: str = "copy"
 
 
 class MappingCreate(BaseModel):
@@ -112,6 +123,7 @@ class BatchImportRequest(BaseModel):
     patterns: list[str] = Field(min_length=1)
     template_id: str = "sensor_monitor"
     output_prefix: str = "batch_run"
+    storage_mode: str = "copy"
 
 
 class CompareRequest(BaseModel):
@@ -131,8 +143,21 @@ class ProjectImportRequest(BaseModel):
     project_name: str | None = None
 
 
+@asynccontextmanager
+async def _lifespan(_: FastAPI):
+    _workspace()
+    try:
+        yield
+    finally:
+        services.stop()
+
+
 def create_app() -> FastAPI:
-    app = FastAPI(title="DataScope Studio API", version=__version__)
+    app = FastAPI(
+        title="DataScope Studio API",
+        version=__version__,
+        lifespan=_lifespan,
+    )
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[
@@ -187,7 +212,26 @@ def create_app() -> FastAPI:
 
     @app.post("/api/projects/{project_id}/sources")
     def add_source(project_id: str, payload: SourceCreate) -> dict[str, Any]:
-        return _guard(lambda: _workspace().add_source(project_id, payload.path))
+        return _guard(
+            lambda: _workspace().add_source(
+                project_id,
+                payload.path,
+                storage_mode=payload.storage_mode,
+            )
+        )
+
+    @app.post("/api/projects/{project_id}/estimates/source-import")
+    def estimate_source_import(
+        project_id: str,
+        payload: SourceEstimateRequest,
+    ) -> dict[str, Any]:
+        return _guard(
+            lambda: _workspace().estimate_source_import(
+                project_id,
+                payload.path,
+                storage_mode=payload.storage_mode,
+            )
+        )
 
     @app.get("/api/projects/{project_id}/sources")
     def list_sources(project_id: str) -> list[dict[str, Any]]:
@@ -274,17 +318,24 @@ def create_app() -> FastAPI:
     def validate_saved_mapping(mapping_id: str) -> dict[str, Any]:
         return _guard(lambda: _workspace().validate_saved_mapping(mapping_id))
 
-    @app.post("/api/recordings/build")
+    @app.post("/api/recordings/build", status_code=202)
     def build_recording(payload: BuildRecordingRequest) -> dict[str, Any]:
-        return _guard(
-            lambda: _workspace().build_recording(
+        def enqueue() -> dict[str, Any]:
+            job = _workspace().enqueue_build_recording(
                 payload.project_id,
                 payload.source_id,
                 mapping_id=payload.mapping_id,
                 output_name=payload.output_name,
                 template_id=payload.template_id,
             )
-        )
+            services.supervisor().wake()
+            return job
+
+        return _guard(enqueue)
+
+    @app.post("/api/projects/{project_id}/estimates/build/{source_id}")
+    def estimate_build(project_id: str, source_id: str) -> dict[str, Any]:
+        return _guard(lambda: _workspace().estimate_build(project_id, source_id))
 
     @app.get("/api/jobs/{job_id}")
     def get_job(job_id: str) -> dict[str, Any]:
@@ -293,6 +344,18 @@ def create_app() -> FastAPI:
     @app.get("/api/projects/{project_id}/jobs")
     def list_jobs(project_id: str) -> list[dict[str, Any]]:
         return _guard(lambda: _workspace().list_jobs(project_id))
+
+    @app.post("/api/jobs/{job_id}/cancel")
+    def cancel_job(job_id: str) -> dict[str, Any]:
+        job = _guard(lambda: _workspace().cancel_job(job_id))
+        services.supervisor().wake()
+        return job
+
+    @app.post("/api/jobs/{job_id}/retry", status_code=202)
+    def retry_job(job_id: str) -> dict[str, Any]:
+        job = _guard(lambda: _workspace().retry_job(job_id))
+        services.supervisor().wake()
+        return job
 
     @app.get("/api/projects/{project_id}/recordings")
     def list_recordings(project_id: str) -> list[dict[str, Any]]:
@@ -441,16 +504,20 @@ def create_app() -> FastAPI:
             )
         )
 
-    @app.post("/api/batch/import")
+    @app.post("/api/batch/import", status_code=202)
     def batch_import(payload: BatchImportRequest) -> dict[str, Any]:
-        return _guard(
-            lambda: _workspace().batch_import(
+        def enqueue() -> dict[str, Any]:
+            job = _workspace().enqueue_batch_import(
                 payload.project_id,
                 payload.patterns,
                 template_id=payload.template_id,
                 output_prefix=payload.output_prefix,
+                storage_mode=payload.storage_mode,
             )
-        )
+            services.supervisor().wake()
+            return job
+
+        return _guard(enqueue)
 
     @app.get("/api/batch/{batch_id}")
     def get_batch(batch_id: str) -> dict[str, Any]:
@@ -473,6 +540,19 @@ def create_app() -> FastAPI:
         output_path = payload.output_path if payload else None
         return _guard(lambda: _workspace().export_project(project_id, output_path=output_path))
 
+    @app.post("/api/projects/{project_id}/estimates/export")
+    def estimate_project_export(
+        project_id: str,
+        payload: ProjectExportRequest | None = None,
+    ) -> dict[str, Any]:
+        output_path = payload.output_path if payload else None
+        return _guard(
+            lambda: _workspace().estimate_project_export(
+                project_id,
+                output_path=output_path,
+            )
+        )
+
     @app.post("/api/projects/import")
     def import_project(payload: ProjectImportRequest) -> dict[str, Any]:
         return _guard(lambda: _workspace().import_project_package(payload.path, project_name=payload.project_name))
@@ -485,7 +565,7 @@ def create_app() -> FastAPI:
 
 
 def _workspace() -> Workspace:
-    return Workspace(os.environ.get("DATASCOPE_WORKSPACE"))
+    return services.workspace()
 
 
 def _guard(operation):
@@ -505,6 +585,28 @@ def _guard(operation):
                     "message": str(exc),
                     "output_name": exc.output_name,
                     "paths": exc.paths,
+                }
+            },
+        ) from exc
+    except DiskSpaceError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": {
+                    "code": exc.code,
+                    "message": str(exc),
+                    "estimate": exc.estimate,
+                }
+            },
+        ) from exc
+    except SourceUnavailableError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": {
+                    "code": exc.code,
+                    "message": str(exc),
+                    "source_id": exc.source_id,
                 }
             },
         ) from exc

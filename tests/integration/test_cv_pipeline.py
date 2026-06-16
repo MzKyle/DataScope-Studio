@@ -8,6 +8,7 @@ from datascope_api.main import app as api_app
 from datascope_cli.main import app as cli_app
 from datascope_core.workspace import Workspace
 from fastapi.testclient import TestClient
+from tests.api_helpers import wait_for_job
 
 
 def test_workspace_image_folder_to_rerun_artifacts(tmp_path: Path) -> None:
@@ -72,8 +73,10 @@ def test_api_image_folder_flow(tmp_path: Path, monkeypatch) -> None:
             "output_name": "api_cv_run",
         },
     )
-    assert build_response.status_code == 200
-    assert Path(build_response.json()["recording_path"]).exists()
+    assert build_response.status_code == 202
+    job = wait_for_job(client, build_response.json()["id"])
+    assert job["status"] == "succeeded"
+    assert Path(job["result"]["recording_path"]).exists()
 
 
 def test_cli_image_folder_import(tmp_path: Path, monkeypatch) -> None:
@@ -142,4 +145,3 @@ def _make_cv_fixture(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     return image_dir
-

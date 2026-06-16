@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from datascope_api.main import app as api_app
 from datascope_core.workspace import Workspace
+from tests.api_helpers import wait_for_job
 
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
@@ -104,8 +105,10 @@ def test_api_template_plugin_batch_compare_and_project_export(tmp_path: Path, mo
             "output_prefix": "api_batch",
         },
     )
-    assert batch_response.status_code == 200
-    recording_id = batch_response.json()["items"][0]["recording_id"]
+    assert batch_response.status_code == 202
+    batch_job = wait_for_job(client, batch_response.json()["id"])
+    assert batch_job["status"] == "succeeded"
+    recording_id = batch_job["result"]["items"][0]["recording_id"]
 
     compare_response = client.post(
         "/api/compare",

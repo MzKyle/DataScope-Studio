@@ -23,6 +23,7 @@ def main() -> None:
     tauri_bundles = build_bundles(args.bundles)
     command = [resolve_npx(), "tauri", "build", "--ci", "--verbose", "--bundles", tauri_bundles]
     env = build_environment(args.bundles)
+    clean_stale_appimage_staging(args.bundles, env)
     print("+ " + " ".join(command), flush=True)
     subprocess.run(command, cwd=DESKTOP_DIR, check=True, env=env)
     if use_native_macos_dmg(args.bundles):
@@ -57,6 +58,15 @@ def cargo_bundle_root(env: dict[str, str]) -> Path:
     if not target_dir.is_absolute():
         target_dir = DESKTOP_DIR / target_dir
     return target_dir.resolve() / "release/bundle"
+
+
+def clean_stale_appimage_staging(requested: str, env: dict[str, str]) -> None:
+    if platform.system().lower() != "linux" or "appimage" not in requested.lower():
+        return
+
+    bundle_root = cargo_bundle_root(env)
+    shutil.rmtree(bundle_root / "appimage_deb", ignore_errors=True)
+    shutil.rmtree(bundle_root / "appimage" / f"{PRODUCT_NAME}.AppDir", ignore_errors=True)
 
 
 def create_macos_dmg(bundle_root: Path) -> Path:

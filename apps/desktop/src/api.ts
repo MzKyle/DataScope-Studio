@@ -1,8 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import type {
-  BuildResult,
-  BatchResult,
+  DiskEstimate,
   Job,
   MappingPayload,
   MappingDiff,
@@ -155,10 +154,19 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ name })
     }),
-  addSource: (projectId: string, path: string) =>
+  addSource: (projectId: string, path: string, storageMode: "copy" | "reference" = "copy") =>
     request<Source>(`/api/projects/${projectId}/sources`, {
       method: "POST",
-      body: JSON.stringify({ path })
+      body: JSON.stringify({ path, storage_mode: storageMode })
+    }),
+  estimateSourceImport: (
+    projectId: string,
+    path: string,
+    storageMode: "copy" | "reference" = "copy"
+  ) =>
+    request<DiskEstimate>(`/api/projects/${projectId}/estimates/source-import`, {
+      method: "POST",
+      body: JSON.stringify({ path, storage_mode: storageMode })
     }),
   inspect: (sourceId: string) =>
     request<{ source: Source; streams: StreamInfo[]; schema_profile: SchemaProfile }>(`/api/sources/${sourceId}/inspect`, {
@@ -209,7 +217,7 @@ export const api = {
     outputName: string,
     templateId: string
   ) =>
-    request<BuildResult>("/api/recordings/build", {
+    request<Job>("/api/recordings/build", {
       method: "POST",
       body: JSON.stringify({
         project_id: projectId,
@@ -219,6 +227,10 @@ export const api = {
         output_name: outputName
       })
     }),
+  estimateBuild: (projectId: string, sourceId: string) =>
+    request<DiskEstimate>(`/api/projects/${projectId}/estimates/build/${sourceId}`, {
+      method: "POST"
+    }),
   open: (recordingPath: string, blueprintPath?: string) =>
     request<{ status: string; pid: number }>("/api/viewer/open", {
       method: "POST",
@@ -226,6 +238,11 @@ export const api = {
     }),
   recordings: (projectId: string) => request<Recording[]>(`/api/projects/${projectId}/recordings`),
   jobs: (projectId: string) => request<Job[]>(`/api/projects/${projectId}/jobs`),
+  job: (jobId: string) => request<Job>(`/api/jobs/${jobId}`),
+  cancelJob: (jobId: string) =>
+    request<Job>(`/api/jobs/${jobId}/cancel`, { method: "POST" }),
+  retryJob: (jobId: string) =>
+    request<Job>(`/api/jobs/${jobId}/retry`, { method: "POST" }),
   patchRecording: (recordingId: string, payload: Partial<Pick<Recording, "run_name" | "tags" | "params">> & { add_tags?: string[]; remove_tags?: string[] }) =>
     request<Recording>(`/api/recordings/${recordingId}`, {
       method: "PATCH",
@@ -300,6 +317,10 @@ export const api = {
       method: "PUT",
       body: JSON.stringify({ config, enabled: true })
     }),
+  deleteMappingTemplate: (templateId: string) =>
+    request<{ deleted: string }>(`/api/mapping-templates/${templateId}`, {
+      method: "DELETE"
+    }),
   importMappingTemplate: (path: string) =>
     request<MappingTemplateItem>("/api/mapping-templates/import", {
       method: "POST",
@@ -336,14 +357,21 @@ export const api = {
         right_source_id: rightSourceId
       })
     }),
-  batchImport: (projectId: string, patterns: string[], templateId: string, outputPrefix: string) =>
-    request<BatchResult>("/api/batch/import", {
+  batchImport: (
+    projectId: string,
+    patterns: string[],
+    templateId: string,
+    outputPrefix: string,
+    storageMode: "copy" | "reference" = "copy"
+  ) =>
+    request<Job>("/api/batch/import", {
       method: "POST",
       body: JSON.stringify({
         project_id: projectId,
         patterns,
         template_id: templateId,
-        output_prefix: outputPrefix
+        output_prefix: outputPrefix,
+        storage_mode: storageMode
       })
     }),
   compare: (
@@ -365,6 +393,11 @@ export const api = {
     }),
   exportProject: (projectId: string, outputPath?: string) =>
     request<ProjectExportResult>(`/api/projects/${projectId}/export`, {
+      method: "POST",
+      body: JSON.stringify({ output_path: outputPath || null })
+    }),
+  estimateProjectExport: (projectId: string, outputPath?: string) =>
+    request<DiskEstimate>(`/api/projects/${projectId}/estimates/export`, {
       method: "POST",
       body: JSON.stringify({ output_path: outputPath || null })
     }),

@@ -59,6 +59,27 @@ def test_macos_dmg_builds_app_before_native_packaging(monkeypatch: pytest.Monkey
     assert build_tauri.use_native_macos_dmg("dmg") is True
 
 
+def test_appimage_build_cleans_stale_staging(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    appdir = bundle_root / "appimage/DataScope Studio.AppDir"
+    staging = bundle_root / "appimage_deb"
+    appdir.mkdir(parents=True)
+    staging.mkdir()
+    (appdir / "stale").write_text("stale", encoding="utf-8")
+    (staging / "stale").write_text("stale", encoding="utf-8")
+
+    monkeypatch.setattr(build_tauri.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(build_tauri, "cargo_bundle_root", lambda env: bundle_root)
+
+    build_tauri.clean_stale_appimage_staging("appimage", {})
+
+    assert not appdir.exists()
+    assert not staging.exists()
+
+
 def test_create_macos_dmg_uses_hdiutil_without_mounting(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -78,7 +99,7 @@ def test_create_macos_dmg_uses_hdiutil_without_mounting(
 
     output = build_tauri.create_macos_dmg(bundle_root)
 
-    assert output.name == "DataScope Studio_0.1.0_x64.dmg"
+    assert output.name == "DataScope Studio_0.2.0_x64.dmg"
     assert app.is_dir()
     assert len(commands) == 1
     command = commands[0]

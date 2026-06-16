@@ -914,8 +914,7 @@ dt {
 }
 
 .chip,
-.status-badge,
-.job-list span {
+.status-badge {
   align-items: center;
   border-radius: var(--radius-pill);
   display: inline-flex;
@@ -1443,16 +1442,68 @@ td {
 }
 
 .job-list {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: var(--space-8);
 }
 
-.job-list span {
+.job-item {
+  align-items: center;
   background: var(--color-surface-soft);
   border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
   color: var(--color-text-muted);
-  padding: 0 var(--space-12);
+  display: grid;
+  gap: var(--space-8);
+  grid-template-columns: minmax(140px, 1fr) minmax(100px, 1fr) auto auto;
+  padding: var(--space-12);
+}
+
+.job-summary {
+  display: grid;
+  gap: 3px;
+}
+
+.job-summary span,
+.job-progress {
+  font-size: 12px;
+}
+
+.job-item progress {
+  inline-size: 100%;
+}
+
+.job-error {
+  color: var(--color-danger);
+  font-size: 12px;
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.job-actions {
+  display: flex;
+  gap: var(--space-8);
+}
+
+.job-actions button {
+  min-height: 30px;
+  padding: 0 var(--space-10, 10px);
+}
+
+.source-options {
+  align-items: end;
+  display: grid;
+  gap: var(--space-12);
+  grid-template-columns: minmax(0, 1fr) minmax(170px, auto);
+}
+
+.source-options label {
+  display: grid;
+  font-size: 12px;
+  gap: var(--space-4);
+}
+
+.button-danger {
+  color: var(--color-danger);
 }
 
 .extension-form {

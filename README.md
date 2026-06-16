@@ -28,7 +28,7 @@ visualization script.
 | Tables and logs | CSV, JSONL |
 | Computer vision | Image folders with detection sidecars |
 | Point clouds | PLY, PCD, NPY, NPZ files or frame directories |
-| Robotics recordings | MCAP metadata and conversion workflows |
+| Robotics recordings | MCAP and ROS2 DB3 bags, including split bag directories |
 
 DataScope is local-first. Source data, mappings, recordings, and the SQLite catalog remain
 in your local workspace unless you explicitly export a project package.
@@ -40,16 +40,16 @@ Download the installer for your computer from
 
 | System | Download |
 | --- | --- |
-| Windows 10/11 x64 | `DataScope-Studio-v0.1.0-windows-x86_64-setup.exe` |
-| macOS Apple Silicon | `DataScope-Studio-v0.1.0-macos-aarch64.dmg` |
-| macOS Intel | `DataScope-Studio-v0.1.0-macos-x86_64.dmg` |
-| Debian/Ubuntu x64 | `DataScope-Studio-v0.1.0-linux-amd64.deb` |
-| Other Linux x64 | `DataScope-Studio-v0.1.0-linux-x86_64.AppImage` |
+| Windows 10/11 x64 | `DataScope-Studio-v0.2.0-windows-x86_64-setup.exe` |
+| macOS Apple Silicon | `DataScope-Studio-v0.2.0-macos-aarch64.dmg` |
+| macOS Intel | `DataScope-Studio-v0.2.0-macos-x86_64.dmg` |
+| Debian/Ubuntu x64 | `DataScope-Studio-v0.2.0-linux-amd64.deb` |
+| Other Linux x64 | `DataScope-Studio-v0.2.0-linux-x86_64.AppImage` |
 
 The installer includes the desktop application, local API, Python runtime, and Rerun.
 Python, Node.js, npm, and Rerun do not need to be installed separately.
 
-The `v0.1.0` packages are unsigned prerelease builds:
+The `v0.2.0` packages are unsigned prerelease builds:
 
 - **Windows:** if SmartScreen appears, choose **More info** and then **Run anyway** after
   confirming the installer came from this repository.
@@ -59,20 +59,20 @@ The `v0.1.0` packages are unsigned prerelease builds:
 - **Linux AppImage:** make it executable before launching:
 
 ```bash
-chmod +x DataScope-Studio-v0.1.0-linux-x86_64.AppImage
-./DataScope-Studio-v0.1.0-linux-x86_64.AppImage
+chmod +x DataScope-Studio-v0.2.0-linux-x86_64.AppImage
+./DataScope-Studio-v0.2.0-linux-x86_64.AppImage
 ```
 
 For the Debian package:
 
 ```bash
-sudo apt install ./DataScope-Studio-v0.1.0-linux-amd64.deb
+sudo apt install ./DataScope-Studio-v0.2.0-linux-amd64.deb
 ```
 
 ## First Visualization
 
 1. Open DataScope Studio and create or select a project.
-2. Choose a CSV, JSONL, image folder, point cloud, or MCAP source.
+2. Choose a CSV, JSONL, image folder, point cloud, MCAP, or ROS2 DB3 source.
 3. Select **Import & Auto Map**.
 4. Review the detected streams and preview. Correct the time field or semantic mapping if needed.
 5. Select **Validate Mapping**, then **Confirm Mapping**.

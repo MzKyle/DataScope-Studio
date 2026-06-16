@@ -73,7 +73,7 @@ def validate_versions(versions: dict[str, str], tag: str | None = None) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Validate DataScope product versions.")
-    parser.add_argument("--tag", help="Optional release tag, for example v0.1.0")
+    parser.add_argument("--tag", help="Optional release tag, for example v0.2.0")
     args = parser.parse_args()
 
     versions = collect_versions()

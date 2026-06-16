@@ -132,11 +132,18 @@ class PointCloudAdapter:
             rec.save(request.output_rrd)
             rec.send_recording_name(request.recording_id)
             for index, cloud in enumerate(clouds):
+                if request.cancel_check is not None:
+                    request.cancel_check()
                 points = read_point_cloud_points(cloud)
                 if not points:
                     continue
                 rec.set_time("time", duration=_cloud_time(index, cloud))
                 rec.log(entity_path, rr.Points3D(points))
+                if request.progress_callback is not None:
+                    request.progress_callback(
+                        "converting",
+                        (index + 1) / max(len(clouds), 1),
+                    )
 
     def validate_mapping(
         self,

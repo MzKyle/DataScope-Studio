@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import subprocess
+import time
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -85,29 +86,7 @@ class McapAdapter:
         }
 
     def convert(self, request: ConvertRequest) -> None:
-        Path(request.output_rrd).parent.mkdir(parents=True, exist_ok=True)
-        command = [
-            *rerun_command(),
-            "mcap",
-            "convert",
-            str(request.source.path),
-            "--output",
-            str(request.output_rrd),
-            "--application-id",
-            request.app_id,
-            "--recording-id",
-            request.recording_id,
-        ]
-        result = subprocess.run(
-            command,
-            capture_output=True,
-            text=True,
-            check=False,
-            env=rerun_subprocess_env(),
-        )
-        if result.returncode != 0:
-            message = (result.stderr or result.stdout or "Rerun MCAP conversion failed").strip()
-            raise RuntimeError(message)
+        convert_mcap_to_rrd(Path(request.source.path), request)
 
     def validate_mapping(
         self,
@@ -151,13 +130,71 @@ def classify_topic(topic: str, schema_name: str = "") -> tuple[str, str, float]:
         return "camera_image", "image", 0.88
     if any(token in value for token in ("pointcloud", "point_cloud", "lidar", "velodyne")):
         return "point_cloud", "points3d", 0.9
+    if "laserscan" in value or "laser_scan" in value:
+        return "laser_scan", "points2d", 0.86
     if any(token in value for token in ("odom", "pose", "trajectory")):
         return "trajectory", "trajectory3d", 0.82
+    if "sensor_msgs/msg/imu" in value or "/imu" in value:
+        return "imu", "scalar_group", 0.82
     if "joint" in value:
         return "joint_state", "scalar_group", 0.78
     if any(token in value for token in ("diagnostic", "rosout", "log")):
         return "diagnostics", "text_log", 0.76
     return "raw_topic", "mcap", 0.55
+
+
+def convert_mcap_to_rrd(mcap_path: Path, request: ConvertRequest) -> None:
+    Path(request.output_rrd).parent.mkdir(parents=True, exist_ok=True)
+    command = [
+        *rerun_command(),
+        "mcap",
+        "convert",
+        str(mcap_path),
+        "--output",
+        str(request.output_rrd),
+        "--application-id",
+        request.app_id,
+        "--recording-id",
+        request.recording_id,
+    ]
+    if not request.poll_subprocess:
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            check=False,
+            env=rerun_subprocess_env(),
+        )
+        if result.returncode != 0:
+            message = (
+                result.stderr
+                or result.stdout
+                or "Rerun MCAP conversion failed"
+            ).strip()
+            raise RuntimeError(message)
+        if request.progress_callback is not None:
+            request.progress_callback("rerun_mcap", 1.0)
+        return
+
+    process = subprocess.Popen(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=rerun_subprocess_env(),
+    )
+    while process.poll() is None:
+        if request.cancel_check is not None:
+            request.cancel_check()
+        if request.progress_callback is not None:
+            request.progress_callback("rerun_mcap", 0.5)
+        time.sleep(0.1)
+    stdout, stderr = process.communicate()
+    if process.returncode != 0:
+        message = (stderr or stdout or "Rerun MCAP conversion failed").strip()
+        raise RuntimeError(message)
+    if request.progress_callback is not None:
+        request.progress_callback("rerun_mcap", 1.0)
 
 
 def _read_summary(path: Path) -> dict[str, Any]:

@@ -33,4 +33,4 @@ imported -> inspected -> mapped -> converted
 | `query_rows` | 本地查询索引 |
 | `query_exports` | 查询导出记录 |
 
-V1.0 扩展还包含 plugin、template、batch job 相关表。
+v0.2.0 扩展还包含 plugin、template、batch job 和持久化后台任务相关表。

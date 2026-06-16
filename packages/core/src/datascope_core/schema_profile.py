@@ -13,6 +13,8 @@ from datascope_core.time_utils import infer_time_unit, normalize_time_value
 def source_family(source_type: str) -> str:
     if source_type in {"csv", "jsonl"}:
         return "tabular"
+    if source_type == "ros2_db3":
+        return "mcap"
     return source_type
 
 
@@ -144,6 +146,6 @@ def _axis(field: str) -> str | None:
 
 
 def _adapter_time_unit(source_type: str) -> str:
-    if source_type == "mcap":
+    if source_type in {"mcap", "ros2_db3"}:
         return "unix_ns"
     return "relative_s"

@@ -1,46 +1,42 @@
 import {
-  memo,
   type DragEvent,
-  type ReactNode,
   useEffect,
   useMemo,
   useRef,
   useState
 } from "react";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
-import {
-  Activity,
-  AlertCircle,
-  CheckCircle2,
-  Command,
-  Database,
-  Download,
-  ExternalLink,
-  FileSearch,
-  FolderOpen,
-  FolderPlus,
-  Image,
-  LayoutDashboard,
-  ListChecks,
-  Play,
-  RefreshCcw,
-  Save,
-  Search,
-  Settings,
-  Tags,
-  Upload,
-  X,
-  Zap
-} from "lucide-react";
 
 import { api, ApiError, asApiError } from "./api";
 import {
+  GlobalErrorToast,
+  clearErrorAreaState,
+  defaultOutputName,
+  derivedMappingFields,
+  getInitialDefaultExportDir,
+  isBatchResult,
+  isBuildResult,
+  isTauriRuntime,
+  isTerminalJob,
+  normalizeDroppedPath,
+  normalizeSourcePathInput,
+  saveDefaultExportDir,
+  sourceFileDialogFilters,
+  upsertProject,
+  type AreaErrors,
+  type ErrorArea,
+  type GlobalNotification
+} from "./app-support";
+import { DashboardSection } from "./DashboardSection";
+import { ExtensionsSections } from "./ExtensionsSections";
+import { ImportWorkflowSection } from "./ImportWorkflowSection";
+import { RecordingsQueriesSection } from "./RecordingsQueriesSection";
+import { AppSidebar, AppTopbar } from "./AppNavigation";
+import {
   createTranslator,
   getInitialLanguage,
-  languageOptions,
   saveLanguage,
-  type Language,
-  type TranslationKey
+  type Language
 } from "./i18n";
 import type {
   BatchResult,
@@ -51,7 +47,6 @@ import type {
   MappingSuggestion,
   MappingTemplateItem,
   MappingValidation,
-  MappingValidationIssue,
   Plugin,
   Project,
   ProjectExportResult,
@@ -65,36 +60,24 @@ import type {
   TemplateRegistryItem
 } from "./types";
 
-const supportedFormats = ["CSV", "JSONL", "Images", "PLY", "PCD", "NPZ", "MCAP", "ROS2"];
-const sourceFileExtensions = new Set(["csv", "jsonl", "json", "mcap", "ply", "pcd", "npy", "npz"]);
+export {
+  GlobalErrorToast,
+  InlineError,
+  MappingIssueCard,
+  clearErrorAreaState,
+  defaultOutputName,
+  sourceFileDialogFilters,
+  sourceFileExtensions
+} from "./app-support";
+export type { AreaErrors, ErrorArea } from "./app-support";
+
 const thresholdTemplates = new Set(["low_battery", "detection_failure"]);
 const TABLE_RENDER_LIMIT = 100;
-const DEFAULT_EXPORT_DIR_KEY = "datascope.defaultExportDir";
-export type ErrorArea =
-  | "project"
-  | "import"
-  | "dashboard"
-  | "mappingToolbar"
-  | "mapping"
-  | "mappingDiff"
-  | "build"
-  | "recordings"
-  | "query"
-  | "compare"
-  | "batch"
-  | "extensions"
-  | "mappingTemplates"
-  | "settings";
 type RunOptions = {
   area?: ErrorArea | "global";
   retry?: () => void;
   onError?: (error: ApiError) => void;
 };
-type GlobalNotification = {
-  error: ApiError;
-  retry?: () => void;
-};
-export type AreaErrors = Partial<Record<ErrorArea, ApiError>>;
 const semanticTypesByFamily: Record<string, string[]> = {
   tabular: [
     "scalar",
@@ -127,6 +110,7 @@ function App() {
   const [projectName, setProjectName] = useState("Sensor Run");
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [sourcePath, setSourcePath] = useState("");
+  const [sourceStorageMode, setSourceStorageMode] = useState<"copy" | "reference">("copy");
   const [outputName, setOutputName] = useState("");
   const [source, setSource] = useState<Source | null>(null);
   const [streams, setStreams] = useState<StreamInfo[]>([]);
@@ -163,6 +147,7 @@ function App() {
   const [compareResult, setCompareResult] = useState<QueryResult | null>(null);
   const [batchPattern, setBatchPattern] = useState("");
   const [batchOutputPrefix, setBatchOutputPrefix] = useState("batch_run");
+  const [batchStorageMode, setBatchStorageMode] = useState<"copy" | "reference">("copy");
   const [batchResult, setBatchResult] = useState<BatchResult | null>(null);
   const [pluginPath, setPluginPath] = useState("");
   const [templatePath, setTemplatePath] = useState("");
@@ -179,6 +164,7 @@ function App() {
   const [sourcePickerOpen, setSourcePickerOpen] = useState(false);
   const [language, setLanguage] = useState<Language>(getInitialLanguage);
   const outputNameRef = useRef<HTMLInputElement>(null);
+  const processedJobIds = useRef(new Set<string>());
   const t = useMemo(() => createTranslator(language), [language]);
 
   const selectedProject = useMemo(
@@ -196,7 +182,6 @@ function App() {
 
   const latestRecording = recordings[0] ?? null;
   const latestJob = jobs[0] ?? null;
-  const recentRecordings = useMemo(() => recordings.slice(0, 4), [recordings]);
   const visibleRecordings = useMemo(() => recordings.slice(0, TABLE_RENDER_LIMIT), [recordings]);
   const queryRecordingOptions = useMemo(() => recordings.slice(0, TABLE_RENDER_LIMIT), [recordings]);
   const visibleJobs = useMemo(() => jobs.slice(0, 8), [jobs]);
@@ -241,13 +226,63 @@ function App() {
   }, [language]);
 
   useEffect(() => {
-    window.localStorage.setItem(DEFAULT_EXPORT_DIR_KEY, defaultExportDir.trim());
+    saveDefaultExportDir(defaultExportDir);
   }, [defaultExportDir]);
 
   useEffect(() => {
     const selected = mappingTemplates.find((item) => item.id === selectedMappingTemplateId);
     setMappingTemplateJson(selected ? JSON.stringify(selected.config, null, 2) : "");
   }, [mappingTemplates, selectedMappingTemplateId]);
+
+  useEffect(() => {
+    processedJobIds.current.clear();
+    if (!selectedProjectId) return;
+
+    let disposed = false;
+    let polling = false;
+    const poll = async () => {
+      if (polling) return;
+      polling = true;
+      try {
+        const jobRows = await api.jobs(selectedProjectId);
+        if (disposed) return;
+        setJobs(jobRows);
+
+        const completed = jobRows.filter(
+          (job) =>
+            isTerminalJob(job) &&
+            !processedJobIds.current.has(job.id)
+        );
+        if (!completed.length) return;
+        completed.forEach((job) => {
+          processedJobIds.current.add(job.id);
+          if (job.status !== "succeeded" || !job.result) return;
+          if (isBuildResult(job.result)) setBuildResult(job.result);
+          if (isBatchResult(job.result)) setBatchResult(job.result);
+        });
+
+        const [recordingRows, sourceRows] = await Promise.all([
+          api.recordings(selectedProjectId),
+          api.sources(selectedProjectId)
+        ]);
+        if (!disposed) {
+          setRecordings(recordingRows);
+          setProjectSources(sourceRows);
+        }
+      } catch {
+        // The regular refresh path surfaces connectivity errors; polling stays quiet.
+      } finally {
+        polling = false;
+      }
+    };
+
+    void poll();
+    const timer = window.setInterval(() => void poll(), 1000);
+    return () => {
+      disposed = true;
+      window.clearInterval(timer);
+    };
+  }, [selectedProjectId]);
 
   function clearAreaError(area: ErrorArea) {
     setAreaErrors((current) => clearErrorAreaState(current, area));
@@ -438,7 +473,11 @@ function App() {
           projectIdForImport = projectForImport.id;
         }
 
-        const added = await api.addSource(projectIdForImport, nextSourcePath);
+        const added = await api.addSource(
+          projectIdForImport,
+          nextSourcePath,
+          sourceStorageMode
+        );
         const inspection = await api.inspect(added.id);
         const templateMatches = await api.suggestTemplates(added.id);
         const nextTemplateId = templateMatches[0]?.template_id ?? "sensor_monitor";
@@ -590,8 +629,30 @@ function App() {
     );
     if (result) {
       setSavedMappingId(result.mappingId);
-      setBuildResult(result.built);
-      refreshProjectData(selectedProject.id);
+      setJobs((current) => [result.built, ...current.filter((job) => job.id !== result.built.id)]);
+      setBuildResult(null);
+    }
+  }
+
+  async function cancelJob(job: Job) {
+    const result = await run(
+      t("busyCancellingJob"),
+      () => api.cancelJob(job.id),
+      { area: "recordings" }
+    );
+    if (result) {
+      setJobs((current) => current.map((item) => (item.id === result.id ? result : item)));
+    }
+  }
+
+  async function retryJob(job: Job) {
+    const result = await run(
+      t("busyRetryingJob"),
+      () => api.retryJob(job.id),
+      { area: "recordings" }
+    );
+    if (result) {
+      setJobs((current) => [result, ...current.filter((item) => item.id !== result.id)]);
     }
   }
 
@@ -845,6 +906,20 @@ function App() {
     if (result) setMappingTemplateExportPath(result.path);
   }
 
+  async function deleteSelectedMappingTemplate() {
+    if (!selectedMappingTemplateId) return;
+    const deletedId = selectedMappingTemplateId;
+    const result = await run(
+      t("busyDeletingMappingTemplate"),
+      () => api.deleteMappingTemplate(deletedId),
+      { area: "mappingTemplates" }
+    );
+    if (!result) return;
+    setMappingTemplates((current) => current.filter((item) => item.id !== deletedId));
+    setSelectedMappingTemplateId("");
+    setMappingTemplateJson("");
+  }
+
   async function runMappingDiff() {
     if (
       !selectedProjectId ||
@@ -953,12 +1028,19 @@ function App() {
       .filter(Boolean);
     const result = await run(
       t("busyRunningBatch"),
-      () => api.batchImport(selectedProjectId, patterns, selectedTemplateId, batchOutputPrefix),
+      () =>
+        api.batchImport(
+          selectedProjectId,
+          patterns,
+          selectedTemplateId,
+          batchOutputPrefix,
+          batchStorageMode
+        ),
       { area: "batch" }
     );
     if (result) {
-      setBatchResult(result);
-      refreshProjectData(selectedProjectId);
+      setJobs((current) => [result, ...current.filter((job) => job.id !== result.id)]);
+      setBatchResult(null);
     }
   }
 
@@ -1118,24 +1200,7 @@ function App() {
           recursive: kind === "folder",
           filters:
             kind === "file"
-              ? [
-                  {
-                    name: "DataScope",
-                    extensions: ["csv", "jsonl", "json", "mcap", "ply", "pcd", "npy", "npz"]
-                  },
-                  {
-                    name: "Tabular",
-                    extensions: ["csv", "jsonl", "json"]
-                  },
-                  {
-                    name: "Point Cloud",
-                    extensions: ["ply", "pcd", "npy", "npz"]
-                  },
-                  {
-                    name: "MCAP",
-                    extensions: ["mcap"]
-                  }
-                ]
+              ? sourceFileDialogFilters
               : undefined
         }),
       { area: "import" }
@@ -1149,1159 +1214,269 @@ function App() {
     }
   }
 
+  const navigationProps = {
+    activeSection,
+    busy,
+    projects,
+    selectedProject,
+    selectedProjectId,
+    projectName,
+    projectError: areaErrors.project,
+    recordingCount: recordings.length,
+    jobCount: jobs.length,
+    templateCount: templateRegistry.length,
+    t,
+    onRefreshAll: () => void refreshAll(),
+    onSectionChange: goToSection,
+    onRefreshProjects: () => void refreshProjects(),
+    onSelectedProjectChange: setSelectedProjectId,
+    onProjectNameChange: (name: string) => {
+      setProjectName(name);
+      clearAreaError("project");
+    },
+    onCreateProject: () => void createProject()
+  };
+
   return (
     <main className="app-shell">
-      <header className="topbar">
-        <div className="brand-mark" aria-hidden="true">
-          <Database size={20} />
-        </div>
-        <div className="topbar-title">
-          <h1>DataScope Studio</h1>
-          <span>{t("localCatalog")}</span>
-        </div>
-        <div className="topbar-spacer" />
-        <StatusBadge tone="success" label={t("online")} />
-        {busy && <span className="busy-indicator">{busy}</span>}
-        <button className="icon-button" onClick={refreshAll} title={t("refreshWorkspace")}>
-          <RefreshCcw size={16} />
-        </button>
-        <button className="icon-button" onClick={() => goToSection("settings")} title={t("settings")}>
-          <Settings size={16} />
-        </button>
-      </header>
+      <AppTopbar {...navigationProps} />
 
       <div className="app-frame">
-        <aside className="sidebar">
-          <nav className="sidebar-nav" aria-label="Primary">
-            <NavButton
-              active={activeSection === "dashboard"}
-              icon={<LayoutDashboard size={17} />}
-              label={t("dashboard")}
-              onClick={() => goToSection("dashboard")}
-            />
-            <NavButton
-              active={activeSection === "import"}
-              icon={<Upload size={17} />}
-              label={t("import")}
-              onClick={() => goToSection("import")}
-            />
-            <NavButton
-              active={activeSection === "recordings"}
-              icon={<ListChecks size={17} />}
-              label={t("recordings")}
-              onClick={() => goToSection("recordings")}
-            />
-            <NavButton
-              active={activeSection === "templates"}
-              icon={<Image size={17} />}
-              label={t("templates")}
-              onClick={() => goToSection("templates")}
-            />
-            <NavButton
-              active={activeSection === "settings"}
-              icon={<Settings size={17} />}
-              label={t("settings")}
-              onClick={() => goToSection("settings")}
-            />
-          </nav>
-
-          <section className="sidebar-card">
-            <div className="sidebar-card-title">
-              <span>{t("workspace")}</span>
-              <button className="mini-button" onClick={refreshProjects} title={t("busyRefreshingProjects")}>
-                <RefreshCcw size={14} />
-              </button>
-            </div>
-            <label className="field-label" htmlFor="project-select">
-              {t("currentProject")}
-            </label>
-            <select
-              id="project-select"
-              value={selectedProjectId}
-              onChange={(event) => setSelectedProjectId(event.target.value)}
-            >
-              <option value="">{t("selectProject")}</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-            <div className="compact-form">
-              <input
-                aria-label={t("createProject")}
-                value={projectName}
-                onChange={(event) => {
-                  setProjectName(event.target.value);
-                  clearAreaError("project");
-                }}
-              />
-              <button className="icon-button" onClick={createProject} title={t("createProject")}>
-                <FolderPlus size={16} />
-              </button>
-            </div>
-            <InlineError error={areaErrors.project} t={t} />
-            {selectedProject && <p className="path-line">{selectedProject.workspace_path}</p>}
-          </section>
-
-          <section className="sidebar-card subtle">
-            <div className="mini-stat">
-              <span>{t("recordings")}</span>
-              <strong>{recordings.length}</strong>
-            </div>
-            <div className="mini-stat">
-              <span>{t("jobs")}</span>
-              <strong>{jobs.length}</strong>
-            </div>
-            <div className="mini-stat">
-              <span>{t("templates")}</span>
-              <strong>{templateRegistry.length}</strong>
-            </div>
-          </section>
-        </aside>
+        <AppSidebar {...navigationProps} />
 
         <section className="workspace">
           {activeSection === "dashboard" && (
-          <section className="dashboard" id="dashboard">
-            <div className="hero-card project-summary-card">
-              <div className="project-summary-main">
-                <div>
-                  <span className="eyebrow">{t("currentProjectEyebrow")}</span>
-                  <h2>{selectedProject?.name ?? t("selectOrCreateProject")}</h2>
-                  <p>
-                    {selectedProject
-                      ? t("projectReadyDescription")
-                      : t("projectEmptyDescription")}
-                  </p>
-                </div>
-                <div className="project-meta-list">
-                  <span className="project-meta-item">
-                    <FolderOpen size={14} />
-                    {selectedProject?.workspace_path ?? t("createProject")}
-                  </span>
-                  <span className="project-meta-item">
-                    <ListChecks size={14} />
-                    {latestRecording ? `${t("latestRun")}: ${latestRecording.run_name}` : t("noLatestRun")}
-                  </span>
-                  <span className="project-meta-item">
-                    <Activity size={14} />
-                    {latestJob ? `${latestJob.type} / ${latestJob.status}` : t("localArtifacts")}
-                  </span>
-                </div>
-                <div className="hero-metrics compact-metrics">
-                  <Metric label={t("runs")} value={recordings.length} />
-                  <Metric label={t("streams")} value={streams.length} />
-                  <Metric label={t("jobs")} value={jobs.length} />
-                </div>
-              </div>
-              <ProjectVisual recordings={recordings.length} streams={streams.length} jobs={jobs.length} />
-            </div>
-
-            <section className="card import-card">
-              <CardHeader
-                icon={<Upload size={18} />}
-                title={t("importData")}
-                subtitle={t("importDataSubtitle")}
-              />
-              <div className="source-picker-toolbar">
-                <div className="source-picker-wrap">
-                  <button
-                    className="button-primary source-picker-button"
-                    disabled={isBusy}
-                    onClick={() => setSourcePickerOpen((value) => !value)}
-                    type="button"
-                  >
-                    <FolderOpen size={16} />
-                    {t("chooseSource")}
-                  </button>
-                  {sourcePickerOpen && (
-                    <div className="source-picker-popover" role="menu">
-                      <button type="button" onClick={() => chooseSource("file")}>
-                        <FileSearch size={16} />
-                        <span>
-                          <strong>{t("selectSourceFile")}</strong>
-                          <small>{t("selectSourceFileHint")}</small>
-                        </span>
-                      </button>
-                      <button type="button" onClick={() => chooseSource("folder")}>
-                        <FolderOpen size={16} />
-                        <span>
-                          <strong>{t("selectSourceFolder")}</strong>
-                          <small>{t("selectSourceFolderHint")}</small>
-                        </span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-                <button disabled={isBusy} onClick={importAndInspect} type="button">
-                  <FileSearch size={16} />
-                  {t("inspectSource")}
-                </button>
-              </div>
-              <div
-                className={`drop-zone compact-drop-zone ${dragActive ? "is-dragging" : ""}`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-              >
-                <div className="drop-icon">
-                  <Upload size={22} />
-                </div>
-                <div>
-                  <strong>{t("dragSourceHere")}</strong>
-                  <span>{t("supportedSources")}</span>
-                </div>
-              </div>
-              <div className="chip-row">
-                {supportedFormats.map((format) => (
-                  <span className="chip" key={format}>
-                    {format}
-                  </span>
-                ))}
-              </div>
-              <input
-                aria-describedby={areaErrors.import ? "import-error" : undefined}
-                aria-invalid={Boolean(areaErrors.import)}
-                placeholder={t("sourcePathPlaceholder")}
-                value={sourcePath}
-                onChange={(event) => {
-                  setSourcePath(event.target.value);
-                  clearAreaError("import");
-                }}
-                onBlur={(event) => setSourcePath(normalizeSourcePathInput(event.target.value))}
-              />
-              <InlineError id="import-error" error={areaErrors.import} t={t} />
-            </section>
-
-            <section className="card quick-actions-card">
-              <CardHeader icon={<Zap size={18} />} title={t("quickActions")} subtitle={t("quickActionsSubtitle")} />
-              <div className="quick-actions">
-                <button onClick={() => refreshProjectData()} disabled={!selectedProjectId || isBusy}>
-                  <RefreshCcw size={16} />
-                  {t("refreshRuns")}
-                </button>
-                <button onClick={exportProject} disabled={!selectedProjectId || isBusy}>
-                  <Download size={16} />
-                  {t("exportProject")}
-                </button>
-                <button onClick={openProjectPackage} disabled={isBusy}>
-                  <FolderOpen size={16} />
-                  {t("openProjectPackage")}
-                </button>
-                <button onClick={openInRerun} disabled={(!buildResult && !latestRecording) || isBusy}>
-                  <ExternalLink size={16} />
-                  {t("openInRerun")}
-                </button>
-              </div>
-              <InlineError error={areaErrors.dashboard} t={t} />
-              {projectExport && <p className="path-line light">{t("packagePath")}: {projectExport.path}</p>}
-              {openedPackagePath && <p className="path-line light">{t("importedPackage")}: {openedPackagePath}</p>}
-              {latestJob && (
-                <div className="soft-status">
-                  <span>{latestJob.type}</span>
-                  <StatusBadge tone={latestJob.status === "failed" ? "danger" : "neutral"} label={latestJob.status} />
-                </div>
-              )}
-            </section>
-
-            <section className="card recent-runs-card">
-              <CardHeader
-                icon={<ListChecks size={18} />}
-                title={t("recentRuns")}
-                subtitle={latestRecording ? `${t("latest")}: ${latestRecording.run_name}` : t("noRecordingsYet")}
-              />
-              {recordings.length ? (
-                <div className="compact-list">
-                  {recentRecordings.map((recording) => (
-                    <div className="run-row" key={recording.id}>
-                      <div>
-                        <strong>{recording.run_name}</strong>
-                        <span>{recording.source_type ?? t("unknown")} · {formatDateTime(recording.created_at, language)}</span>
-                      </div>
-                      <div className="run-row-actions">
-                        <StatusBadge tone="neutral" label={recording.blueprint_id ?? t("recording")} />
-                        <button className="mini-button" onClick={() => openRecording(recording)} disabled={isBusy} title={t("openInRerun")}>
-                          <ExternalLink size={15} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <EmptyState text={t("recordingsWillAppear")} />
-              )}
-            </section>
-          </section>
+            <DashboardSection
+              selectedProject={selectedProject}
+              latestRecording={latestRecording}
+              latestJob={latestJob}
+              recordings={recordings}
+              streamCount={streams.length}
+              jobCount={jobs.length}
+              sourcePickerOpen={sourcePickerOpen}
+              dragActive={dragActive}
+              sourcePath={sourcePath}
+              sourceStorageMode={sourceStorageMode}
+              isBusy={isBusy}
+              importError={areaErrors.import}
+              dashboardError={areaErrors.dashboard}
+              projectExport={projectExport}
+              openedPackagePath={openedPackagePath}
+              buildResult={buildResult}
+              language={language}
+              t={t}
+              onToggleSourcePicker={() => setSourcePickerOpen((value) => !value)}
+              onChooseSource={(kind) => void chooseSource(kind)}
+              onImport={() => void importAndInspect()}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onSourcePathChange={(value) => {
+                setSourcePath(value);
+                clearAreaError("import");
+              }}
+              onStorageModeChange={setSourceStorageMode}
+              onRefresh={() => void refreshProjectData()}
+              onExportProject={() => void exportProject()}
+              onOpenPackage={() => void openProjectPackage()}
+              onOpenLatest={() => void openInRerun()}
+              onOpenRecording={(recording) => void openRecording(recording)}
+            />
           )}
 
           {activeSection === "import" && (
-          <section className="section-stack" id="import">
-            <SectionTitle
-              eyebrow={t("workspace")}
-              title={t("importWorkflow")}
-              subtitle={t("importWorkflowSubtitle")}
-              action={
-                <div className="template-control">
-                  <Image size={16} />
-                  <select
-                    value={selectedTemplateId}
-                    onChange={(event) => changeTemplate(event.target.value)}
-                  >
-                    {templateOptions.map((template) => (
-                      <option key={template.template_id} value={template.template_id}>
-                        {template.name} ({Math.round(template.score * 100)}%)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              }
+            <ImportWorkflowSection
+              selectedTemplateId={selectedTemplateId}
+              templateOptions={templateOptions}
+              selectedMappingTemplateId={selectedMappingTemplateId}
+              mappingTemplates={mappingTemplates}
+              mappingTemplateName={mappingTemplateName}
+              source={source}
+              streams={streams}
+              mapping={mapping}
+              schemaProfile={schemaProfile}
+              mappingValidation={mappingValidation}
+              mappingConfirmed={mappingConfirmed}
+              savedMappingId={savedMappingId}
+              mappingDiff={mappingDiff}
+              projectSources={projectSources}
+              diffLeftSourceId={diffLeftSourceId}
+              diffRightSourceId={diffRightSourceId}
+              supportedSemanticTypes={supportedSemanticTypes}
+              timeUnits={timeUnits}
+              outputNameRef={outputNameRef}
+              outputName={outputName}
+              buildResult={buildResult}
+              previewText={previewText}
+              isBusy={isBusy}
+              language={language}
+              errors={areaErrors}
+              t={t}
+              onTemplateChange={(value) => void changeTemplate(value)}
+              onSelectedMappingTemplateChange={(value) => {
+                setSelectedMappingTemplateId(value);
+                clearAreaError("mappingToolbar");
+              }}
+              onApplyMappingTemplate={() => void applySelectedMappingTemplate()}
+              onMappingTemplateNameChange={(value) => {
+                setMappingTemplateName(value);
+                clearAreaError("mappingToolbar");
+              }}
+              onCreateMappingTemplate={() => void createCurrentMappingTemplate()}
+              onUpdateTimeline={updateTimeline}
+              onUpdateMappingStream={updateMappingStream}
+              onApplyMappingSuggestion={applyMappingSuggestion}
+              onSaveMapping={() => void saveMapping()}
+              onValidateMapping={() => void validateCurrentMapping()}
+              onConfirmMapping={() => void confirmCurrentMapping()}
+              onDiffLeftSourceChange={(value) => {
+                setDiffLeftSourceId(value);
+                clearAreaError("mappingDiff");
+              }}
+              onDiffRightSourceChange={(value) => {
+                setDiffRightSourceId(value);
+                clearAreaError("mappingDiff");
+              }}
+              onRunMappingDiff={() => void runMappingDiff()}
+              onOutputNameChange={(value) => {
+                setOutputName(value);
+                clearAreaError("build");
+              }}
+              onBuildRecording={() => void buildRecording()}
+              onOpenInRerun={() => void openInRerun()}
             />
-
-            <section className="card mapping-template-toolbar">
-              <CardHeader
-                icon={<ListChecks size={18} />}
-                title={t("mappingTemplates")}
-                subtitle={t("mappingTemplatesSubtitle")}
-              />
-              <div className="inline-actions">
-                <select
-                  value={selectedMappingTemplateId}
-                  onChange={(event) => {
-                    setSelectedMappingTemplateId(event.target.value);
-                    clearAreaError("mappingToolbar");
-                  }}
-                >
-                  <option value="">{t("automaticMapping")}</option>
-                  {mappingTemplates.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name} ({item.source_family})
-                    </option>
-                  ))}
-                </select>
-                <button
-                  onClick={applySelectedMappingTemplate}
-                  disabled={!source || !selectedMappingTemplateId || isBusy}
-                >
-                  {t("applyMappingTemplate")}
-                </button>
-                <input
-                  value={mappingTemplateName}
-                  onChange={(event) => {
-                    setMappingTemplateName(event.target.value);
-                    clearAreaError("mappingToolbar");
-                  }}
-                  placeholder={t("mappingTemplateName")}
-                />
-                <button
-                  onClick={createCurrentMappingTemplate}
-                  disabled={!mapping || !mappingTemplateName.trim() || isBusy}
-                >
-                  <Save size={16} />
-                  {t("saveAsMappingTemplate")}
-                </button>
-              </div>
-              <InlineError error={areaErrors.mappingToolbar} t={t} />
-            </section>
-
-            <div className="two-column">
-              <section className="card">
-                <CardHeader icon={<FileSearch size={18} />} title={t("schemaInspector")} />
-                {source ? (
-                  <>
-                    <dl className="meta-grid">
-                      <div>
-                        <dt>{t("type")}</dt>
-                        <dd>{source.type}</dd>
-                      </div>
-                      <div>
-                        <dt>{t("status")}</dt>
-                        <dd>{source.status}</dd>
-                      </div>
-                      <div>
-                        <dt>{t("size")}</dt>
-                        <dd>{source.size_bytes.toLocaleString()} {t("bytes")}</dd>
-                      </div>
-                      <div>
-                        <dt>{t("streams")}</dt>
-                        <dd>{streams.length}</dd>
-                      </div>
-                    </dl>
-                    <StreamTable
-                      streams={streams}
-                      labels={{
-                        empty: t("noStreams"),
-                        name: t("streamName"),
-                        semanticType: t("semanticType"),
-                        fields: t("fields"),
-                        time: t("time"),
-                        confidence: t("confidence")
-                      }}
-                    />
-                  </>
-                ) : (
-                  <EmptyState text={t("sourceEmpty")} />
-                )}
-              </section>
-
-              <section className="card">
-                <CardHeader icon={<Save size={18} />} title={t("mappingEditor")} />
-                {mapping ? (
-                  <>
-                    <div className="mapping-meta">
-                      <span>{mapping.mapping.app_id}</span>
-                      <span>
-                        {mapping.mapping.status} / {mapping.mapping.schema_version === 2 ? "v2" : "v1"}
-                      </span>
-                    </div>
-                    <div className="timeline-editor">
-                      <label>
-                        <span>{t("timeField")}</span>
-                        <select
-                          value={mapping.mapping.timelines.primary.source_field}
-                          onChange={(event) => updateTimeline("source_field", event.target.value)}
-                        >
-                          <option value="">{t("rowSequence")}</option>
-                          {(schemaProfile?.field_names ?? []).map((field) => (
-                            <option key={field} value={field}>{field}</option>
-                          ))}
-                        </select>
-                      </label>
-                      <label>
-                        <span>{t("timeUnit")}</span>
-                        <select
-                          value={mapping.mapping.timelines.primary.unit}
-                          onChange={(event) => updateTimeline("unit", event.target.value)}
-                        >
-                          {timeUnits.map((unit) => (
-                            <option key={unit} value={unit}>{unit}</option>
-                          ))}
-                        </select>
-                      </label>
-                      <label>
-                        <span>{t("timeSort")}</span>
-                        <select
-                          value={mapping.mapping.timelines.primary.sort ?? "source"}
-                          onChange={(event) => updateTimeline("sort", event.target.value)}
-                        >
-                          <option value="source">{t("sourceOrder")}</option>
-                          <option value="ascending">{t("sortAscending")}</option>
-                        </select>
-                      </label>
-                      <span className="soft-status">
-                        {t("effectiveUnit")}: {mappingValidation?.effective_timeline_unit ?? "pending"}
-                      </span>
-                    </div>
-                    <div className="table-wrap">
-                      <table>
-                        <thead>
-                          <tr>
-                            <th>{t("enabled")}</th>
-                            <th>{t("fields")}</th>
-                            <th>{t("semanticType")}</th>
-                            <th>{t("entityPath")}</th>
-                            <th>{t("archetype")}</th>
-                            <th>{t("view")}</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {mapping.mapping.streams.map((stream, index) => (
-                            <tr key={stream.stream_id}>
-                              <td>
-                                <input
-                                  type="checkbox"
-                                  checked={stream.enabled}
-                                  onChange={(event) =>
-                                    updateMappingStream(index, "enabled", event.target.checked)
-                                  }
-                                />
-                              </td>
-                              <td>
-                                <input
-                                  value={stream.source_fields.join(", ")}
-                                  onChange={(event) =>
-                                    updateMappingStream(index, "source_fields", event.target.value)
-                                  }
-                                />
-                                <span className="subline">
-                                  {stream.rule_key} / {stream.origin}
-                                </span>
-                              </td>
-                              <td>
-                                <select
-                                  value={stream.semantic_type}
-                                  disabled={source?.type === "mcap"}
-                                  onChange={(event) =>
-                                    updateMappingStream(index, "semantic_type", event.target.value)
-                                  }
-                                >
-                                  {supportedSemanticTypes.map((type) => (
-                                    <option key={type} value={type}>{type}</option>
-                                  ))}
-                                  {!supportedSemanticTypes.includes(stream.semantic_type) && (
-                                    <option value={stream.semantic_type}>{stream.semantic_type}</option>
-                                  )}
-                                </select>
-                              </td>
-                              <td>
-                                <input
-                                  value={stream.entity_path}
-                                  disabled={source?.type === "mcap"}
-                                  title={source?.type === "mcap" ? t("mcapPathManaged") : undefined}
-                                  onChange={(event) =>
-                                    updateMappingStream(index, "entity_path", event.target.value)
-                                  }
-                                />
-                                {source?.type === "mcap" && (
-                                  <span className="subline">{t("mcapPathManaged")}</span>
-                                )}
-                              </td>
-                              <td>{stream.archetype}</td>
-                              <td>{stream.view}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    {mappingValidation && (
-                      <div className={`validation-panel ${mappingValidation.valid ? "is-valid" : "has-errors"}`}>
-                        <div className="validation-summary">
-                          <strong>
-                            {mappingValidation.valid ? t("mappingValid") : t("mappingInvalid")}
-                          </strong>
-                          <span>
-                            {mappingValidation.summary.errors} {t("errors")} /{" "}
-                            {mappingValidation.summary.warnings} {t("warnings")}
-                          </span>
-                        </div>
-                        {mappingValidation.issues.map((issue, index) => (
-                          <MappingIssueCard
-                            key={`${issue.code}-${issue.stream_id ?? issue.field ?? index}-${index}`}
-                            issue={issue}
-                            language={language}
-                            t={t}
-                            isBusy={isBusy}
-                            onApply={applyMappingSuggestion}
-                          />
-                        ))}
-                      </div>
-                    )}
-                    <div className="actions">
-                      <button onClick={saveMapping} disabled={isBusy || Boolean(savedMappingId)}>
-                        <Save size={16} />
-                        {savedMappingId ? t("draftSaved") : t("saveDraft")}
-                      </button>
-                      <button onClick={validateCurrentMapping} disabled={isBusy}>
-                        <ListChecks size={16} />
-                        {t("validateMapping")}
-                      </button>
-                      <button
-                        className="button-primary"
-                        onClick={confirmCurrentMapping}
-                        disabled={isBusy || Boolean(mappingValidation && !mappingValidation.valid)}
-                      >
-                        <CheckCircle2 size={16} />
-                        {mappingConfirmed ? t("mappingConfirmed") : t("confirmMapping")}
-                      </button>
-                      <span className={mappingConfirmed ? "success" : "pending"}>
-                        {mappingConfirmed ? t("mappingConfirmed") : t("mappingDraft")}
-                      </span>
-                    </div>
-                    <InlineError error={areaErrors.mapping} t={t} />
-                  </>
-                ) : (
-                  <EmptyState text={t("mappingEmpty")} />
-                )}
-              </section>
-            </div>
-
-            <section className="card">
-              <CardHeader
-                icon={<Activity size={18} />}
-                title={t("mappingDiff")}
-                subtitle={t("mappingDiffSubtitle")}
-              />
-              <div className="diff-controls">
-                <select
-                  value={diffLeftSourceId}
-                  onChange={(event) => {
-                    setDiffLeftSourceId(event.target.value);
-                    clearAreaError("mappingDiff");
-                  }}
-                >
-                  <option value="">{t("leftSource")}</option>
-                  {projectSources.map((item) => (
-                    <option key={item.id} value={item.id}>{item.id} / {item.type}</option>
-                  ))}
-                </select>
-                <select
-                  value={diffRightSourceId}
-                  onChange={(event) => {
-                    setDiffRightSourceId(event.target.value);
-                    clearAreaError("mappingDiff");
-                  }}
-                >
-                  <option value="">{t("rightSource")}</option>
-                  {projectSources.map((item) => (
-                    <option key={item.id} value={item.id}>{item.id} / {item.type}</option>
-                  ))}
-                </select>
-                <button
-                  onClick={runMappingDiff}
-                  disabled={
-                    isBusy ||
-                    !selectedMappingTemplateId ||
-                    !diffLeftSourceId ||
-                    !diffRightSourceId ||
-                    diffLeftSourceId === diffRightSourceId
-                  }
-                >
-                  {t("compareMappings")}
-                </button>
-              </div>
-              <InlineError error={areaErrors.mappingDiff} t={t} />
-              {mappingDiff ? (
-                <div className="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>{t("rule")}</th>
-                        <th>{t("status")}</th>
-                        <th>{t("changes")}</th>
-                        <th>{t("leftSource")}</th>
-                        <th>{t("rightSource")}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {mappingDiff.rows.map((row) => (
-                        <tr key={row.rule_key}>
-                          <td>{row.rule_key}</td>
-                          <td>{row.status}</td>
-                          <td>{row.changes.join(", ") || "-"}</td>
-                          <td>{row.left?.source_fields.join(", ") || "-"}</td>
-                          <td>{row.right?.source_fields.join(", ") || "-"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <EmptyState text={t("mappingDiffEmpty")} />
-              )}
-            </section>
-
-            <div className="two-column balanced">
-              <section className="card">
-                <CardHeader icon={<Play size={18} />} title={t("conversionJob")} />
-                <div className="build-row">
-                  <input
-                    ref={outputNameRef}
-                    aria-describedby={areaErrors.build ? "build-error" : undefined}
-                    aria-invalid={Boolean(areaErrors.build)}
-                    value={outputName}
-                    onChange={(event) => {
-                      setOutputName(event.target.value);
-                      clearAreaError("build");
-                    }}
-                  />
-                  <button className="button-primary" disabled={isBusy || !mappingConfirmed} onClick={buildRecording}>
-                    <Play size={16} />
-                    {t("buildArtifacts")}
-                  </button>
-                  <button disabled={!buildResult || isBusy} onClick={openInRerun}>
-                    <ExternalLink size={16} />
-                    {t("openInRerun")}
-                  </button>
-                </div>
-                <InlineError id="build-error" error={areaErrors.build} t={t} />
-                {buildResult ? (
-                  <dl className="artifact-list">
-                    <div>
-                      <dt>{t("recording")}</dt>
-                      <dd>{buildResult.recording_path}</dd>
-                    </div>
-                    <div>
-                      <dt>{t("blueprint")}</dt>
-                      <dd>{buildResult.blueprint_path}</dd>
-                    </div>
-                    <div>
-                      <dt>{t("job")}</dt>
-                      <dd>
-                        {buildResult.job_id} / {buildResult.status}
-                      </dd>
-                    </div>
-                  </dl>
-                ) : (
-                  <EmptyState text={t("buildEmpty")} />
-                )}
-              </section>
-
-              <section className="card">
-                <CardHeader icon={<FileSearch size={18} />} title={t("preview")} />
-                {previewText ? (
-                  <pre className="preview">{previewText}</pre>
-                ) : (
-                  <EmptyState text={t("previewEmpty")} />
-                )}
-              </section>
-            </div>
-          </section>
           )}
 
           {activeSection === "recordings" && (
-          <section className="section-stack" id="recordings">
-            <SectionTitle
-              eyebrow={t("workspace")}
-              title={t("recordingsQueries")}
-              subtitle={t("recordingsQueriesSubtitle")}
+            <RecordingsQueriesSection
+              recordings={recordings}
+              visibleRecordings={visibleRecordings}
+              tagInput={tagInput}
+              queryTemplates={queryTemplates}
+              selectedQueryTemplate={selectedQueryTemplate}
+              selectedQueryRecording={selectedQueryRecording}
+              queryRecordingOptions={queryRecordingOptions}
+              thresholdTemplates={thresholdTemplates}
+              queryThreshold={queryThreshold}
+              selectedProjectId={selectedProjectId}
+              exportPath={exportPath}
+              queryResult={queryResult}
+              compareRecordingIds={compareRecordingIds}
+              compareMetric={compareMetric}
+              compareResult={compareResult}
+              jobs={jobs}
+              visibleJobs={visibleJobs}
+              isBusy={isBusy}
+              language={language}
+              errors={areaErrors}
+              t={t}
+              onTagInputChange={(value) => {
+                setTagInput(value);
+                clearAreaError("recordings");
+              }}
+              onOpenRecording={(recording) => void openRecording(recording)}
+              onAddTag={(recordingId) => void addTagToRecording(recordingId)}
+              onQueryTemplateChange={(value) => {
+                setSelectedQueryTemplate(value);
+                clearAreaError("query");
+              }}
+              onQueryRecordingChange={(value) => {
+                setSelectedQueryRecording(value);
+                clearAreaError("query");
+              }}
+              onQueryThresholdChange={(value) => {
+                setQueryThreshold(value);
+                clearAreaError("query");
+              }}
+              onRunQuery={() => void runQuery()}
+              onExportQuery={() => void exportQuery()}
+              onCompareRecordingIdsChange={(value) => {
+                setCompareRecordingIds(value);
+                clearAreaError("compare");
+              }}
+              onCompareMetricChange={(value) => {
+                setCompareMetric(value);
+                clearAreaError("compare");
+              }}
+              onRunCompare={() => void runCompare()}
+              onCancelJob={(job) => void cancelJob(job)}
+              onRetryJob={(job) => void retryJob(job)}
             />
-            <div className="two-column">
-              <section className="card">
-                <CardHeader icon={<ListChecks size={18} />} title={t("recordingBrowser")} />
-                {recordings.length ? (
-                  <>
-                    <div className="tag-row">
-                      <input
-                        placeholder={t("tagPlaceholder")}
-                        value={tagInput}
-                        onChange={(event) => {
-                          setTagInput(event.target.value);
-                          clearAreaError("recordings");
-                        }}
-                      />
-                    </div>
-                    <InlineError error={areaErrors.recordings} t={t} />
-                    <div className="table-wrap responsive-table">
-                      <table>
-                        <thead>
-                          <tr>
-                            <th>{t("run")}</th>
-                            <th>{t("template")}</th>
-                            <th>{t("source")}</th>
-                            <th>{t("tags")}</th>
-                            <th>{t("action")}</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {visibleRecordings.map((recording) => (
-                            <tr key={recording.id}>
-                              <td data-label={t("run")}>
-                                <strong>{recording.run_name}</strong>
-                                <span className="subline">{recording.id}</span>
-                              </td>
-                              <td data-label={t("template")}>{recording.blueprint_id}</td>
-                              <td data-label={t("source")}>{recording.source_type ?? t("unknown")}</td>
-                              <td data-label={t("tags")}>{recording.tags.join(", ") || "-"}</td>
-                              <td data-label={t("action")}>
-                                <button onClick={() => openRecording(recording)} disabled={isBusy}>
-                                  <ExternalLink size={16} />
-                                  {t("openInRerun")}
-                                </button>
-                                <button onClick={() => addTagToRecording(recording.id)} disabled={isBusy}>
-                                  <Tags size={16} />
-                                  {t("addTag")}
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    {visibleRecordings.length < recordings.length && (
-                      <p className="render-limit-note">
-                        {renderLimitText(language, visibleRecordings.length, recordings.length)}
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  <EmptyState text={t("recordingBrowserEmpty")} />
-                )}
-              </section>
-
-              <section className="card">
-                <CardHeader icon={<Search size={18} />} title={t("queryConsole")} />
-                <div className="query-controls">
-                  <select
-                    value={selectedQueryTemplate}
-                    onChange={(event) => {
-                      setSelectedQueryTemplate(event.target.value);
-                      clearAreaError("query");
-                    }}
-                  >
-                    {queryTemplates.length ? (
-                      queryTemplates.map((template) => (
-                        <option key={template.template_id} value={template.template_id}>
-                          {template.name}
-                        </option>
-                      ))
-                    ) : (
-                      <option value="low_battery">{t("lowBattery")}</option>
-                    )}
-                  </select>
-                  <select
-                    value={selectedQueryRecording}
-                    onChange={(event) => {
-                      setSelectedQueryRecording(event.target.value);
-                      clearAreaError("query");
-                    }}
-                  >
-                    <option value="">{t("allRecordings")}</option>
-                    {queryRecordingOptions.map((recording) => (
-                      <option key={recording.id} value={recording.id}>
-                        {recording.run_name}
-                      </option>
-                    ))}
-                  </select>
-                  {queryRecordingOptions.length < recordings.length && (
-                    <span className="field-hint">
-                      {renderLimitText(language, queryRecordingOptions.length, recordings.length)}
-                    </span>
-                  )}
-                  {thresholdTemplates.has(selectedQueryTemplate) && (
-                    <input
-                      aria-label={t("queryThreshold")}
-                      value={queryThreshold}
-                      onChange={(event) => {
-                        setQueryThreshold(event.target.value);
-                        clearAreaError("query");
-                      }}
-                    />
-                  )}
-                  <button className="button-primary" onClick={runQuery} disabled={!selectedProjectId || isBusy}>
-                    <Search size={16} />
-                    {t("runQuery")}
-                  </button>
-                  <button onClick={exportQuery} disabled={!selectedProjectId || isBusy}>
-                    <Download size={16} />
-                    {t("exportCsv")}
-                  </button>
-                </div>
-                <InlineError error={areaErrors.query} t={t} />
-                {exportPath && <p className="path-line light">{t("exported")}: {exportPath}</p>}
-                <ResultTable result={queryResult} emptyText={t("queryEmpty")} />
-              </section>
-            </div>
-
-            <div className="two-column balanced">
-              <section className="card">
-                <CardHeader icon={<Search size={18} />} title={t("runCompare")} />
-                <div className="query-controls">
-                  <input
-                    placeholder={t("recordingIdsPlaceholder")}
-                    value={compareRecordingIds}
-                    onChange={(event) => {
-                      setCompareRecordingIds(event.target.value);
-                      clearAreaError("compare");
-                    }}
-                  />
-                  <input
-                    placeholder={t("metricPlaceholder")}
-                    value={compareMetric}
-                    onChange={(event) => {
-                      setCompareMetric(event.target.value);
-                      clearAreaError("compare");
-                    }}
-                  />
-                  <button className="button-primary" onClick={runCompare} disabled={!selectedProjectId || isBusy}>
-                    <Search size={16} />
-                    {t("compare")}
-                  </button>
-                </div>
-                <InlineError error={areaErrors.compare} t={t} />
-                <ResultTable
-                  result={compareResult}
-                  emptyText={t("compareEmpty")}
-                />
-              </section>
-
-              <section className="card">
-                <CardHeader icon={<Activity size={18} />} title={t("jobs")} />
-                {jobs.length ? (
-                  <div className="job-list">
-                    {visibleJobs.map((job) => (
-                      <span key={job.id}>
-                        {job.type} / {job.status} / {Math.round(job.progress * 100)}%
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <EmptyState text={t("jobsEmpty")} />
-                )}
-              </section>
-            </div>
-          </section>
           )}
 
-          {activeSection === "templates" && (
-          <section className="section-stack" id="templates">
-            <SectionTitle
-              eyebrow={t("workspace")}
-              title={t("templatesExtensions")}
-              subtitle={t("templatesExtensionsSubtitle")}
-            />
-            <div className="two-column balanced">
-              <section className="card">
-                <CardHeader icon={<FolderOpen size={18} />} title={t("batchImport")} />
-                <textarea
-                  placeholder={t("batchPlaceholder")}
-                  value={batchPattern}
-                  onChange={(event) => {
-                    setBatchPattern(event.target.value);
-                    clearAreaError("batch");
-                  }}
-                />
-                <div className="inline-actions">
-                  <input
-                    value={batchOutputPrefix}
-                    onChange={(event) => {
-                      setBatchOutputPrefix(event.target.value);
-                      clearAreaError("batch");
-                    }}
-                  />
-                  <button onClick={runBatchImport} disabled={!selectedProjectId || isBusy}>
-                    <Upload size={16} />
-                    {t("runBatch")}
-                  </button>
-                </div>
-                <InlineError error={areaErrors.batch} t={t} />
-                {batchResult && (
-                  <p className="path-line light">
-                    {batchResult.id}: {batchResult.succeeded}/{batchResult.total} succeeded
-                  </p>
-                )}
-              </section>
-
-              <section className="card">
-                <CardHeader
-                  icon={<Save size={18} />}
-                  title={t("extensionRegistry")}
-                  subtitle={t("extensionRegistrySubtitle")}
-                />
-                <div className="extension-form">
-                  <input
-                    placeholder={t("pluginPathPlaceholder")}
-                    value={pluginPath}
-                    onChange={(event) => {
-                      setPluginPath(event.target.value);
-                      clearAreaError("extensions");
-                    }}
-                  />
-                  <button onClick={installPlugin} disabled={isBusy}>
-                    <Save size={16} />
-                    {t("installPlugin")}
-                  </button>
-                  <input
-                    placeholder={t("templatePathPlaceholder")}
-                    value={templatePath}
-                    onChange={(event) => {
-                      setTemplatePath(event.target.value);
-                      clearAreaError("extensions");
-                    }}
-                  />
-                  <button onClick={installTemplate} disabled={isBusy}>
-                    <Save size={16} />
-                    {t("installTemplate")}
-                  </button>
-                </div>
-                <InlineError error={areaErrors.extensions} t={t} />
-              </section>
-            </div>
-
-            <section className="card mapping-template-manager">
-              <CardHeader
-                icon={<ListChecks size={18} />}
-                title={t("mappingTemplateRegistry")}
-                subtitle={`${mappingTemplates.length} ${t("mappingTemplates")}`}
-              />
-              <div className="mapping-template-manager-grid">
-                <div className="mapping-template-controls">
-                  <div className="mapping-template-control-row">
-                    <input
-                      placeholder={t("mappingTemplatePathPlaceholder")}
-                      value={mappingTemplatePath}
-                      onChange={(event) => {
-                        setMappingTemplatePath(event.target.value);
-                        clearAreaError("mappingTemplates");
-                      }}
-                    />
-                    <button onClick={importMappingTemplate} disabled={isBusy}>
-                      <Upload size={16} />
-                      {t("importMappingTemplate")}
-                    </button>
-                  </div>
-                  <select
-                    value={selectedMappingTemplateId}
-                    onChange={(event) => {
-                      setSelectedMappingTemplateId(event.target.value);
-                      clearAreaError("mappingTemplates");
-                    }}
-                  >
-                    <option value="">{t("selectMappingTemplate")}</option>
-                    {mappingTemplates.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.name} / {item.source_family}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="mapping-template-control-row">
-                    <input
-                      placeholder={t("mappingTemplateExportPath")}
-                      value={mappingTemplateExportPath}
-                      onChange={(event) => {
-                        setMappingTemplateExportPath(event.target.value);
-                        clearAreaError("mappingTemplates");
-                      }}
-                    />
-                    <button
-                      onClick={exportSelectedMappingTemplate}
-                      disabled={!selectedMappingTemplateId || isBusy}
-                    >
-                      <Download size={16} />
-                      {t("exportMappingTemplate")}
-                    </button>
-                  </div>
-                </div>
-                <div className="mapping-template-rules">
-                  <label className="field-label">{t("mappingTemplateRules")}</label>
-                  <textarea
-                    aria-describedby={areaErrors.mappingTemplates ? "mapping-template-error" : undefined}
-                    aria-invalid={Boolean(areaErrors.mappingTemplates)}
-                    className="mapping-template-json"
-                    value={mappingTemplateJson}
-                    onChange={(event) => {
-                      setMappingTemplateJson(event.target.value);
-                      clearAreaError("mappingTemplates");
-                    }}
-                    placeholder={t("mappingTemplateRulesHint")}
-                  />
-                  <div className="actions">
-                    <button
-                      onClick={saveMappingTemplateConfig}
-                      disabled={!selectedMappingTemplateId || !mappingTemplateJson.trim() || isBusy}
-                    >
-                      <Save size={16} />
-                      {t("saveTemplateRules")}
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <InlineError
-                id="mapping-template-error"
-                error={areaErrors.mappingTemplates}
-                t={t}
-              />
-            </section>
-
-            <section className="card registry-card">
-              <CardHeader
-                icon={<Database size={18} />}
-                title={t("pluginTemplateRegistry")}
-                subtitle={`${plugins.length} ${t("plugins")} / ${templateRegistry.length} ${t("templates")}`}
-              />
-              <div className="table-wrap responsive-table">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>{t("kind")}</th>
-                      <th>{t("name")}</th>
-                      <th>{t("version")}</th>
-                      <th>{t("status")}</th>
-                      <th>{t("pathApp")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {visiblePlugins.map((plugin) => (
-                      <tr key={`plugin-${plugin.id}`}>
-                        <td data-label={t("kind")}>{t("plugin")}</td>
-                        <td data-label={t("name")}>{plugin.name}</td>
-                        <td data-label={t("version")}>{plugin.version}</td>
-                        <td data-label={t("status")}>{plugin.status}</td>
-                        <td data-label={t("pathApp")}>{plugin.path}</td>
-                      </tr>
-                    ))}
-                    {visibleTemplateRegistry.map((template) => (
-                      <tr key={`template-${template.id}`}>
-                        <td data-label={t("kind")}>{t("template")}</td>
-                        <td data-label={t("name")}>{template.name}</td>
-                        <td data-label={t("version")}>{template.version}</td>
-                        <td data-label={t("status")}>{template.enabled ? t("enabled") : t("disabled")}</td>
-                        <td data-label={t("pathApp")}>{template.app_id}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {visiblePlugins.length + visibleTemplateRegistry.length < plugins.length + templateRegistry.length && (
-                <p className="render-limit-note">
-                  {renderLimitText(
-                    language,
-                    visiblePlugins.length + visibleTemplateRegistry.length,
-                    plugins.length + templateRegistry.length
-                  )}
-                </p>
-              )}
-              {!plugins.length && !templateRegistry.length && (
-                <EmptyState text={t("registryEmpty")} />
-              )}
-            </section>
-          </section>
-          )}
-
-          {activeSection === "settings" && (
-          <section className="section-stack" id="settings">
-            <SectionTitle
-              eyebrow={t("workspace")}
-              title={t("settings")}
-              subtitle={t("settingsSubtitle")}
-            />
-            <section className="card">
-              <CardHeader
-                icon={<Settings size={18} />}
-                title={t("preferences")}
-                subtitle={t("preferencesSubtitle")}
-              />
-              <div className="settings-block">
-                <div>
-                  <strong>{t("language")}</strong>
-                  <span>{t("languageSubtitle")}</span>
-                </div>
-                <div className="segmented-control" role="group" aria-label={t("language")}>
-                  {languageOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      className={language === option.value ? "is-selected" : ""}
-                      onClick={() => setLanguage(option.value)}
-                      type="button"
-                    >
-                      {option.value === "zh" ? t("chinese") : t("english")}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="settings-block vertical">
-                <div>
-                  <strong>{t("defaultExportPath")}</strong>
-                  <span>{t("defaultExportPathSubtitle")}</span>
-                </div>
-                <div className="settings-path-control">
-                  <input
-                    placeholder={t("exportPathPlaceholder")}
-                    value={defaultExportDir}
-                    onChange={(event) => {
-                      setDefaultExportDir(event.target.value);
-                      clearAreaError("settings");
-                    }}
-                    onBlur={(event) => setDefaultExportDir(normalizeSourcePathInput(event.target.value))}
-                  />
-                  <button type="button" onClick={chooseExportFolder} disabled={isBusy}>
-                    <FolderOpen size={16} />
-                    {t("selectExportFolder")}
-                  </button>
-                </div>
-                <InlineError error={areaErrors.settings} t={t} />
-              </div>
-            </section>
-          </section>
-          )}
+          <ExtensionsSections
+            activeSection={activeSection}
+            selectedProjectId={selectedProjectId}
+            batchPattern={batchPattern}
+            batchOutputPrefix={batchOutputPrefix}
+            batchStorageMode={batchStorageMode}
+            batchResult={batchResult}
+            pluginPath={pluginPath}
+            templatePath={templatePath}
+            mappingTemplates={mappingTemplates}
+            selectedMappingTemplateId={selectedMappingTemplateId}
+            mappingTemplatePath={mappingTemplatePath}
+            mappingTemplateExportPath={mappingTemplateExportPath}
+            mappingTemplateJson={mappingTemplateJson}
+            plugins={plugins}
+            templateRegistry={templateRegistry}
+            visiblePlugins={visiblePlugins}
+            visibleTemplateRegistry={visibleTemplateRegistry}
+            language={language}
+            defaultExportDir={defaultExportDir}
+            isBusy={isBusy}
+            batchError={areaErrors.batch}
+            extensionsError={areaErrors.extensions}
+            mappingTemplatesError={areaErrors.mappingTemplates}
+            settingsError={areaErrors.settings}
+            t={t}
+            onBatchPatternChange={(value) => {
+              setBatchPattern(value);
+              clearAreaError("batch");
+            }}
+            onBatchOutputPrefixChange={(value) => {
+              setBatchOutputPrefix(value);
+              clearAreaError("batch");
+            }}
+            onBatchStorageModeChange={setBatchStorageMode}
+            onRunBatch={() => void runBatchImport()}
+            onPluginPathChange={(value) => {
+              setPluginPath(value);
+              clearAreaError("extensions");
+            }}
+            onInstallPlugin={() => void installPlugin()}
+            onTemplatePathChange={(value) => {
+              setTemplatePath(value);
+              clearAreaError("extensions");
+            }}
+            onInstallTemplate={() => void installTemplate()}
+            onMappingTemplatePathChange={(value) => {
+              setMappingTemplatePath(value);
+              clearAreaError("mappingTemplates");
+            }}
+            onImportMappingTemplate={() => void importMappingTemplate()}
+            onSelectedMappingTemplateChange={(value) => {
+              setSelectedMappingTemplateId(value);
+              clearAreaError("mappingTemplates");
+            }}
+            onMappingTemplateExportPathChange={(value) => {
+              setMappingTemplateExportPath(value);
+              clearAreaError("mappingTemplates");
+            }}
+            onExportMappingTemplate={() => void exportSelectedMappingTemplate()}
+            onDeleteMappingTemplate={() => void deleteSelectedMappingTemplate()}
+            onMappingTemplateJsonChange={(value) => {
+              setMappingTemplateJson(value);
+              clearAreaError("mappingTemplates");
+            }}
+            onSaveMappingTemplate={() => void saveMappingTemplateConfig()}
+            onLanguageChange={setLanguage}
+            onDefaultExportDirChange={(value) => {
+              setDefaultExportDir(value);
+              clearAreaError("settings");
+            }}
+            onChooseExportFolder={() => void chooseExportFolder()}
+          />
         </section>
       </div>
       {globalNotification && (
@@ -2319,575 +1494,5 @@ function App() {
     </main>
   );
 }
-
-export function clearErrorAreaState(current: AreaErrors, area: ErrorArea): AreaErrors {
-  if (!current[area]) return current;
-  const next = { ...current };
-  delete next[area];
-  return next;
-}
-
-function normalizeDroppedPath(value: string) {
-  const firstLine = value.trim().split(/\r?\n/)[0];
-  if (!firstLine) return "";
-  return normalizeSourcePathInput(decodeURIComponent(firstLine.replace(/^file:\/\//, "")));
-}
-
-function normalizeSourcePathInput(value: string) {
-  const trimmed = value.trim();
-  if (!trimmed) return "";
-  const roots = ["/home/", "/mnt/", "/media/", "/tmp/", "/var/", "/opt/"];
-  for (const root of roots) {
-    let index = trimmed.indexOf(root, 1);
-    while (index > 0) {
-      const prefix = trimmed.slice(0, index);
-      const suffix = trimmed.slice(index);
-      if (prefix === suffix || prefix.endsWith(suffix)) {
-        return suffix;
-      }
-      index = trimmed.indexOf(root, index + root.length);
-    }
-  }
-  return trimmed;
-}
-
-function defaultOutputName(value: string, kind?: "file" | "folder") {
-  const normalized = normalizeSourcePathInput(value).replace(/[\\/]+$/, "");
-  const name = normalized.split(/[\\/]/).pop() ?? "";
-  if (!name || kind === "folder") return name;
-  const extensionIndex = name.lastIndexOf(".");
-  const extension = extensionIndex >= 0 ? name.slice(extensionIndex + 1).toLowerCase() : "";
-  const isFile = kind === "file" || sourceFileExtensions.has(extension);
-  return isFile && extensionIndex > 0 ? name.slice(0, extensionIndex) : name;
-}
-
-function isTauriRuntime() {
-  return Boolean((window as Window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__);
-}
-
-function getInitialDefaultExportDir() {
-  return window.localStorage.getItem(DEFAULT_EXPORT_DIR_KEY) ?? "";
-}
-
-function upsertProject(projects: Project[], project: Project) {
-  const withoutProject = projects.filter((item) => item.id !== project.id);
-  return [project, ...withoutProject];
-}
-
-function formatCell(value: unknown) {
-  if (value === null || value === undefined) return "";
-  if (typeof value === "object") return JSON.stringify(value);
-  return String(value);
-}
-
-function formatDateTime(value: string, language: Language) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString(language === "zh" ? "zh-CN" : "en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-}
-
-export function InlineError({
-  id,
-  error,
-  t
-}: {
-  id?: string;
-  error?: ApiError;
-  t: (key: TranslationKey) => string;
-}) {
-  if (!error) return null;
-  const isArtifactConflict = error.code === "artifact_name_conflict";
-  const paths = Array.isArray(error.details.paths) ? error.details.paths : [];
-  const outputName =
-    typeof error.details.output_name === "string" ? error.details.output_name : "";
-
-  return (
-    <div className="inline-error" id={id} role="alert">
-      <AlertCircle size={17} aria-hidden="true" />
-      <div>
-        <strong>{isArtifactConflict ? t("artifactNameConflict") : t("operationFailed")}</strong>
-        <p>
-          {isArtifactConflict ? t("artifactNameConflictHint") : error.message}
-          {isArtifactConflict && outputName ? ` (${outputName})` : ""}
-        </p>
-        {paths.length > 0 && (
-          <div className="inline-error-paths">
-            <span>{t("conflictingFiles")}</span>
-            {paths.map((path) => (
-              <code key={path}>{path}</code>
-            ))}
-          </div>
-        )}
-        {!isArtifactConflict && error.code && (
-          <span className="inline-error-code">
-            {t("errorCode")}: {error.code}
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-export function GlobalErrorToast({
-  notification,
-  t,
-  onDismiss,
-  onRetry
-}: {
-  notification: GlobalNotification;
-  t: (key: TranslationKey) => string;
-  onDismiss: () => void;
-  onRetry: () => void;
-}) {
-  return (
-    <aside className="error-toast" role="alert" aria-live="assertive">
-      <AlertCircle size={19} aria-hidden="true" />
-      <div className="error-toast-content">
-        <strong>{t("workspaceError")}</strong>
-        <p>{notification.error.message}</p>
-        <span>
-          {t("errorCode")}: {notification.error.code}
-        </span>
-        {notification.retry && (
-          <button type="button" onClick={onRetry}>
-            <RefreshCcw size={14} />
-            {t("retry")}
-          </button>
-        )}
-      </div>
-      <button
-        className="error-toast-close"
-        type="button"
-        onClick={onDismiss}
-        title={t("close")}
-        aria-label={t("close")}
-      >
-        <X size={16} />
-      </button>
-    </aside>
-  );
-}
-
-const validationIssueKeys: Record<string, TranslationKey> = {
-  missing_time_column: "issueMissingTimeColumn",
-  non_monotonic_time: "issueNonMonotonicTime",
-  time_nulls: "issueTimeNulls",
-  time_parse_failure: "issueTimeParseFailure",
-  mixed_time_units: "issueMixedTimeUnits",
-  time_unit_mismatch: "issueTimeUnitMismatch",
-  invalid_timeline_sort: "issueInvalidTimelineSort",
-  unsupported_semantic_type: "issueUnsupportedSemanticType",
-  required_field_missing: "issueRequiredFieldMissing",
-  field_missing: "issueFieldMissing",
-  ambiguous_field_match: "issueAmbiguousFieldMatch",
-  ambiguous_time_match: "issueAmbiguousTimeMatch",
-  required_fields_empty: "issueRequiredFieldsEmpty",
-  fields_empty: "issueFieldsEmpty",
-  field_nulls: "issueFieldNulls",
-  invalid_entity_path: "issueInvalidEntityPath",
-  duplicate_entity_path: "issueDuplicateEntityPath",
-  missing_coordinate_axes: "issueMissingCoordinateAxes",
-  incomplete_rotation: "issueIncompleteRotation",
-  field_unit_mismatch: "issueFieldUnitMismatch",
-  mcap_summary_unavailable: "issueMcapSummaryUnavailable",
-  mcap_topics_unavailable: "issueMcapTopicsUnavailable",
-  point_cloud_sample_warning: "issuePointCloudSampleWarning",
-  point_cloud_coordinates_missing: "issuePointCloudCoordinatesMissing",
-  image_stream_required: "issueImageStreamRequired"
-};
-
-const validationRecommendationKeys: Record<string, TranslationKey> = {
-  missing_time_column: "recommendMissingTimeColumn",
-  non_monotonic_time: "recommendNonMonotonicTime",
-  time_nulls: "recommendTimeNulls",
-  time_parse_failure: "recommendTimeParseFailure",
-  mixed_time_units: "recommendMixedTimeUnits",
-  time_unit_mismatch: "recommendTimeUnitMismatch",
-  invalid_timeline_sort: "recommendInvalidTimelineSort",
-  unsupported_semantic_type: "recommendUnsupportedSemanticType",
-  required_field_missing: "recommendRequiredFieldMissing",
-  field_missing: "recommendFieldMissing",
-  ambiguous_field_match: "recommendAmbiguousFieldMatch",
-  ambiguous_time_match: "recommendAmbiguousTimeMatch",
-  required_fields_empty: "recommendRequiredFieldsEmpty",
-  fields_empty: "recommendFieldsEmpty",
-  field_nulls: "recommendFieldNulls",
-  invalid_entity_path: "recommendInvalidEntityPath",
-  duplicate_entity_path: "recommendDuplicateEntityPath",
-  missing_coordinate_axes: "recommendMissingCoordinateAxes",
-  incomplete_rotation: "recommendIncompleteRotation",
-  field_unit_mismatch: "recommendFieldUnitMismatch",
-  mcap_summary_unavailable: "recommendMcapSummaryUnavailable",
-  mcap_topics_unavailable: "recommendMcapTopicsUnavailable",
-  point_cloud_sample_warning: "recommendPointCloudSampleWarning",
-  point_cloud_coordinates_missing: "recommendPointCloudCoordinatesMissing",
-  image_stream_required: "recommendImageStreamRequired"
-};
-
-function MappingIssueCard({
-  issue,
-  language,
-  t,
-  isBusy,
-  onApply
-}: {
-  issue: MappingValidationIssue;
-  language: Language;
-  t: (key: TranslationKey) => string;
-  isBusy: boolean;
-  onApply: (suggestion: MappingSuggestion) => Promise<void>;
-}) {
-  const suggestions = issue.suggestions ?? [];
-  const useSelector =
-    suggestions.length > 2 &&
-    new Set(suggestions.map((suggestion) => suggestion.action)).size === 1;
-  const location = [issue.stream_id, issue.field].filter(Boolean).join(" / ");
-  return (
-    <article className={`validation-issue is-${issue.severity}`}>
-      <div className="validation-issue-heading">
-        <span className="validation-severity">{issue.severity.toUpperCase()}</span>
-        <strong>{validationIssueKeys[issue.code] ? t(validationIssueKeys[issue.code]) : issue.code}</strong>
-        <code>{issue.code}</code>
-      </div>
-      {location && <span className="validation-location">{location}</span>}
-      {issue.message && <p className="validation-message">{issue.message}</p>}
-      <p className="validation-recommendation">
-        <b>{t("repairSuggestion")}</b>{" "}
-        {validationRecommendationKeys[issue.code]
-          ? t(validationRecommendationKeys[issue.code])
-          : issue.recommendation ?? issue.message ?? issue.code}
-      </p>
-      {suggestions.length > 0 && (
-        <div className="validation-fixes">
-          {useSelector ? (
-            <select
-              value=""
-              aria-label={t("chooseRepair")}
-              disabled={isBusy}
-              onChange={(event) => {
-                const suggestion = suggestions[Number(event.target.value)];
-                if (suggestion) void onApply(suggestion);
-              }}
-            >
-              <option value="">{t("chooseRepair")}</option>
-              {suggestions.map((suggestion, index) => (
-                <option key={`${suggestion.action}-${index}`} value={index}>
-                  {mappingSuggestionLabel(suggestion, language)}
-                </option>
-              ))}
-            </select>
-          ) : (
-            suggestions.map((suggestion, index) => (
-              <button
-                type="button"
-                key={`${suggestion.action}-${index}`}
-                disabled={isBusy}
-                onClick={() => void onApply(suggestion)}
-              >
-                {mappingSuggestionLabel(suggestion, language)}
-              </button>
-            ))
-          )}
-        </div>
-      )}
-    </article>
-  );
-}
-
-function mappingSuggestionLabel(suggestion: MappingSuggestion, language: Language) {
-  const params = suggestion.params;
-  const zh = language === "zh";
-  switch (suggestion.action) {
-    case "set_timeline_field":
-      return params.field
-        ? zh
-          ? `使用 ${params.field} 作为时间字段`
-          : `Use ${params.field} as time`
-        : zh
-          ? "使用行序列"
-          : "Use row sequence";
-    case "set_timeline_unit":
-      return zh ? `时间单位设为 ${params.unit}` : `Use ${params.unit}`;
-    case "set_timeline_sort":
-      return params.sort === "ascending"
-        ? zh
-          ? "按时间升序排序"
-          : "Sort by time ascending"
-        : zh
-          ? "保持源顺序"
-          : "Keep source order";
-    case "replace_source_field":
-      return zh ? `改用字段 ${params.new_field}` : `Use field ${params.new_field}`;
-    case "set_source_fields":
-      return zh
-        ? `使用字段 ${(params.fields ?? []).join(", ")}`
-        : `Use fields ${(params.fields ?? []).join(", ")}`;
-    case "set_entity_path":
-      return zh ? `改为 ${params.entity_path}` : `Use ${params.entity_path}`;
-    case "set_semantic_type":
-      return zh ? `类型改为 ${params.semantic_type}` : `Use ${params.semantic_type}`;
-    case "set_stream_enabled":
-      return params.enabled
-        ? zh
-          ? "启用该流"
-          : "Enable stream"
-        : zh
-          ? "禁用可选流"
-          : "Disable optional stream";
-    default:
-      return suggestion.label;
-  }
-}
-
-function renderLimitText(language: Language, shown: number, total: number) {
-  return language === "zh" ? `已显示 ${shown} / 共 ${total} 条` : `Showing ${shown} of ${total}`;
-}
-
-function derivedMappingFields(semanticType: string) {
-  const archetypes: Record<string, string> = {
-    scalar: "Scalars",
-    scalar_group: "Scalars",
-    state: "StateChange",
-    text_log: "TextLog",
-    image: "EncodedImage",
-    points2d: "Points2D",
-    segmentation: "SegmentationImage",
-    points3d: "Points3D",
-    asset3d: "Asset3D",
-    trajectory3d: "LineStrips3D",
-    boxes2d: "Boxes2D",
-    transform3d: "Transform3D",
-    mcap: "AnyValues"
-  };
-  const view =
-    ["image", "points2d", "boxes2d", "segmentation"].includes(semanticType)
-      ? "Spatial2DView"
-      : ["points3d", "trajectory3d", "transform3d"].includes(semanticType)
-        ? "Spatial3DView"
-        : ["scalar", "scalar_group"].includes(semanticType)
-          ? "TimeSeriesView"
-          : semanticType === "text_log"
-            ? "TextLogView"
-            : semanticType === "state"
-              ? "StateTimelineView"
-              : "DataframeView";
-  return { archetype: archetypes[semanticType] ?? "AnyValues", view };
-}
-
-const NavButton = memo(function NavButton({
-  active,
-  icon,
-  label,
-  onClick
-}: {
-  active: boolean;
-  icon: ReactNode;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button className={`nav-item ${active ? "is-active" : ""}`} onClick={onClick}>
-      {icon}
-      <span>{label}</span>
-    </button>
-  );
-});
-
-const StatusBadge = memo(function StatusBadge({
-  tone,
-  label
-}: {
-  tone: "success" | "danger" | "neutral";
-  label: string;
-}) {
-  return (
-    <span className={`status-badge ${tone}`}>
-      {tone === "success" ? <CheckCircle2 size={13} /> : <span className="status-dot" />}
-      {label}
-    </span>
-  );
-});
-
-const Metric = memo(function Metric({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="metric">
-      <strong>{value}</strong>
-      <span>{label}</span>
-    </div>
-  );
-});
-
-const ProjectVisual = memo(function ProjectVisual({
-  recordings,
-  streams,
-  jobs
-}: {
-  recordings: number;
-  streams: number;
-  jobs: number;
-}) {
-  const total = Math.max(1, recordings + streams + jobs);
-  const values = [
-    { label: "Runs", value: recordings, ratio: Math.max(recordings / total, 0.08) },
-    { label: "Streams", value: streams, ratio: Math.max(streams / total, 0.08) },
-    { label: "Jobs", value: jobs, ratio: Math.max(jobs / total, 0.08) }
-  ];
-  return (
-    <div className="project-visual" aria-hidden="true">
-      <div className="visual-card">
-        {values.map((item) => (
-          <div className="visual-meter" key={item.label}>
-            <div>
-              <strong>{item.value}</strong>
-              <span>{item.label}</span>
-            </div>
-            <span className="visual-track">
-              <span style={{ width: `${Math.round(item.ratio * 100)}%` }} />
-            </span>
-          </div>
-        ))}
-        <div className="visual-foot">
-          <span />
-          <span />
-          <span />
-        </div>
-      </div>
-    </div>
-  );
-});
-
-const CardHeader = memo(function CardHeader({
-  icon,
-  title,
-  subtitle
-}: {
-  icon: ReactNode;
-  title: string;
-  subtitle?: string;
-}) {
-  return (
-    <div className="card-header">
-      <div className="card-icon">{icon}</div>
-      <div>
-        <h3>{title}</h3>
-        {subtitle && <p>{subtitle}</p>}
-      </div>
-    </div>
-  );
-});
-
-const SectionTitle = memo(function SectionTitle({
-  eyebrow,
-  title,
-  subtitle,
-  action
-}: {
-  eyebrow: string;
-  title: string;
-  subtitle: string;
-  action?: ReactNode;
-}) {
-  return (
-    <div className="section-title">
-      <div>
-        <span className="eyebrow">{eyebrow}</span>
-        <h2>{title}</h2>
-        <p>{subtitle}</p>
-      </div>
-      {action}
-    </div>
-  );
-});
-
-const StreamTable = memo(function StreamTable({
-  streams,
-  labels
-}: {
-  streams: StreamInfo[];
-  labels: {
-    empty: string;
-    name: string;
-    semanticType: string;
-    fields: string;
-    time: string;
-    confidence: string;
-  };
-}) {
-  if (!streams.length) return <EmptyState text={labels.empty} />;
-  return (
-    <div className="table-wrap responsive-table">
-      <table>
-        <thead>
-          <tr>
-            <th>{labels.name}</th>
-            <th>{labels.semanticType}</th>
-            <th>{labels.fields}</th>
-            <th>{labels.time}</th>
-            <th>{labels.confidence}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {streams.map((stream) => (
-            <tr key={stream.stream_id}>
-              <td data-label={labels.name}>{stream.name}</td>
-              <td data-label={labels.semanticType}>{stream.semantic_type}</td>
-              <td data-label={labels.fields}>{stream.fields.join(", ")}</td>
-              <td data-label={labels.time}>{stream.time_key ?? "row"}</td>
-              <td data-label={labels.confidence}>{Math.round(stream.confidence * 100)}%</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-});
-
-const ResultTable = memo(function ResultTable({
-  result,
-  emptyText
-}: {
-  result: QueryResult | null;
-  emptyText: string;
-}) {
-  if (!result?.rows.length) return <EmptyState text={emptyText} />;
-  return (
-    <div className="table-wrap responsive-table">
-      <table>
-        <thead>
-          <tr>
-            {result.columns.map((column) => (
-              <th key={column}>{column}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {result.rows.slice(0, 50).map((row, index) => (
-            <tr key={index}>
-              {result.columns.map((column) => (
-                <td key={column} data-label={column}>
-                  {formatCell(row[column])}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-});
-
-const EmptyState = memo(function EmptyState({ text }: { text: string }) {
-  return (
-    <div className="empty-state">
-      <Command size={17} />
-      <span>{text}</span>
-    </div>
-  );
-});
 
 export default App;

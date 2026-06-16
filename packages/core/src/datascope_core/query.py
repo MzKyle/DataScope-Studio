@@ -4,6 +4,7 @@ import csv
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from collections.abc import Iterator
 from typing import Any
 
 import pandas as pd
@@ -85,19 +86,32 @@ class QueryRow:
 
 
 def build_query_rows(recording_id: str, source: SourceInfo, spec: MappingSpec) -> list[QueryRow]:
+    return list(iter_query_rows(recording_id, source, spec))
+
+
+def iter_query_rows(
+    recording_id: str,
+    source: SourceInfo,
+    spec: MappingSpec,
+    *,
+    chunk_size: int = 50_000,
+) -> Iterator[QueryRow]:
     if source.source_type == "csv":
-        frame = pd.read_csv(source.path)
-        return _tabular_rows(recording_id, source, spec, frame)
+        for frame in pd.read_csv(source.path, chunksize=chunk_size):
+            yield from _tabular_rows(recording_id, source, spec, frame)
+        return
     if source.source_type == "jsonl":
-        frame = pd.DataFrame(_read_jsonl(source.path, limit=None))
-        return _tabular_rows(recording_id, source, spec, frame)
+        for records in _iter_jsonl_batches(source.path, chunk_size):
+            yield from _tabular_rows(recording_id, source, spec, pd.DataFrame(records))
+        return
     if source.source_type == "image_folder":
-        return _cv_rows(recording_id, source)
-    if source.source_type == "mcap":
-        return _mcap_rows(recording_id, source)
+        yield from _cv_rows(recording_id, source)
+        return
+    if source.source_type in {"mcap", "ros2_db3"}:
+        yield from _mcap_rows(recording_id, source)
+        return
     if source.source_type == "point_cloud":
-        return _point_cloud_rows(recording_id, source)
-    return []
+        yield from _point_cloud_rows(recording_id, source)
 
 
 def run_query_template(
@@ -219,8 +233,7 @@ def _tabular_rows(
     source: SourceInfo,
     spec: MappingSpec,
     frame: pd.DataFrame,
-) -> list[QueryRow]:
-    rows: list[QueryRow] = []
+) -> Iterator[QueryRow]:
     frame = prepare_tabular_frame(
         frame,
         time_key=spec.primary_timeline,
@@ -240,20 +253,51 @@ def _tabular_rows(
             entity_path = mapping.get("entity_path", "")
             semantic_type = mapping.get("semantic_type", "")
             if semantic_type == "scalar":
-                _append_field_values(rows, recording_id, source.source_id, timestamp, entity_path, semantic_type, row, fields)
+                yield from _field_values(
+                    recording_id,
+                    source.source_id,
+                    timestamp,
+                    entity_path,
+                    semantic_type,
+                    row,
+                    fields,
+                )
             elif semantic_type == "scalar_group":
                 for field in fields:
                     if field in row and pd.notna(row[field]):
-                        rows.append(QueryRow(recording_id, source.source_id, timestamp, f"{entity_path}/{field}", semantic_type, field, _json_value(row[field])))
+                        yield QueryRow(
+                            recording_id,
+                            source.source_id,
+                            timestamp,
+                            f"{entity_path}/{field}",
+                            semantic_type,
+                            field,
+                            _json_value(row[field]),
+                        )
             elif semantic_type in {"state", "text_log"}:
-                _append_field_values(rows, recording_id, source.source_id, timestamp, entity_path, semantic_type, row, fields)
+                yield from _field_values(
+                    recording_id,
+                    source.source_id,
+                    timestamp,
+                    entity_path,
+                    semantic_type,
+                    row,
+                    fields,
+                )
                 if semantic_type == "text_log":
                     message = " ".join(
                         f"{field}={row[field]}" for field in fields if field in row and pd.notna(row[field])
                     )
                     if message:
-                        rows.append(QueryRow(recording_id, source.source_id, timestamp, entity_path, semantic_type, "message", message))
-    return rows
+                        yield QueryRow(
+                            recording_id,
+                            source.source_id,
+                            timestamp,
+                            entity_path,
+                            semantic_type,
+                            "message",
+                            message,
+                        )
 
 
 def _cv_rows(recording_id: str, source: SourceInfo) -> list[QueryRow]:
@@ -300,8 +344,11 @@ def _mcap_rows(recording_id: str, source: SourceInfo) -> list[QueryRow]:
             "topic": topic_name,
             "role": topic.get("role") or _role_from_topic(topic_name, topic.get("schema_name", "")),
             "schema_name": topic.get("schema_name", ""),
+            "message_type": topic.get("message_type", topic.get("schema_name", "")),
             "message_encoding": topic.get("message_encoding", ""),
             "message_count": topic.get("message_count", 0),
+            "convertible": topic.get("convertible", True),
+            "skip_reason": topic.get("skip_reason", ""),
             "start_time": topic.get("message_start_time", source.metadata.get("message_start_time")),
             "end_time": topic.get("message_end_time", source.metadata.get("message_end_time")),
         }
@@ -337,6 +384,51 @@ def _append_field_values(
     for field in fields:
         if field in row and pd.notna(row[field]):
             rows.append(QueryRow(recording_id, source_id, timestamp, entity_path, semantic_type, field, _json_value(row[field])))
+
+
+def _field_values(
+    recording_id: str,
+    source_id: str,
+    timestamp: float | None,
+    entity_path: str,
+    semantic_type: str,
+    row: pd.Series,
+    fields: list[str],
+) -> Iterator[QueryRow]:
+    for field in fields:
+        if field in row and pd.notna(row[field]):
+            yield QueryRow(
+                recording_id,
+                source_id,
+                timestamp,
+                entity_path,
+                semantic_type,
+                field,
+                _json_value(row[field]),
+            )
+
+
+def _iter_jsonl_batches(path: str, batch_size: int) -> Iterator[list[dict[str, Any]]]:
+    batch: list[dict[str, Any]] = []
+    with open(path, "r", encoding="utf-8") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            stripped = line.strip()
+            if not stripped:
+                continue
+            try:
+                record = json.loads(stripped)
+            except json.JSONDecodeError as exc:
+                raise ValueError(f"Invalid JSONL at line {line_number}: {exc}") from exc
+            if not isinstance(record, dict):
+                raise ValueError(f"JSONL line {line_number} is not an object")
+            from datascope_core.inference import flatten_record
+
+            batch.append(flatten_record(record))
+            if len(batch) >= batch_size:
+                yield batch
+                batch = []
+    if batch:
+        yield batch
 
 
 def _row_time(row: pd.Series, time_key: str, time_unit: str) -> float | None:

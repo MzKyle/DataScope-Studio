@@ -68,6 +68,9 @@ RECOMMENDATIONS = {
     "field_unit_mismatch": "Review the mapped field or update the template unit expectation.",
     "mcap_summary_unavailable": "Check MCAP readability and optional MCAP dependencies.",
     "mcap_topics_unavailable": "Inspect the MCAP source and verify that it contains readable topics.",
+    "ros2_distro_fallback": "Confirm that Humble message definitions match the recorded ROS2 bag.",
+    "ros2_topics_skipped": "Provide message definitions for skipped custom topics if they are required.",
+    "ros2_no_convertible_topics": "Use a bag with standard types or embedded message definitions.",
     "point_cloud_sample_warning": "Inspect the reported point-cloud file and repair or replace it.",
     "point_cloud_coordinates_missing": "Provide point-cloud data with readable x/y/z coordinates.",
     "image_stream_required": "Enable an image stream before converting this image folder.",
@@ -75,6 +78,8 @@ RECOMMENDATIONS = {
 
 
 class MappingValidationError(RuntimeError):
+    code = "mapping_validation_failed"
+
     def __init__(self, report: dict[str, Any]) -> None:
         super().__init__("Mapping validation failed")
         self.report = report

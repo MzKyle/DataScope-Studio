@@ -38,16 +38,16 @@ DataScope 采用本地优先设计。源数据、Mapping、Recording 和 SQLite 
 
 | 系统 | 安装包 |
 | --- | --- |
-| Windows 10/11 x64 | `DataScope-Studio-v0.1.0-windows-x86_64-setup.exe` |
-| macOS Apple Silicon | `DataScope-Studio-v0.1.0-macos-aarch64.dmg` |
-| macOS Intel | `DataScope-Studio-v0.1.0-macos-x86_64.dmg` |
-| Debian/Ubuntu x64 | `DataScope-Studio-v0.1.0-linux-amd64.deb` |
-| 其他 Linux x64 | `DataScope-Studio-v0.1.0-linux-x86_64.AppImage` |
+| Windows 10/11 x64 | `DataScope-Studio-v0.2.0-windows-x86_64-setup.exe` |
+| macOS Apple Silicon | `DataScope-Studio-v0.2.0-macos-aarch64.dmg` |
+| macOS Intel | `DataScope-Studio-v0.2.0-macos-x86_64.dmg` |
+| Debian/Ubuntu x64 | `DataScope-Studio-v0.2.0-linux-amd64.deb` |
+| 其他 Linux x64 | `DataScope-Studio-v0.2.0-linux-x86_64.AppImage` |
 
 安装包已经包含桌面应用、本地 API、Python 运行时和 Rerun，不需要另外安装
 Python、Node.js、npm 或 Rerun。
 
-`v0.1.0` 是未签名的预发布版本：
+`v0.2.0` 是未签名的预发布版本：
 
 - **Windows：** 如果出现 SmartScreen，确认文件来自本仓库后，点击“更多信息”与
   “仍要运行”。
@@ -56,14 +56,14 @@ Python、Node.js、npm 或 Rerun。
 - **Linux AppImage：** 首次启动前添加执行权限：
 
 ```bash
-chmod +x DataScope-Studio-v0.1.0-linux-x86_64.AppImage
-./DataScope-Studio-v0.1.0-linux-x86_64.AppImage
+chmod +x DataScope-Studio-v0.2.0-linux-x86_64.AppImage
+./DataScope-Studio-v0.2.0-linux-x86_64.AppImage
 ```
 
 Debian 安装包使用：
 
 ```bash
-sudo apt install ./DataScope-Studio-v0.1.0-linux-amd64.deb
+sudo apt install ./DataScope-Studio-v0.2.0-linux-amd64.deb
 ```
 
 ## 完成第一次可视化

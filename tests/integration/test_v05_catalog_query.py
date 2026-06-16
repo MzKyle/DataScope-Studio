@@ -10,6 +10,7 @@ import datascope_core.adapters.mcap_adapter as mcap_adapter
 from datascope_api.main import app as api_app
 from datascope_cli.main import app as cli_app
 from datascope_core.workspace import Workspace
+from tests.api_helpers import wait_for_job
 
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
@@ -242,7 +243,7 @@ def _api_import(client: TestClient, project_id: str, path: str, template_id: str
         f"/api/sources/{source['id']}/mapping",
         json={"mapping": mapping},
     ).json()
-    return client.post(
+    response = client.post(
         "/api/recordings/build",
         json={
             "project_id": project_id,
@@ -251,7 +252,11 @@ def _api_import(client: TestClient, project_id: str, path: str, template_id: str
             "template_id": template_id,
             "output_name": "api_catalog_run",
         },
-    ).json()
+    )
+    assert response.status_code == 202
+    job = wait_for_job(client, response.json()["id"])
+    assert job["status"] == "succeeded"
+    return job["result"]
 
 
 def _make_cv_fixture(tmp_path: Path) -> Path:

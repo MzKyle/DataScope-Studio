@@ -13,7 +13,7 @@ from datascope_core.inference import (
     safe_slug,
 )
 from datascope_core.models import ConvertRequest, SourceInfo, StreamInfo
-from datascope_core.rerun_writer import write_tabular_recording
+from datascope_core.rerun_writer import write_tabular_chunks
 
 
 class JsonlAdapter:
@@ -64,8 +64,13 @@ class JsonlAdapter:
         }
 
     def convert(self, request: ConvertRequest) -> None:
-        frame = pd.DataFrame(_read_jsonl(request.source.path, limit=None))
-        write_tabular_recording(frame, request)
+        write_tabular_chunks(
+            (
+                pd.DataFrame(rows)
+                for rows in _read_jsonl_batches(request.source.path, batch_size=50_000)
+            ),
+            request,
+        )
 
 
 def _read_jsonl(path: str, limit: int | None) -> list[dict[str, Any]]:
@@ -86,3 +91,23 @@ def _read_jsonl(path: str, limit: int | None) -> list[dict[str, Any]]:
             rows.append(flatten_record(record))
     return rows
 
+
+def _read_jsonl_batches(path: str, batch_size: int) -> Any:
+    rows: list[dict[str, Any]] = []
+    with open(path, "r", encoding="utf-8") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            stripped = line.strip()
+            if not stripped:
+                continue
+            try:
+                record = json.loads(stripped)
+            except json.JSONDecodeError as exc:
+                raise ValueError(f"Invalid JSONL at line {line_number}: {exc}") from exc
+            if not isinstance(record, dict):
+                raise ValueError(f"JSONL line {line_number} is not an object")
+            rows.append(flatten_record(record))
+            if len(rows) >= batch_size:
+                yield rows
+                rows = []
+    if rows:
+        yield rows
