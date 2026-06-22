@@ -1,4 +1,4 @@
-# DataScope Studio v0.2.0 运行与安装说明
+# DataScope Studio v0.3.0 运行与安装说明
 
 ## 安装版
 
@@ -46,8 +46,13 @@ CLI 示例：
 ```bash
 datascope inspect tests/fixtures/sample_sensor.csv
 datascope import tests/fixtures/sample_sensor.csv --project demo --out run_001
+datascope import tests/fixtures/sample_sensor.csv --project demo --out run_002 --output-dir ~/DataScopeArtifacts
 datascope open ~/.datascope-studio/projects/<project_id>/recordings/run_001.rrd
 ```
+
+桌面端导入无表头 CSV 时，可以选择“无表头”并按原始顺序输入列名。CLI/API
+导入仍使用默认 CSV 自动识别；需要精确控制表头和列名时使用 Source API 的
+`import_options.csv`。
 
 图片目录导入使用 DataScope CV sidecar 格式。请把 `annotations.json` 和可选的 `predictions.json` 放在图片目录旁边：
 
@@ -124,7 +129,7 @@ curl -X POST http://127.0.0.1:8000/api/projects/<project_id>/diagnostics \
   -d '{"recording_ids":["<recording_id>"],"thresholds":{"battery_low":0.2}}'
 ```
 
-v0.2.0 插件、模板、批量导入、Run 对比和项目打包示例：
+插件、模板、批量导入、Run 对比和项目打包示例：
 
 ```bash
 datascope plugin validate ./my_plugin

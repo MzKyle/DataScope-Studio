@@ -54,6 +54,8 @@ type DashboardSectionProps = {
   dragActive: boolean;
   sourcePath: string;
   sourceStorageMode: "copy" | "reference";
+  csvHeaderMode: "auto" | "header" | "no_header";
+  csvColumnNames: string;
   isBusy: boolean;
   importError?: ApiError;
   dashboardError?: ApiError;
@@ -70,6 +72,8 @@ type DashboardSectionProps = {
   onDrop: (event: DragEvent<HTMLDivElement>) => void;
   onSourcePathChange: (value: string) => void;
   onStorageModeChange: (value: "copy" | "reference") => void;
+  onCsvHeaderModeChange: (value: "auto" | "header" | "no_header") => void;
+  onCsvColumnNamesChange: (value: string) => void;
   onRefresh: () => void;
   onExportProject: () => void;
   onOpenPackage: () => void;
@@ -203,6 +207,34 @@ export function DashboardSection(props: DashboardSectionProps) {
             </select>
           </label>
         </div>
+        {props.sourcePath.trim().toLowerCase().endsWith(".csv") && (
+          <div className="csv-source-options">
+            <label>
+              <span>{props.t("csvHeaderMode")}</span>
+              <select
+                value={props.csvHeaderMode}
+                onChange={(event) =>
+                  props.onCsvHeaderModeChange(
+                    event.target.value as "auto" | "header" | "no_header"
+                  )
+                }
+              >
+                <option value="auto">{props.t("csvHeaderAuto")}</option>
+                <option value="header">{props.t("csvHasHeader")}</option>
+                <option value="no_header">{props.t("csvNoHeader")}</option>
+              </select>
+            </label>
+            <label>
+              <span>{props.t("csvColumnNames")}</span>
+              <input
+                placeholder={props.t("csvColumnNamesPlaceholder")}
+                value={props.csvColumnNames}
+                onChange={(event) => props.onCsvColumnNamesChange(event.target.value)}
+              />
+            </label>
+            <span className="field-hint">{props.t("csvColumnNamesHint")}</span>
+          </div>
+        )}
         <InlineError id="import-error" error={props.importError} t={props.t} />
       </section>
 

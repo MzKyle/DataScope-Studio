@@ -1425,6 +1425,28 @@ td {
   max-width: 260px;
 }
 
+.artifact-output-control {
+  align-items: end;
+  display: grid;
+  gap: var(--space-8);
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-top: var(--space-12);
+}
+
+.artifact-output-control label,
+.csv-source-options label {
+  display: grid;
+  font-size: 12px;
+  gap: var(--space-4);
+}
+
+.field-hint {
+  color: var(--color-text-muted);
+  display: block;
+  font-size: 12px;
+  margin-top: var(--space-8);
+}
+
 .artifact-list {
   display: grid;
   gap: var(--space-10, 10px);
@@ -1609,6 +1631,23 @@ td {
   gap: var(--space-4);
 }
 
+.csv-source-options {
+  align-items: end;
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-16);
+  display: grid;
+  gap: var(--space-12);
+  grid-template-columns: minmax(180px, 0.35fr) minmax(0, 1fr);
+  margin-top: var(--space-12);
+  padding: var(--space-12);
+}
+
+.csv-source-options .field-hint {
+  grid-column: 1 / -1;
+  margin-top: 0;
+}
+
 .button-danger {
   color: var(--color-danger);
 }
@@ -1782,6 +1821,8 @@ td {
   .query-controls,
   .inline-actions,
   .mapping-template-control-row,
+  .artifact-output-control,
+  .csv-source-options,
   .settings-block,
   .settings-path-control,
   .extension-form {

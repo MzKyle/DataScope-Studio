@@ -78,6 +78,7 @@ from datascope_core.workspace_registry import WorkspaceRegistryMixin
 from datascope_core.workspace_utils import (
     archive_name as _archive_name,
     artifact_paths as _artifact_paths,
+    build_artifact_paths as _build_artifact_paths,
     copy_parent_sidecars as _copy_parent_sidecars,
     disk_estimate as _disk_estimate,
     job_from_row as _job_from_row,
@@ -104,6 +105,22 @@ from datascope_core.workspace_utils import (
 
 def default_workspace_path() -> Path:
     return Path.home() / ".datascope-studio"
+
+
+def _schema_profile_checksum(source: dict[str, Any]) -> str:
+    import_options = source.get("metadata", {}).get("import_options")
+    if not import_options:
+        return str(source["checksum"])
+    digest = hashlib.sha256()
+    digest.update(str(source["checksum"]).encode("ascii"))
+    digest.update(
+        json.dumps(
+            import_options,
+            ensure_ascii=False,
+            sort_keys=True,
+        ).encode("utf-8")
+    )
+    return digest.hexdigest()
 
 
 class ArtifactConflictError(RuntimeError):
@@ -171,7 +188,14 @@ class Workspace(
         source_row = self.get_source(source_id)
         self._assert_source_available(source_row)
         adapter = self._adapter_for_type(source_row["type"])
-        source = adapter.inspect(source_row["uri"], source_id=source_id)
+        if source_row["type"] == "csv":
+            source = adapter.inspect(
+                source_row["uri"],
+                source_id=source_id,
+                options=source_row["metadata"].get("import_options"),
+            )
+        else:
+            source = adapter.inspect(source_row["uri"], source_id=source_id)
         streams = adapter.infer_streams(source)
         now = _now()
         with self._connect() as conn:
@@ -205,7 +229,7 @@ class Workspace(
         with self._connect() as conn:
             cached_profile = conn.execute(
                 "select profile_json from schema_profiles where checksum = ?",
-                (source_row["checksum"],),
+                (_schema_profile_checksum(source_row),),
             ).fetchone()
         profile = (
             json.loads(cached_profile["profile_json"])
@@ -225,7 +249,12 @@ class Workspace(
                   updated_at = excluded.updated_at
                 """,
                 (
-                    source_row["checksum"],
+                    _schema_profile_checksum(
+                        {
+                            **source_row,
+                            "metadata": source.metadata,
+                        }
+                    ),
                     source.source_type,
                     json.dumps(profile, ensure_ascii=False),
                     now,
@@ -267,7 +296,7 @@ class Workspace(
         with self._connect() as conn:
             row = conn.execute(
                 "select profile_json from schema_profiles where checksum = ?",
-                (source["checksum"],),
+                (_schema_profile_checksum(source),),
             ).fetchone()
         if row is None:
             self.inspect_source(source_id)
@@ -424,6 +453,7 @@ class Workspace(
         mapping_id: str | None = None,
         output_name: str | None = None,
         template_id: str = "sensor_monitor",
+        output_dir: str | None = None,
         *,
         _job_id: str | None = None,
         _manage_job: bool = True,
@@ -437,14 +467,17 @@ class Workspace(
         project = self.get_project(project_id)
         source_row = self.get_source(source_id)
         self._assert_source_available(source_row)
-        self._ensure_disk(self.estimate_build(project_id, source_id))
+        self._ensure_disk(self.estimate_build(project_id, source_id, output_dir=output_dir))
         requested_output_name = output_name.strip() if output_name else ""
         output_base = (
             _safe_output_name(requested_output_name or _source_output_name(source_row["uri"]))
             or "run"
         )
-        recording_path = Path(project["workspace_path"]) / "recordings" / f"{output_base}.rrd"
-        blueprint_path = Path(project["workspace_path"]) / "blueprints" / f"{output_base}.rbl"
+        recording_path, blueprint_path = _build_artifact_paths(
+            project["workspace_path"],
+            output_base,
+            output_dir,
+        )
         self._assert_artifact_paths_available(
             project_id,
             recording_path,
@@ -475,6 +508,7 @@ class Workspace(
                     "mapping_id": mapping_id,
                     "output_name": output_name,
                     "template_id": template_id,
+                    "output_dir": output_dir,
                 },
                 resource_type="source",
                 resource_id=source_id,

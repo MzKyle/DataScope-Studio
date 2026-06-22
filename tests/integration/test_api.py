@@ -102,3 +102,59 @@ def test_api_build_defaults_artifact_names_to_source_name(tmp_path: Path, monkey
     result = job["result"]
     assert Path(result["recording_path"]).name == "sample_sensor.rrd"
     assert Path(result["blueprint_path"]).name == "sample_sensor.rbl"
+
+
+def test_api_headerless_csv_and_custom_artifact_directory(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("DATASCOPE_WORKSPACE", str(tmp_path / "workspace"))
+    source_path = tmp_path / "pose.csv"
+    source_path.write_text(
+        "1781733042228,1,2,3,0.1,0.2,0.3\n"
+        "1781733042271,4,5,6,0.4,0.5,0.6\n",
+        encoding="utf-8",
+    )
+    output_dir = tmp_path / "rerun-artifacts"
+    client = TestClient(app)
+    project = client.post("/api/projects", json={"name": "Headerless CSV"}).json()
+    source = client.post(
+        f"/api/projects/{project['id']}/sources",
+        json={
+            "path": str(source_path),
+            "import_options": {
+                "csv": {
+                    "header_mode": "no_header",
+                    "column_names": ["timestamp", "x", "y", "z", "rx", "ry", "rz"],
+                }
+            },
+        },
+    ).json()
+    inspection = client.post(f"/api/sources/{source['id']}/inspect").json()
+    mapping = client.get(f"/api/sources/{source['id']}/mapping/suggest").json()["mapping"]
+    saved = client.post(
+        f"/api/sources/{source['id']}/mapping",
+        json={"mapping": mapping},
+    ).json()
+
+    response = client.post(
+        "/api/recordings/build",
+        json={
+            "project_id": project["id"],
+            "source_id": source["id"],
+            "mapping_id": saved["id"],
+            "output_name": "pose",
+            "output_dir": str(output_dir),
+        },
+    )
+    job = wait_for_job(client, response.json()["id"])
+
+    assert inspection["schema_profile"]["field_names"] == [
+        "timestamp",
+        "x",
+        "y",
+        "z",
+        "rx",
+        "ry",
+        "rz",
+    ]
+    assert job["status"] == "succeeded"
+    assert Path(job["result"]["recording_path"]) == output_dir / "pose.rrd"
+    assert Path(job["result"]["blueprint_path"]) == output_dir / "pose.rbl"

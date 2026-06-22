@@ -20,7 +20,7 @@ http://127.0.0.1:8000
 
 | Method | Path | 说明 |
 | --- | --- | --- |
-| `POST` | `/api/projects/{project_id}/sources` | 导入 source |
+| `POST` | `/api/projects/{project_id}/sources` | 导入 source，可通过 `import_options.csv` 控制 CSV 表头和列名 |
 | `GET` | `/api/projects/{project_id}/sources` | 项目 source 列表 |
 | `POST` | `/api/sources/{source_id}/inspect` | inspect source |
 | `GET` | `/api/sources/{source_id}/streams` | streams |
@@ -30,8 +30,44 @@ http://127.0.0.1:8000
 | `POST` | `/api/sources/{source_id}/mapping/validate` | 校验 mapping |
 | `POST` | `/api/sources/{source_id}/mapping` | 保存 mapping draft |
 | `POST` | `/api/mappings/{mapping_id}/confirm` | 校验并确认 mapping |
-| `POST` | `/api/recordings/build` | 构建 `.rrd + .rbl` |
+| `POST` | `/api/recordings/build` | 构建 `.rrd + .rbl`，可通过 `output_dir` 指定共同输出目录 |
+| `POST` | `/api/projects/{project_id}/estimates/build/{source_id}` | 估算构建空间，可通过 `output_dir` 查询参数指定目标磁盘 |
 | `POST` | `/api/viewer/open` | 外部打开 Rerun |
+
+导入无表头 CSV：
+
+```json
+{
+  "path": "/data/pose.csv",
+  "storage_mode": "copy",
+  "import_options": {
+    "csv": {
+      "header_mode": "no_header",
+      "column_names": ["timestamp", "x", "y", "z", "rx", "ry", "rz"]
+    }
+  }
+}
+```
+
+`header_mode` 支持 `auto`、`header`、`no_header`。`column_names` 的数量必须与
+CSV 实际列数一致且名称唯一。省略 `import_options` 时保持自动识别行为。
+
+构建到共同产物目录：
+
+```json
+{
+  "project_id": "<project_id>",
+  "source_id": "<source_id>",
+  "mapping_id": "<mapping_id>",
+  "template_id": "sensor_monitor",
+  "output_name": "pose",
+  "output_dir": "/data/rerun-artifacts"
+}
+```
+
+省略 `output_dir` 时，`.rrd` 和 `.rbl` 继续分别写入项目内的 `recordings/` 与
+`blueprints/`。空间估算可调用
+`POST /api/projects/{project_id}/estimates/build/{source_id}?output_dir=<目录>`。
 
 ## Catalog / Query
 

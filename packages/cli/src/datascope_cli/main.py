@@ -95,6 +95,11 @@ def import_source(
         "--out",
         help="Output recording base name. Defaults to the source file or folder name.",
     ),
+    output_dir: Path | None = typer.Option(
+        None,
+        "--output-dir",
+        help="Optional folder that receives both the .rrd and .rbl files.",
+    ),
     storage_mode: str = typer.Option(
         "copy",
         "--storage-mode",
@@ -125,6 +130,7 @@ def import_source(
         mapping_id=saved_mapping["id"],
         output_name=out,
         template_id=template,
+        output_dir=str(output_dir) if output_dir else None,
     )
     result = _run_job(workspace, job, no_wait=no_wait)
 

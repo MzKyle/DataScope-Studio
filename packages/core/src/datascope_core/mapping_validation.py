@@ -74,6 +74,7 @@ RECOMMENDATIONS = {
     "point_cloud_sample_warning": "Inspect the reported point-cloud file and repair or replace it.",
     "point_cloud_coordinates_missing": "Provide point-cloud data with readable x/y/z coordinates.",
     "image_stream_required": "Enable an image stream before converting this image folder.",
+    "no_enabled_streams": "Enable and correctly map at least one stream before conversion.",
 }
 
 
@@ -102,6 +103,16 @@ def validate_mapping(
         if stream.get("enabled", True)
         and _valid_entity_path(str(stream.get("entity_path") or ""))
     }
+    enabled_streams = [
+        stream for stream in spec.streams if stream.get("enabled", True)
+    ]
+    if not enabled_streams:
+        _issue(
+            issues,
+            "error",
+            "no_enabled_streams",
+            "The mapping does not contain any enabled streams.",
+        )
 
     timeline = profile.get("timeline", {})
     if spec.timeline_sort not in {"source", "ascending"}:
@@ -207,7 +218,7 @@ def validate_mapping(
         ]:
             _issue(
                 issues,
-                "error" if required else "warning",
+                "error",
                 "required_field_missing" if required else "field_missing",
                 f"Mapped field is missing: {missing_field}",
                 stream_id=stream_id,

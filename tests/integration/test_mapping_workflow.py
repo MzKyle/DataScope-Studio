@@ -136,6 +136,33 @@ def test_api_mapping_template_flow_and_validation_gate(tmp_path: Path, monkeypat
     assert "scalar" in blocked_job["error"]["validation"]["supported_semantic_types"]
 
 
+def test_mapping_rejects_missing_fields_and_zero_enabled_streams(tmp_path: Path) -> None:
+    source_path = tmp_path / "sensor.csv"
+    _write_sensor(source_path)
+    workspace = Workspace(tmp_path / "workspace")
+    project = workspace.create_project("Mapping gates")
+    source = workspace.add_source(project["id"], str(source_path))
+    workspace.inspect_source(source["id"])
+    spec = workspace.suggest_mapping(source["id"])
+
+    spec.streams[0]["source_fields"] = ["renamed_but_missing"]
+    missing_report = workspace.validate_mapping_spec(source["id"], spec)
+    assert missing_report["valid"] is False
+    assert any(
+        issue["code"] == "field_missing" and issue["severity"] == "error"
+        for issue in missing_report["issues"]
+    )
+
+    for stream in spec.streams:
+        stream["enabled"] = False
+    disabled_report = workspace.validate_mapping_spec(source["id"], spec)
+    assert disabled_report["valid"] is False
+    assert any(
+        issue["code"] == "no_enabled_streams"
+        for issue in disabled_report["issues"]
+    )
+
+
 def test_cli_mapping_validate_and_template_list(tmp_path: Path, monkeypatch) -> None:
     workspace_path = tmp_path / "workspace"
     source_path = tmp_path / "sensor.csv"

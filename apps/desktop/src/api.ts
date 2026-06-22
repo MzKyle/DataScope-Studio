@@ -156,10 +156,19 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ name })
     }),
-  addSource: (projectId: string, path: string, storageMode: "copy" | "reference" = "copy") =>
+  addSource: (
+    projectId: string,
+    path: string,
+    storageMode: "copy" | "reference" = "copy",
+    importOptions: Record<string, unknown> = {}
+  ) =>
     request<Source>(`/api/projects/${projectId}/sources`, {
       method: "POST",
-      body: JSON.stringify({ path, storage_mode: storageMode })
+      body: JSON.stringify({
+        path,
+        storage_mode: storageMode,
+        import_options: importOptions
+      })
     }),
   estimateSourceImport: (
     projectId: string,
@@ -217,7 +226,8 @@ export const api = {
     sourceId: string,
     mappingId: string,
     outputName: string,
-    templateId: string
+    templateId: string,
+    outputDir?: string
   ) =>
     request<Job>("/api/recordings/build", {
       method: "POST",
@@ -226,7 +236,8 @@ export const api = {
         source_id: sourceId,
         mapping_id: mappingId,
         template_id: templateId,
-        output_name: outputName
+        output_name: outputName,
+        output_dir: outputDir || null
       })
     }),
   estimateBuild: (projectId: string, sourceId: string) =>

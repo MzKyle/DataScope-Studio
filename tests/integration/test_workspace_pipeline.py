@@ -43,6 +43,26 @@ def test_workspace_defaults_artifact_names_to_source_file(tmp_path: Path) -> Non
     assert workspace.get_recording(result["recording_id"])["run_name"] == "sample_sensor"
 
 
+def test_workspace_can_store_rrd_and_rbl_in_one_output_directory(tmp_path: Path) -> None:
+    workspace = Workspace(tmp_path / "workspace")
+    project = workspace.create_project("Custom artifacts")
+    source = workspace.add_source(project["id"], str(FIXTURES / "sample_sensor.csv"))
+    workspace.inspect_source(source["id"])
+    output_dir = tmp_path / "artifacts"
+
+    result = workspace.build_recording(
+        project["id"],
+        source["id"],
+        output_name="custom_output",
+        output_dir=str(output_dir),
+    )
+
+    assert Path(result["recording_path"]) == output_dir / "custom_output.rrd"
+    assert Path(result["blueprint_path"]) == output_dir / "custom_output.rbl"
+    assert Path(result["recording_path"]).exists()
+    assert Path(result["blueprint_path"]).exists()
+
+
 @pytest.mark.parametrize(
     ("directory", "suffix"),
     [("recordings", ".rrd"), ("blueprints", ".rbl")],

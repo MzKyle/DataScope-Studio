@@ -7,6 +7,7 @@ from typing import Any
 from uuid import uuid4
 
 from datascope_core.workspace_utils import (
+    build_artifact_paths,
     job_from_row,
     resolve_patterns,
     safe_output_name,
@@ -31,11 +32,12 @@ class WorkspaceJobsMixin:
         mapping_id: str | None = None,
         output_name: str | None = None,
         template_id: str = "sensor_monitor",
+        output_dir: str | None = None,
     ) -> dict[str, Any]:
         self.get_project(project_id)
         source = self.get_source(source_id)
         self._assert_source_available(source)
-        self._ensure_disk(self.estimate_build(project_id, source_id))
+        self._ensure_disk(self.estimate_build(project_id, source_id, output_dir=output_dir))
         if mapping_id is not None:
             self.get_mapping(mapping_id)
         return self._create_job(
@@ -47,6 +49,7 @@ class WorkspaceJobsMixin:
                 "mapping_id": mapping_id,
                 "output_name": output_name,
                 "template_id": template_id,
+                "output_dir": output_dir,
             },
             resource_type="source",
             resource_id=source_id,
@@ -210,6 +213,7 @@ class WorkspaceJobsMixin:
                     mapping_id=payload.get("mapping_id"),
                     output_name=payload.get("output_name"),
                     template_id=payload.get("template_id", "sensor_monitor"),
+                    output_dir=payload.get("output_dir"),
                     _job_id=job_id,
                     _cache_dir=cache_dir,
                     _background_job=True,
@@ -429,9 +433,10 @@ class WorkspaceJobsMixin:
             (payload.get("output_name") or "").strip()
             or source_output_name(source["uri"])
         ) or "run"
-        paths = (
-            Path(project["workspace_path"]) / "recordings" / f"{output_base}.rrd",
-            Path(project["workspace_path"]) / "blueprints" / f"{output_base}.rbl",
+        paths = build_artifact_paths(
+            project["workspace_path"],
+            output_base,
+            payload.get("output_dir"),
         )
         with self._connect() as conn:
             committed = conn.execute(

@@ -107,13 +107,23 @@ def save_sensor_monitor_blueprint(spec: MappingSpec, path: str | Path) -> None:
     scalar_paths = [
         stream["entity_path"]
         for stream in spec.streams
-        if stream.get("semantic_type") in {"scalar", "scalar_group"}
+        if stream.get("enabled", True)
+        and stream.get("entity_path")
+        and stream.get("semantic_type") in {"scalar", "scalar_group"}
     ]
     state_paths = [
-        stream["entity_path"] for stream in spec.streams if stream.get("semantic_type") == "state"
+        stream["entity_path"]
+        for stream in spec.streams
+        if stream.get("enabled", True)
+        and stream.get("entity_path")
+        and stream.get("semantic_type") == "state"
     ]
     log_paths = [
-        stream["entity_path"] for stream in spec.streams if stream.get("semantic_type") == "text_log"
+        stream["entity_path"]
+        for stream in spec.streams
+        if stream.get("enabled", True)
+        and stream.get("entity_path")
+        and stream.get("semantic_type") == "text_log"
     ]
 
     views = []
@@ -133,7 +143,10 @@ def save_sensor_monitor_blueprint(spec: MappingSpec, path: str | Path) -> None:
 def save_cv_detection_blueprint(spec: MappingSpec, path: str | Path) -> None:
     import rerun.blueprint as rrb
 
-    has_scores = any(stream.get("role") == "pred_scores" for stream in spec.streams)
+    has_scores = any(
+        stream.get("enabled", True) and stream.get("role") == "pred_scores"
+        for stream in spec.streams
+    )
     views = [
         rrb.Spatial2DView(
             name="Image + Detections",
@@ -151,7 +164,11 @@ def save_cv_detection_blueprint(spec: MappingSpec, path: str | Path) -> None:
 def save_robotics_debug_blueprint(spec: MappingSpec, path: str | Path) -> None:
     import rerun.blueprint as rrb
 
-    semantic_types = {stream.get("semantic_type") for stream in spec.streams}
+    semantic_types = {
+        stream.get("semantic_type")
+        for stream in spec.streams
+        if stream.get("enabled", True)
+    }
     views = [
         rrb.Spatial3DView(
             name="World",

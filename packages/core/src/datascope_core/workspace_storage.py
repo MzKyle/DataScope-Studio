@@ -43,6 +43,7 @@ class WorkspaceStorageMixin:
         project_id: str,
         path: str,
         storage_mode: str = "copy",
+        import_options: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         project = self.get_project(project_id)
         if storage_mode not in {"copy", "reference"}:
@@ -95,7 +96,10 @@ class WorkspaceStorageMixin:
                     source_checksum(stored_path),
                     source_size(stored_path),
                     "imported",
-                    "{}",
+                    json.dumps(
+                        {"import_options": import_options or {}},
+                        ensure_ascii=False,
+                    ),
                     storage_mode,
                     str(source_path),
                     now,
@@ -179,7 +183,12 @@ class WorkspaceStorageMixin:
             warnings=warnings,
         )
 
-    def estimate_build(self, project_id: str, source_id: str) -> dict[str, Any]:
+    def estimate_build(
+        self,
+        project_id: str,
+        source_id: str,
+        output_dir: str | None = None,
+    ) -> dict[str, Any]:
         project = self.get_project(project_id)
         source = self.get_source(source_id)
         self._assert_source_available(source)
@@ -208,7 +217,7 @@ class WorkspaceStorageMixin:
         return disk_estimate(
             "build",
             estimated,
-            Path(project["workspace_path"]),
+            Path(output_dir).expanduser() if output_dir else Path(project["workspace_path"]),
             confidence=confidence,
             warnings=warnings,
         )

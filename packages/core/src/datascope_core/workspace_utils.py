@@ -219,6 +219,24 @@ def source_output_name(value: str | Path) -> str:
     return path.name if path.is_dir() else path.stem
 
 
+def build_artifact_paths(
+    project_path: str | Path,
+    output_base: str,
+    output_dir: str | Path | None = None,
+) -> tuple[Path, Path]:
+    if output_dir:
+        artifact_root = Path(output_dir).expanduser().resolve()
+        return (
+            artifact_root / f"{output_base}.rrd",
+            artifact_root / f"{output_base}.rbl",
+        )
+    project_root = Path(project_path)
+    return (
+        project_root / "recordings" / f"{output_base}.rrd",
+        project_root / "blueprints" / f"{output_base}.rbl",
+    )
+
+
 def disk_estimate(
     operation: str,
     estimated_bytes: int,

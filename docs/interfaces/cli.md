@@ -6,9 +6,12 @@ CLI 入口是 `datascope`。
 
 ```bash
 datascope inspect <path> [--json]
-datascope import <path> --project <name> --template <id> --out <name> [--json]
+datascope import <path> --project <name> --template <id> --out <name> [--output-dir <目录>] [--json]
 datascope open <recording.rrd> [--blueprint <file.rbl>]
 ```
+
+导入时可用 `--output-dir <目录>` 将 `.rrd` 与 `.rbl` 一起写入指定目录；省略时
+保持项目内 `recordings/` 与 `blueprints/` 的默认结构。
 
 ## Catalog
 

@@ -46,6 +46,7 @@ export type AreaErrors = Partial<Record<ErrorArea, ApiError>>;
 type Translate = (key: TranslationKey) => string;
 
 const DEFAULT_EXPORT_DIR_KEY = "datascope.defaultExportDir";
+const DEFAULT_ARTIFACT_DIR_KEY = "datascope.defaultArtifactDir";
 
 export const sourceFileExtensions = new Set([
   "csv",
@@ -143,6 +144,14 @@ export function getInitialDefaultExportDir() {
 
 export function saveDefaultExportDir(value: string) {
   window.localStorage.setItem(DEFAULT_EXPORT_DIR_KEY, value.trim());
+}
+
+export function getInitialDefaultArtifactDir() {
+  return window.localStorage.getItem(DEFAULT_ARTIFACT_DIR_KEY) ?? "";
+}
+
+export function saveDefaultArtifactDir(value: string) {
+  window.localStorage.setItem(DEFAULT_ARTIFACT_DIR_KEY, value.trim());
 }
 
 export function upsertProject(projects: Project[], project: Project) {
@@ -298,7 +307,8 @@ const validationIssueKeys: Record<string, TranslationKey> = {
   ros2_no_convertible_topics: "issueRos2NoConvertibleTopics",
   point_cloud_sample_warning: "issuePointCloudSampleWarning",
   point_cloud_coordinates_missing: "issuePointCloudCoordinatesMissing",
-  image_stream_required: "issueImageStreamRequired"
+  image_stream_required: "issueImageStreamRequired",
+  no_enabled_streams: "issueNoEnabledStreams"
 };
 
 const validationRecommendationKeys: Record<string, TranslationKey> = {
@@ -329,7 +339,8 @@ const validationRecommendationKeys: Record<string, TranslationKey> = {
   ros2_no_convertible_topics: "recommendRos2NoConvertibleTopics",
   point_cloud_sample_warning: "recommendPointCloudSampleWarning",
   point_cloud_coordinates_missing: "recommendPointCloudCoordinatesMissing",
-  image_stream_required: "recommendImageStreamRequired"
+  image_stream_required: "recommendImageStreamRequired",
+  no_enabled_streams: "recommendNoEnabledStreams"
 };
 
 export function MappingIssueCard({

@@ -5,6 +5,7 @@ from typing import Any
 
 import pandas as pd
 
+from datascope_core.adapters.csv_adapter import read_csv_source
 from datascope_core.adapters.jsonl_adapter import _read_jsonl
 from datascope_core.models import SourceInfo, StreamInfo
 from datascope_core.time_utils import infer_time_unit, normalize_time_value
@@ -20,7 +21,7 @@ def source_family(source_type: str) -> str:
 
 def build_schema_profile(source: SourceInfo, streams: list[StreamInfo]) -> dict[str, Any]:
     if source.source_type == "csv":
-        frame = pd.read_csv(source.path, nrows=1000)
+        frame = read_csv_source(source, nrows=1000)
         return _tabular_profile(source, streams, frame)
     if source.source_type == "jsonl":
         frame = pd.DataFrame(_read_jsonl(source.path, limit=1000))

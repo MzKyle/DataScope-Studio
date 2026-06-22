@@ -13,6 +13,7 @@ import {
   clearErrorAreaState,
   defaultOutputName,
   derivedMappingFields,
+  getInitialDefaultArtifactDir,
   getInitialDefaultExportDir,
   isBatchResult,
   isBuildResult,
@@ -21,6 +22,7 @@ import {
   normalizeDroppedPath,
   normalizeSourcePathInput,
   saveDefaultExportDir,
+  saveDefaultArtifactDir,
   sourceFileDialogFilters,
   upsertProject,
   type AreaErrors,
@@ -107,6 +109,7 @@ const semanticTypesByFamily: Record<string, string[]> = {
   ]
 };
 const timeUnits = ["auto", "relative_s", "unix_s", "unix_ms", "unix_us", "unix_ns", "datetime"];
+type CsvHeaderMode = "auto" | "header" | "no_header";
 
 function App() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -114,6 +117,8 @@ function App() {
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [sourcePath, setSourcePath] = useState("");
   const [sourceStorageMode, setSourceStorageMode] = useState<"copy" | "reference">("copy");
+  const [csvHeaderMode, setCsvHeaderMode] = useState<CsvHeaderMode>("auto");
+  const [csvColumnNames, setCsvColumnNames] = useState("");
   const [outputName, setOutputName] = useState("");
   const [source, setSource] = useState<Source | null>(null);
   const [streams, setStreams] = useState<StreamInfo[]>([]);
@@ -159,6 +164,7 @@ function App() {
   const [projectExport, setProjectExport] = useState<ProjectExportResult | null>(null);
   const [openedPackagePath, setOpenedPackagePath] = useState("");
   const [defaultExportDir, setDefaultExportDir] = useState(getInitialDefaultExportDir);
+  const [defaultArtifactDir, setDefaultArtifactDir] = useState(getInitialDefaultArtifactDir);
   const [tagInput, setTagInput] = useState("");
   const [busy, setBusy] = useState("");
   const [areaErrors, setAreaErrors] = useState<AreaErrors>({});
@@ -232,6 +238,10 @@ function App() {
   useEffect(() => {
     saveDefaultExportDir(defaultExportDir);
   }, [defaultExportDir]);
+
+  useEffect(() => {
+    saveDefaultArtifactDir(defaultArtifactDir);
+  }, [defaultArtifactDir]);
 
   useEffect(() => {
     const selected = mappingTemplates.find((item) => item.id === selectedMappingTemplateId);
@@ -480,7 +490,18 @@ function App() {
         const added = await api.addSource(
           projectIdForImport,
           nextSourcePath,
-          sourceStorageMode
+          sourceStorageMode,
+          nextSourcePath.toLowerCase().endsWith(".csv")
+            ? {
+                csv: {
+                  header_mode: csvHeaderMode,
+                  column_names: csvColumnNames
+                    .split(",")
+                    .map((name) => name.trim())
+                    .filter(Boolean)
+                }
+              }
+            : {}
         );
         const inspection = await api.inspect(added.id);
         const templateMatches = await api.suggestTemplates(added.id);
@@ -615,7 +636,8 @@ function App() {
           source.id,
           mappingId,
           outputName,
-          selectedTemplateId
+          selectedTemplateId,
+          normalizeSourcePathInput(defaultArtifactDir) || undefined
         );
         return { built, mappingId };
       },
@@ -1116,6 +1138,29 @@ function App() {
     }
   }
 
+  async function chooseArtifactFolder(area: "build" | "settings" = "settings") {
+    if (!isTauriRuntime()) {
+      showAreaError(area, t("errorPickerUnavailable"));
+      return;
+    }
+    const selected = await run(
+      t("busySelectingArtifactFolder"),
+      () =>
+        openDialog({
+          title: t("selectArtifactFolder"),
+          directory: true,
+          multiple: false,
+          recursive: false
+        }),
+      { area }
+    );
+    const selectedPath = Array.isArray(selected) ? selected[0] : selected;
+    if (selectedPath) {
+      setDefaultArtifactDir(normalizeSourcePathInput(selectedPath));
+      clearAreaError(area);
+    }
+  }
+
   async function openProjectPackage() {
     if (!isTauriRuntime()) {
       showAreaError("dashboard", t("errorPickerUnavailable"));
@@ -1274,6 +1319,8 @@ function App() {
               dragActive={dragActive}
               sourcePath={sourcePath}
               sourceStorageMode={sourceStorageMode}
+              csvHeaderMode={csvHeaderMode}
+              csvColumnNames={csvColumnNames}
               isBusy={isBusy}
               importError={areaErrors.import}
               dashboardError={areaErrors.dashboard}
@@ -1293,6 +1340,8 @@ function App() {
                 clearAreaError("import");
               }}
               onStorageModeChange={setSourceStorageMode}
+              onCsvHeaderModeChange={setCsvHeaderMode}
+              onCsvColumnNamesChange={setCsvColumnNames}
               onRefresh={() => void refreshProjectData()}
               onExportProject={() => void exportProject()}
               onOpenPackage={() => void openProjectPackage()}
@@ -1323,6 +1372,7 @@ function App() {
               timeUnits={timeUnits}
               outputNameRef={outputNameRef}
               outputName={outputName}
+              artifactOutputDir={defaultArtifactDir}
               buildResult={buildResult}
               previewText={previewText}
               isBusy={isBusy}
@@ -1359,6 +1409,11 @@ function App() {
                 setOutputName(value);
                 clearAreaError("build");
               }}
+              onArtifactOutputDirChange={(value) => {
+                setDefaultArtifactDir(value);
+                clearAreaError("build");
+              }}
+              onChooseArtifactOutputFolder={() => void chooseArtifactFolder("build")}
               onBuildRecording={() => void buildRecording()}
               onOpenInRerun={() => void openInRerun()}
             />
@@ -1453,6 +1508,7 @@ function App() {
             visibleTemplateRegistry={visibleTemplateRegistry}
             language={language}
             defaultExportDir={defaultExportDir}
+            defaultArtifactDir={defaultArtifactDir}
             isBusy={isBusy}
             batchError={areaErrors.batch}
             extensionsError={areaErrors.extensions}
@@ -1505,6 +1561,11 @@ function App() {
               clearAreaError("settings");
             }}
             onChooseExportFolder={() => void chooseExportFolder()}
+            onDefaultArtifactDirChange={(value) => {
+              setDefaultArtifactDir(value);
+              clearAreaError("settings");
+            }}
+            onChooseArtifactFolder={() => void chooseArtifactFolder("settings")}
           />
         </section>
       </div>

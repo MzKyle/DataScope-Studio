@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   ExternalLink,
   FileSearch,
+  FolderOpen,
   Image,
   ListChecks,
   Play,
@@ -58,6 +59,7 @@ type ImportWorkflowSectionProps = {
   timeUnits: string[];
   outputNameRef: RefObject<HTMLInputElement | null>;
   outputName: string;
+  artifactOutputDir: string;
   buildResult: BuildResult | null;
   previewText: string;
   isBusy: boolean;
@@ -83,6 +85,8 @@ type ImportWorkflowSectionProps = {
   onDiffRightSourceChange: (sourceId: string) => void;
   onRunMappingDiff: () => void;
   onOutputNameChange: (name: string) => void;
+  onArtifactOutputDirChange: (path: string) => void;
+  onChooseArtifactOutputFolder: () => void;
   onBuildRecording: () => void;
   onOpenInRerun: () => void;
 };
@@ -108,6 +112,7 @@ export function ImportWorkflowSection({
   timeUnits,
   outputNameRef,
   outputName,
+  artifactOutputDir,
   buildResult,
   previewText,
   isBusy,
@@ -129,6 +134,8 @@ export function ImportWorkflowSection({
   onDiffRightSourceChange,
   onRunMappingDiff,
   onOutputNameChange,
+  onArtifactOutputDirChange,
+  onChooseArtifactOutputFolder,
   onBuildRecording,
   onOpenInRerun
 }: ImportWorkflowSectionProps) {
@@ -503,6 +510,25 @@ export function ImportWorkflowSection({
               {t("openInRerun")}
             </button>
           </div>
+          <div className="artifact-output-control">
+            <label>
+              <span>{t("artifactOutputPath")}</span>
+              <input
+                placeholder={t("artifactOutputPathPlaceholder")}
+                value={artifactOutputDir}
+                onChange={(event) => onArtifactOutputDirChange(event.target.value)}
+              />
+            </label>
+            <button
+              type="button"
+              onClick={onChooseArtifactOutputFolder}
+              disabled={isBusy}
+            >
+              <FolderOpen size={16} />
+              {t("selectArtifactFolder")}
+            </button>
+          </div>
+          <p className="field-hint">{t("artifactOutputPathHint")}</p>
           <InlineError id="build-error" error={errors.build} t={t} />
           {buildResult ? (
             <dl className="artifact-list">

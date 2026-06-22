@@ -7,7 +7,7 @@ graph TB
     DESK["Tauri Desktop<br/>React UI"] --> HTTP["FastAPI<br/>127.0.0.1:8000"]
     CLI["datascope CLI"] --> CORE["datascope_core"]
     HTTP --> CORE
-    CORE --> ADAPTERS["Adapters<br/>CSV / JSONL / Image / Point Cloud / MCAP"]
+    CORE --> ADAPTERS["Adapters<br/>CSV / JSONL / Image / Point Cloud / MCAP / ROS2 DB3"]
     CORE --> MAP["Mapping + Templates"]
     CORE --> QUERY["Query Index + Templates"]
     CORE --> DB["SQLite Catalog"]
@@ -19,7 +19,7 @@ graph TB
 
 - **本地优先**：默认不上传数据，workspace 在用户本机。
 - **公共核心复用**：API 和 CLI 都调用 core，不复制业务逻辑。
-- **显式 artifact**：原始副本、mapping、recording、blueprint、query export 都在项目目录可定位。
+- **显式 artifact**：原始副本、mapping、recording、blueprint、query export 都有可定位路径；recording 与 blueprint 也可写入用户指定目录。
 - **可扩展**：adapter、template、plugin registry 是未来扩展入口。
 
 ## 主要边界

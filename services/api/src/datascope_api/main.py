@@ -32,6 +32,7 @@ class ProjectCreate(BaseModel):
 class SourceCreate(BaseModel):
     path: str = Field(min_length=1)
     storage_mode: str = "copy"
+    import_options: dict[str, Any] = Field(default_factory=dict)
 
 
 class SourceEstimateRequest(BaseModel):
@@ -81,6 +82,7 @@ class BuildRecordingRequest(BaseModel):
     mapping_id: str | None = None
     template_id: str = "sensor_monitor"
     output_name: str | None = None
+    output_dir: str | None = None
 
 
 class ViewerOpenRequest(BaseModel):
@@ -223,6 +225,7 @@ def create_app() -> FastAPI:
                 project_id,
                 payload.path,
                 storage_mode=payload.storage_mode,
+                import_options=payload.import_options,
             )
         )
 
@@ -333,6 +336,7 @@ def create_app() -> FastAPI:
                 mapping_id=payload.mapping_id,
                 output_name=payload.output_name,
                 template_id=payload.template_id,
+                output_dir=payload.output_dir,
             )
             services.supervisor().wake()
             return job
@@ -340,8 +344,18 @@ def create_app() -> FastAPI:
         return _guard(enqueue)
 
     @app.post("/api/projects/{project_id}/estimates/build/{source_id}")
-    def estimate_build(project_id: str, source_id: str) -> dict[str, Any]:
-        return _guard(lambda: _workspace().estimate_build(project_id, source_id))
+    def estimate_build(
+        project_id: str,
+        source_id: str,
+        output_dir: str | None = None,
+    ) -> dict[str, Any]:
+        return _guard(
+            lambda: _workspace().estimate_build(
+                project_id,
+                source_id,
+                output_dir=output_dir,
+            )
+        )
 
     @app.get("/api/jobs/{job_id}")
     def get_job(job_id: str) -> dict[str, Any]:

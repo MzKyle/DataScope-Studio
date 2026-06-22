@@ -11,6 +11,13 @@
 7. 确认 Mapping 后构建 recording。
 8. 点击“在 Rerun 中打开”。
 
+对于没有表头的 CSV，在导入前把“CSV 表头”设为“无表头”，并按原始列顺序填写
+列名。Mapping 编辑器中的 `source_fields` 只引用已经存在的源字段，不会重命名
+CSV 列。
+
+转换任务中的“Rerun 产物目录”用于指定 `.rrd` 与 `.rbl` 的共同输出目录。留空时
+保持默认项目结构：`recordings/<name>.rrd` 与 `blueprints/<name>.rbl`。
+
 自动 Mapping 首次保存为 draft。任何编辑都会撤销 confirmed 状态，必须重新
 校验和确认。Mapping 模板可以跨项目复用，并可通过 YAML 导入/导出。
 
@@ -18,7 +25,8 @@
 
 ```bash
 datascope inspect /path/to/source
-datascope import /path/to/source --project demo --template sensor_monitor --out run_001
+datascope import /path/to/source --project demo --template sensor_monitor --out run_001 \
+  --output-dir ~/DataScopeArtifacts
 datascope recordings --project demo
 ```
 

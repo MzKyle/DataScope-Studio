@@ -48,6 +48,7 @@ type ExtensionsSectionsProps = {
   visibleTemplateRegistry: TemplateRegistryItem[];
   language: Language;
   defaultExportDir: string;
+  defaultArtifactDir: string;
   isBusy: boolean;
   batchError?: ApiError;
   extensionsError?: ApiError;
@@ -73,6 +74,8 @@ type ExtensionsSectionsProps = {
   onLanguageChange: (value: Language) => void;
   onDefaultExportDirChange: (value: string) => void;
   onChooseExportFolder: () => void;
+  onDefaultArtifactDirChange: (value: string) => void;
+  onChooseArtifactFolder: () => void;
 };
 
 export function ExtensionsSections(props: ExtensionsSectionsProps) {
@@ -360,6 +363,32 @@ function SettingsSection(props: ExtensionsSectionsProps) {
             </button>
           </div>
           <InlineError error={props.settingsError} t={props.t} />
+        </div>
+        <div className="settings-block vertical">
+          <div>
+            <strong>{props.t("defaultArtifactPath")}</strong>
+            <span>{props.t("defaultArtifactPathSubtitle")}</span>
+          </div>
+          <div className="settings-path-control">
+            <input
+              placeholder={props.t("artifactOutputPathPlaceholder")}
+              value={props.defaultArtifactDir}
+              onChange={(event) => props.onDefaultArtifactDirChange(event.target.value)}
+              onBlur={(event) =>
+                props.onDefaultArtifactDirChange(
+                  normalizeSourcePathInput(event.target.value)
+                )
+              }
+            />
+            <button
+              type="button"
+              onClick={props.onChooseArtifactFolder}
+              disabled={props.isBusy}
+            >
+              <FolderOpen size={16} />
+              {props.t("selectArtifactFolder")}
+            </button>
+          </div>
         </div>
       </section>
     </section>

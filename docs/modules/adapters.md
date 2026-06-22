@@ -3,11 +3,16 @@
 Adapter 是 DataScope Core 对不同数据源的统一抽象。公开协议包含：
 
 ```python
-inspect(path) -> SourceInfo
+inspect(path, source_id=None) -> SourceInfo
 infer_streams(source) -> list[StreamInfo]
 preview(source, stream_id, limit=100) -> dict
 convert(request) -> None
 ```
+
+CSV adapter 的 `inspect(..., options=...)` 扩展参数中，
+`options.csv.header_mode` 支持 `auto`、`header`、`no_header`；
+`options.csv.column_names` 可按原始列顺序为无表头 CSV 指定字段名。解析后的配置
+会写入 source metadata，确保 inspect、preview、mapping 和 convert 使用相同列定义。
 
 Workspace 会为所有 adapter 生成统一 schema profile。CSV/JSONL 提供字段类型、
 空值比例、每列时间解析/单调性和推断单位；图像、点云、MCAP 使用 adapter

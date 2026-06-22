@@ -28,12 +28,12 @@ def test_stage_linux_artifacts_uses_stable_names(tmp_path: Path) -> None:
     manifest = write_manifest(tmp_path / "runtime-manifest.json", "x86_64")
 
     staged = prepare_artifacts.stage_artifacts(
-        input_dir, tmp_path / "out", "linux", "x86_64", "0.2.0", manifest
+        input_dir, tmp_path / "out", "linux", "x86_64", "0.3.0", manifest
     )
 
     assert [path.name for path in staged] == [
-        "DataScope-Studio-v0.2.0-linux-amd64.deb",
-        "DataScope-Studio-v0.2.0-linux-x86_64.AppImage",
+        "DataScope-Studio-v0.3.0-linux-amd64.deb",
+        "DataScope-Studio-v0.3.0-linux-x86_64.AppImage",
     ]
 
 
@@ -46,7 +46,7 @@ def test_stage_rejects_duplicate_bundle_type(tmp_path: Path) -> None:
 
     with pytest.raises(RuntimeError, match="Expected one macOS disk image"):
         prepare_artifacts.stage_artifacts(
-            input_dir, tmp_path / "out", "macos", "aarch64", "0.2.0", manifest
+            input_dir, tmp_path / "out", "macos", "aarch64", "0.3.0", manifest
         )
 
 
@@ -58,31 +58,31 @@ def test_stage_rejects_mislabeled_architecture(tmp_path: Path) -> None:
 
     with pytest.raises(RuntimeError, match="does not match"):
         prepare_artifacts.stage_artifacts(
-            input_dir, tmp_path / "out", "macos", "aarch64", "0.2.0", manifest
+            input_dir, tmp_path / "out", "macos", "aarch64", "0.3.0", manifest
         )
 
 
 def test_stage_windows_nsis_artifact_uses_stable_name(tmp_path: Path) -> None:
     input_dir = tmp_path / "bundle"
     input_dir.mkdir()
-    (input_dir / "DataScope Studio_0.2.0_x64-setup.exe").write_bytes(b"exe")
+    (input_dir / "DataScope Studio_0.3.0_x64-setup.exe").write_bytes(b"exe")
     manifest = write_manifest(tmp_path / "runtime-manifest.json", "AMD64")
 
     staged = prepare_artifacts.stage_artifacts(
-        input_dir, tmp_path / "out", "windows", "x86_64", "0.2.0", manifest
+        input_dir, tmp_path / "out", "windows", "x86_64", "0.3.0", manifest
     )
 
     assert [path.name for path in staged] == [
-        "DataScope-Studio-v0.2.0-windows-x86_64-setup.exe"
+        "DataScope-Studio-v0.3.0-windows-x86_64-setup.exe"
     ]
 
 
 def test_write_checksums_requires_complete_release(tmp_path: Path) -> None:
-    names = prepare_artifacts.public_artifact_names("0.2.0")
+    names = prepare_artifacts.public_artifact_names("0.3.0")
     for index, name in enumerate(names):
         (tmp_path / name).write_bytes(f"artifact-{index}".encode())
 
-    checksum_path = prepare_artifacts.write_checksums(tmp_path, "0.2.0")
+    checksum_path = prepare_artifacts.write_checksums(tmp_path, "0.3.0")
     contents = checksum_path.read_text(encoding="utf-8")
 
     assert len(contents.splitlines()) == 5
@@ -91,4 +91,4 @@ def test_write_checksums_requires_complete_release(tmp_path: Path) -> None:
 
 def test_write_checksums_rejects_missing_artifact(tmp_path: Path) -> None:
     with pytest.raises(RuntimeError, match="missing="):
-        prepare_artifacts.write_checksums(tmp_path, "0.2.0")
+        prepare_artifacts.write_checksums(tmp_path, "0.3.0")
