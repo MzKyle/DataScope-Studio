@@ -32,6 +32,7 @@ import {
 import { DashboardSection } from "./DashboardSection";
 import { DiagnosticsSection } from "./DiagnosticsSection";
 import { ExtensionsSections } from "./ExtensionsSections";
+import { isActiveBuildJob } from "./BuildJobStatus";
 import { ImportWorkflowSection } from "./ImportWorkflowSection";
 import { RecordingsQueriesSection } from "./RecordingsQueriesSection";
 import { AppSidebar, AppTopbar } from "./AppNavigation";
@@ -140,6 +141,8 @@ function App() {
   const [selectedTemplateId, setSelectedTemplateId] = useState("sensor_monitor");
   const [savedMappingId, setSavedMappingId] = useState("");
   const [buildResult, setBuildResult] = useState<BuildResult | null>(null);
+  const [activeBuildJobId, setActiveBuildJobId] = useState("");
+  const [isBuildSubmitting, setIsBuildSubmitting] = useState(false);
   const [previewRows, setPreviewRows] = useState<Record<string, unknown>[]>([]);
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -192,6 +195,10 @@ function App() {
 
   const latestRecording = recordings[0] ?? null;
   const latestJob = jobs[0] ?? null;
+  const buildJob = useMemo(
+    () => jobs.find((job) => job.id === activeBuildJobId) ?? null,
+    [activeBuildJobId, jobs]
+  );
   const visibleRecordings = useMemo(() => recordings.slice(0, TABLE_RENDER_LIMIT), [recordings]);
   const queryRecordingOptions = useMemo(() => recordings.slice(0, TABLE_RENDER_LIMIT), [recordings]);
   const visibleJobs = useMemo(() => jobs.slice(0, 8), [jobs]);
@@ -220,6 +227,11 @@ function App() {
     if (selectedProjectId) {
       refreshProjectData(selectedProjectId, activeSection === "recordings");
     }
+  }, [selectedProjectId]);
+
+  useEffect(() => {
+    setActiveBuildJobId("");
+    setIsBuildSubmitting(false);
   }, [selectedProjectId]);
 
   useEffect(() => {
@@ -542,6 +554,8 @@ function App() {
       setSavedMappingId(result.savedMappingId);
       setMappingConfirmed(false);
       setBuildResult(null);
+      setActiveBuildJobId("");
+      setIsBuildSubmitting(false);
       clearAreaError("build");
       setActiveSection("import");
     }
@@ -627,36 +641,37 @@ function App() {
       showAreaError("build", t("errorConfirmMappingFirst"));
       return;
     }
-    const result = await run(
-      t("busyBuildingRecording"),
-      async () => {
-        const mappingId = savedMappingId || (await api.saveMapping(source.id, mapping.mapping)).id;
-        const built = await api.build(
-          selectedProject.id,
-          source.id,
-          mappingId,
-          outputName,
-          selectedTemplateId,
-          normalizeSourcePathInput(defaultArtifactDir) || undefined
-        );
-        return { built, mappingId };
-      },
-      {
-        area: "build",
-        onError: (error) => {
-          if (error.code === "artifact_name_conflict") {
-            window.requestAnimationFrame(() => {
-              outputNameRef.current?.focus();
-              outputNameRef.current?.select();
-            });
-          }
-        }
-      }
-    );
-    if (result) {
-      setSavedMappingId(result.mappingId);
-      setJobs((current) => [result.built, ...current.filter((job) => job.id !== result.built.id)]);
+    if (isBuildSubmitting || isActiveBuildJob(buildJob)) return;
+
+    setIsBuildSubmitting(true);
+    setActiveBuildJobId("");
+    setBuildResult(null);
+    clearAreaError("build");
+    try {
+      const mappingId = savedMappingId || (await api.saveMapping(source.id, mapping.mapping)).id;
+      const built = await api.build(
+        selectedProject.id,
+        source.id,
+        mappingId,
+        outputName,
+        selectedTemplateId,
+        normalizeSourcePathInput(defaultArtifactDir) || undefined
+      );
+      setSavedMappingId(mappingId);
+      setActiveBuildJobId(built.id);
+      setJobs((current) => [built, ...current.filter((job) => job.id !== built.id)]);
       setBuildResult(null);
+    } catch (err) {
+      const apiError = asApiError(err);
+      setAreaErrors((current) => ({ ...current, build: apiError }));
+      if (apiError.code === "artifact_name_conflict") {
+        window.requestAnimationFrame(() => {
+          outputNameRef.current?.focus();
+          outputNameRef.current?.select();
+        });
+      }
+    } finally {
+      setIsBuildSubmitting(false);
     }
   }
 
@@ -1203,6 +1218,8 @@ function App() {
       setTemplates([]);
       setSavedMappingId("");
       setBuildResult(null);
+      setActiveBuildJobId("");
+      setIsBuildSubmitting(false);
       setProjectSources([]);
       setMappingDiff(null);
       setOpenedPackagePath(result.package_path);
@@ -1374,6 +1391,8 @@ function App() {
               outputName={outputName}
               artifactOutputDir={defaultArtifactDir}
               buildResult={buildResult}
+              buildJob={buildJob}
+              isBuildSubmitting={isBuildSubmitting}
               previewText={previewText}
               isBusy={isBusy}
               language={language}
