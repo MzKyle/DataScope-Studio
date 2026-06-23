@@ -50,6 +50,27 @@ def test_read_point_cloud_points_filters_nan(tmp_path: Path) -> None:
     assert read_point_cloud_points(path) == [[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]]
 
 
+def test_read_binary_little_endian_ply_with_extra_fields_and_nan(tmp_path: Path) -> None:
+    path = tmp_path / "cloud_binary.ply"
+    _write_binary_ply(
+        path,
+        [
+            (7, 1.5, 2.5, 3.5, 10, 20, 30),
+            (8, float("nan"), 4.0, 5.0, 40, 50, 60),
+            (9, -1.0, -2.0, -3.0, 70, 80, 90),
+        ],
+    )
+
+    assert read_point_cloud_points(path) == [
+        [1.5, 2.5, 3.5],
+        [-1.0, -2.0, -3.0],
+    ]
+
+    source = PointCloudAdapter().inspect(str(path))
+    assert source.metadata["sampled"][0]["point_count"] == 3
+    assert source.metadata["sampled"][0]["warning"] is None
+
+
 def test_read_binary_pcd_points_with_extra_field_and_nan(tmp_path: Path) -> None:
     path = tmp_path / "cloud.pcd"
     _write_binary_pcd(
@@ -91,6 +112,30 @@ def _write_ply(path: Path, points: list[list[float]]) -> None:
     ]
     lines.extend(" ".join(str(value) for value in point) for point in points)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _write_binary_ply(
+    path: Path,
+    points: list[tuple[int, float, float, float, int, int, int]],
+) -> None:
+    header = "\n".join(
+        [
+            "ply",
+            "format binary_little_endian 1.0",
+            f"element vertex {len(points)}",
+            "property ushort intensity",
+            "property float x",
+            "property float y",
+            "property float z",
+            "property uchar red",
+            "property uchar green",
+            "property uchar blue",
+            "end_header",
+            "",
+        ]
+    ).encode("ascii")
+    payload = b"".join(struct.pack("<HfffBBB", *point) for point in points)
+    path.write_bytes(header + payload)
 
 
 def _write_binary_pcd(path: Path, points: list[tuple[int, float, float, float]]) -> None:

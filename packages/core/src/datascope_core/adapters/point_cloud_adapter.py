@@ -34,6 +34,20 @@ class PcdHeader:
     data: str
 
 
+@dataclass(slots=True)
+class PlyProperty:
+    name: str
+    data_type: str
+    is_list: bool = False
+
+
+@dataclass(slots=True)
+class PlyHeader:
+    encoding: str
+    vertex_count: int
+    vertex_properties: list[PlyProperty]
+
+
 class PointCloudAdapter:
     adapter_id = "point_cloud"
     display_name = "3D Point Cloud"
@@ -221,14 +235,8 @@ def _read_point_cloud_stats(path: Path, include_bounds: bool = False) -> PointCl
 def _point_count(path: Path) -> int:
     suffix = path.suffix.lower()
     if suffix == ".ply":
-        with open(path, "r", encoding="utf-8", errors="ignore") as handle:
-            for line in handle:
-                line = line.strip()
-                if line.startswith("element vertex "):
-                    return int(line.split()[-1])
-                if line == "end_header":
-                    break
-        return len(_read_ply_points(path))
+        with open(path, "rb") as handle:
+            return _read_ply_header(handle, path.name).vertex_count
     if suffix == ".pcd":
         with open(path, "rb") as handle:
             header = _read_pcd_header(handle)
@@ -241,55 +249,176 @@ def _point_count(path: Path) -> int:
 
 
 def _read_ply_points(path: Path) -> list[list[float]]:
-    header: list[str] = []
-    with open(path, "r", encoding="utf-8", errors="ignore") as handle:
-        for line in handle:
-            stripped = line.strip()
-            header.append(stripped)
-            if stripped == "end_header":
-                break
-        if not any(line == "format ascii 1.0" for line in header):
-            raise ValueError(f"Only ASCII PLY is supported: {path.name}")
-        vertex_count = _ply_vertex_count(header)
-        xyz_indices = _ply_xyz_indices(header)
-        points: list[list[float]] = []
-        for _ in range(vertex_count):
-            line = handle.readline()
-            if not line:
-                break
-            values = line.strip().split()
-            if len(values) <= max(xyz_indices):
-                continue
-            point = _finite_xyz(values[index] for index in xyz_indices)
-            if point is not None:
-                points.append(point)
+    with open(path, "rb") as handle:
+        header = _read_ply_header(handle, path.name)
+        if header.encoding == "ascii":
+            return _read_ascii_ply_points(handle, header)
+        if header.encoding == "binary_little_endian":
+            return _read_binary_little_endian_ply_points(handle, header, path.name)
+        raise ValueError(f"Unsupported PLY encoding '{header.encoding}': {path.name}")
+
+
+def _read_ply_header(handle: BinaryIO, filename: str) -> PlyHeader:
+    if handle.readline().strip() != b"ply":
+        raise ValueError(f"Invalid PLY header: {filename}")
+
+    encoding = ""
+    vertex_count: int | None = None
+    vertex_properties: list[PlyProperty] = []
+    current_element: str | None = None
+    nonempty_element_before_vertex = False
+    while True:
+        raw_line = handle.readline()
+        if not raw_line:
+            raise ValueError(f"PLY header missing end_header: {filename}")
+        try:
+            parts = raw_line.decode("ascii").strip().split()
+        except UnicodeDecodeError as exc:
+            raise ValueError(f"PLY header must be ASCII: {filename}") from exc
+        if not parts or parts[0] in {"comment", "obj_info"}:
+            continue
+        if parts[0] == "end_header":
+            break
+        if parts[0] == "format":
+            if len(parts) != 3 or parts[2] != "1.0":
+                raise ValueError(f"Unsupported PLY format declaration: {filename}")
+            encoding = parts[1].lower()
+            continue
+        if parts[0] == "element":
+            if len(parts) != 3:
+                raise ValueError(f"Invalid PLY element declaration: {filename}")
+            try:
+                element_count = int(parts[2])
+            except ValueError as exc:
+                raise ValueError(f"PLY element count must be an integer: {filename}") from exc
+            if element_count < 0:
+                raise ValueError(f"PLY element count must not be negative: {filename}")
+            current_element = parts[1].lower()
+            if current_element == "vertex":
+                vertex_count = element_count
+            elif vertex_count is None and element_count:
+                nonempty_element_before_vertex = True
+            continue
+        if parts[0] == "property" and current_element == "vertex":
+            if len(parts) == 3:
+                vertex_properties.append(
+                    PlyProperty(name=parts[2].lower(), data_type=parts[1].lower())
+                )
+            elif len(parts) == 5 and parts[1].lower() == "list":
+                vertex_properties.append(
+                    PlyProperty(name=parts[4].lower(), data_type=parts[3].lower(), is_list=True)
+                )
+            else:
+                raise ValueError(f"Invalid PLY vertex property declaration: {filename}")
+
+    if not encoding:
+        raise ValueError(f"PLY header missing format: {filename}")
+    if encoding not in {"ascii", "binary_little_endian", "binary_big_endian"}:
+        raise ValueError(f"Unsupported PLY encoding '{encoding}': {filename}")
+    if vertex_count is None:
+        raise ValueError("PLY header missing element vertex")
+    if nonempty_element_before_vertex:
+        raise ValueError(f"PLY vertex element must be the first non-empty element: {filename}")
+    if any(prop.is_list for prop in vertex_properties):
+        raise ValueError(f"PLY list properties on vertices are not supported: {filename}")
+    _ply_xyz_property_indices(vertex_properties)
+    return PlyHeader(
+        encoding=encoding,
+        vertex_count=vertex_count,
+        vertex_properties=vertex_properties,
+    )
+
+
+def _ply_xyz_property_indices(properties: list[PlyProperty]) -> tuple[int, int, int]:
+    names = [prop.name for prop in properties]
+    try:
+        return (names.index("x"), names.index("y"), names.index("z"))
+    except ValueError as exc:
+        raise ValueError("PLY vertex properties must include x, y, z") from exc
+
+
+def _read_ascii_ply_points(handle: BinaryIO, header: PlyHeader) -> list[list[float]]:
+    xyz_indices = _ply_xyz_property_indices(header.vertex_properties)
+    points: list[list[float]] = []
+    for _ in range(header.vertex_count):
+        raw_line = handle.readline()
+        if not raw_line:
+            break
+        values = raw_line.split()
+        if len(values) <= max(xyz_indices):
+            continue
+        point = _finite_xyz(values[index] for index in xyz_indices)
+        if point is not None:
+            points.append(point)
     return points
 
 
-def _ply_vertex_count(header: list[str]) -> int:
-    for line in header:
-        if line.startswith("element vertex "):
-            return int(line.split()[-1])
-    raise ValueError("PLY header missing element vertex")
+def _read_binary_little_endian_ply_points(
+    handle: BinaryIO,
+    header: PlyHeader,
+    filename: str,
+) -> list[list[float]]:
+    import numpy as np
+
+    property_dtypes = [_ply_numpy_dtype(prop.data_type) for prop in header.vertex_properties]
+    property_offsets: list[int] = []
+    stride = 0
+    for dtype in property_dtypes:
+        property_offsets.append(stride)
+        stride += dtype.itemsize
+    if stride <= 0:
+        raise ValueError(f"PLY binary vertex stride must be positive: {filename}")
+
+    expected_size = header.vertex_count * stride
+    payload = handle.read(expected_size)
+    if len(payload) < expected_size:
+        raise ValueError(
+            f"PLY binary payload is truncated: expected {expected_size} bytes, "
+            f"found {len(payload)} in {filename}"
+        )
+
+    xyz_indices = _ply_xyz_property_indices(header.vertex_properties)
+    coordinates = np.column_stack(
+        [
+            np.ndarray(
+                shape=(header.vertex_count,),
+                dtype=property_dtypes[index],
+                buffer=payload,
+                offset=property_offsets[index],
+                strides=(stride,),
+            )
+            for index in xyz_indices
+        ]
+    )
+    coordinates = coordinates[np.isfinite(coordinates).all(axis=1)]
+    return coordinates.astype(float, copy=False).tolist()
 
 
-def _ply_xyz_indices(header: list[str]) -> tuple[int, int, int]:
-    in_vertex = False
-    properties: list[str] = []
-    for line in header:
-        parts = line.split()
-        if len(parts) >= 3 and parts[0] == "element":
-            if parts[1] == "vertex":
-                in_vertex = True
-                continue
-            if in_vertex:
-                break
-        if in_vertex and len(parts) >= 3 and parts[0] == "property":
-            properties.append(parts[-1])
+def _ply_numpy_dtype(data_type: str):
+    import numpy as np
+
+    dtypes = {
+        "char": "<i1",
+        "int8": "<i1",
+        "uchar": "<u1",
+        "uint8": "<u1",
+        "short": "<i2",
+        "int16": "<i2",
+        "ushort": "<u2",
+        "uint16": "<u2",
+        "int": "<i4",
+        "int32": "<i4",
+        "uint": "<u4",
+        "uint32": "<u4",
+        "float": "<f4",
+        "float32": "<f4",
+        "double": "<f8",
+        "float64": "<f8",
+    }
     try:
-        return (properties.index("x"), properties.index("y"), properties.index("z"))
-    except ValueError as exc:
-        raise ValueError("PLY vertex properties must include x, y, z") from exc
+        return np.dtype(dtypes[data_type])
+    except KeyError as exc:
+        raise ValueError(f"Unsupported PLY property type: {data_type}") from exc
 
 
 def _read_pcd_points(path: Path) -> list[list[float]]:

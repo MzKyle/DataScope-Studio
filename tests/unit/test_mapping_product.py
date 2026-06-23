@@ -383,6 +383,32 @@ def test_point_cloud_adapter_validation_reports_missing_xyz(tmp_path: Path) -> N
     assert any(issue["code"] == "point_cloud_coordinates_missing" for issue in issues)
 
 
+def test_point_cloud_adapter_profile_does_not_report_unknown_field_as_empty(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "valid.ply"
+    path.write_text(
+        "ply\n"
+        "format ascii 1.0\n"
+        "element vertex 1\n"
+        "property float x\n"
+        "property float y\n"
+        "property float z\n"
+        "end_header\n"
+        "1 2 3\n",
+        encoding="utf-8",
+    )
+    adapter = PointCloudAdapter()
+    source = adapter.inspect(str(path), source_id="source_valid_cloud")
+    streams = adapter.infer_streams(source)
+    spec = suggest_mapping(source, streams)
+    profile = build_schema_profile(source, streams)
+
+    report = validate_mapping(source, spec, profile)
+
+    assert not any(issue["code"] == "fields_empty" for issue in report["issues"])
+
+
 class FakeRecording:
     def __init__(self) -> None:
         self.calls = []
