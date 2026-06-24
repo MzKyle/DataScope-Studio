@@ -1453,6 +1453,25 @@ td {
   margin: 0;
 }
 
+.diagnostic-log-paths {
+  display: grid;
+  gap: var(--space-10, 10px);
+  margin: 0;
+}
+
+.diagnostic-log-paths div {
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-12);
+  padding: var(--space-12);
+}
+
+.diagnostic-log-paths dd {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  user-select: text;
+}
+
 .build-job-status {
   align-items: flex-start;
   background: rgba(10, 132, 255, 0.07);

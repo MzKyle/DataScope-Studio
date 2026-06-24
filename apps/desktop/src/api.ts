@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 
+import { apiErrorLogContext, logDiagnostic } from "./diagnostic-log";
 import type {
   DiagnosticReport,
   DiagnosticThresholds,
@@ -42,6 +43,9 @@ export type ApiStatus = {
   packaged_runtime: boolean;
   runtime_dir: string | null;
   rerun_available: boolean;
+  log_dir: string;
+  desktop_log_path: string;
+  backend_log_path: string;
 };
 
 export type ApiErrorDetails = {
@@ -89,34 +93,46 @@ async function fetchWithRetry(url: string, init: RequestInit): Promise<Response>
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const headers = new Headers(init?.headers);
-  if (init?.body && !headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json");
-  }
-  if (isTauriRuntime()) {
-    const body = typeof init?.body === "string" ? init.body : undefined;
-    const result = await invoke<ApiCommandResponse>("api_request", {
-      request: {
-        method: init?.method ?? "GET",
-        path,
-        body
-      }
-    });
-    const parsedBody = parseBody(result.body);
-    if (result.status < 200 || result.status >= 300) {
-      throw apiErrorFromResponse(parsedBody, result.status, `HTTP ${result.status}`);
+  const method = init?.method ?? "GET";
+  try {
+    const headers = new Headers(init?.headers);
+    if (init?.body && !headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/json");
     }
-    return parsedBody as T;
+    if (isTauriRuntime()) {
+      const body = typeof init?.body === "string" ? init.body : undefined;
+      const result = await invoke<ApiCommandResponse>("api_request", {
+        request: {
+          method,
+          path,
+          body
+        }
+      });
+      const parsedBody = parseBody(result.body);
+      if (result.status < 200 || result.status >= 300) {
+        throw apiErrorFromResponse(parsedBody, result.status, `HTTP ${result.status}`);
+      }
+      return parsedBody as T;
+    }
+    const response = await fetchWithRetry(`${API_BASE}${path}`, {
+      headers,
+      ...init
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw apiErrorFromResponse(body, response.status, response.statusText);
+    }
+    return body as T;
+  } catch (error) {
+    const apiError = asApiError(error);
+    logDiagnostic(
+      apiError.status >= 500 || apiError.status === 0 ? "error" : "warn",
+      "frontend.api",
+      apiError.message,
+      apiErrorLogContext(method, path, apiError.status, apiError.code, apiError.details)
+    );
+    throw error;
   }
-  const response = await fetchWithRetry(`${API_BASE}${path}`, {
-    headers,
-    ...init
-  });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw apiErrorFromResponse(body, response.status, response.statusText);
-  }
-  return body as T;
 }
 
 function isTauriRuntime() {

@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import os
 import threading
+import traceback
 from pathlib import Path
 
 from datascope_core.workspace import JobCancelled, Workspace
@@ -29,6 +30,7 @@ def main() -> None:
     except JobCancelled:
         raise SystemExit(2)
     except Exception:
+        traceback.print_exc()
         raise SystemExit(1)
     finally:
         stop.set()

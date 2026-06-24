@@ -4,7 +4,7 @@
 
 正式安装包会把桌面端、FastAPI 后端、Python 运行时、DataScope Python 包和 Rerun SDK/CLI 一起打包。用户安装后直接从系统菜单启动 DataScope Studio，不需要手动安装 Python、Node、npm、`.venv`、uvicorn 或 Rerun。
 
-安装版启动时会自动选择一个空闲的 `127.0.0.1:<port>`，由 Tauri 主进程拉起内置后端。应用退出时后端进程会同步退出。后端日志写入系统应用日志目录的 `datascope-api.log`。
+安装版启动时会自动选择一个空闲的 `127.0.0.1:<port>`，由 Tauri 主进程拉起内置后端。应用退出时后端进程会同步退出。系统应用日志目录包含 `datascope-studio.log` 和 `datascope-api.log`；设置页会显示准确路径。两个主日志达到约 2 MB 后保留 3 个轮转副本，项目后台任务日志仍写入项目的 `logs/` 目录。
 
 本机当前平台构建安装包：
 

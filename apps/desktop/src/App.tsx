@@ -7,7 +7,7 @@ import {
 } from "react";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 
-import { api, ApiError, asApiError } from "./api";
+import { api, ApiError, asApiError, type ApiStatus } from "./api";
 import {
   GlobalErrorToast,
   clearErrorAreaState,
@@ -31,6 +31,7 @@ import {
 } from "./app-support";
 import { DashboardSection } from "./DashboardSection";
 import { DiagnosticsSection } from "./DiagnosticsSection";
+import { logDiagnosticError } from "./diagnostic-log";
 import { ExtensionsSections } from "./ExtensionsSections";
 import { isActiveBuildJob } from "./BuildJobStatus";
 import { ImportWorkflowSection } from "./ImportWorkflowSection";
@@ -154,6 +155,7 @@ function App() {
   const [queryThreshold, setQueryThreshold] = useState("0.5");
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
   const [diagnosticReport, setDiagnosticReport] = useState<DiagnosticReport | null>(null);
+  const [apiStatus, setApiStatus] = useState<ApiStatus | null>(null);
   const [compareRecordingIds, setCompareRecordingIds] = useState("");
   const [compareMetric, setCompareMetric] = useState("battery");
   const [compareResult, setCompareResult] = useState<QueryResult | null>(null);
@@ -221,6 +223,11 @@ function App() {
     window.scrollTo(0, 0);
     refreshProjects();
     refreshTemplateRegistry();
+    if (isTauriRuntime()) {
+      void api.status().then(setApiStatus).catch((error) => {
+        logDiagnosticError("frontend.api_status", error);
+      });
+    }
   }, []);
 
   useEffect(() => {
@@ -337,6 +344,11 @@ function App() {
       return await task();
     } catch (err) {
       const apiError = asApiError(err);
+      logDiagnosticError("frontend.operation", apiError, {
+        area,
+        code: apiError.code,
+        status: apiError.status
+      });
       if (area === "global") {
         setGlobalNotification({ error: apiError, retry: options.retry });
       } else {
@@ -663,6 +675,10 @@ function App() {
       setBuildResult(null);
     } catch (err) {
       const apiError = asApiError(err);
+      logDiagnosticError("frontend.build_recording", apiError, {
+        code: apiError.code,
+        status: apiError.status
+      });
       setAreaErrors((current) => ({ ...current, build: apiError }));
       if (apiError.code === "artifact_name_conflict") {
         window.requestAnimationFrame(() => {
@@ -1528,6 +1544,9 @@ function App() {
             language={language}
             defaultExportDir={defaultExportDir}
             defaultArtifactDir={defaultArtifactDir}
+            diagnosticLogDir={apiStatus?.log_dir ?? ""}
+            desktopLogPath={apiStatus?.desktop_log_path ?? ""}
+            backendLogPath={apiStatus?.backend_log_path ?? ""}
             isBusy={isBusy}
             batchError={areaErrors.batch}
             extensionsError={areaErrors.extensions}

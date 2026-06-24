@@ -1,3 +1,5 @@
+mod diagnostic_log;
+
 use std::env;
 use std::fs::{self, OpenOptions};
 use std::io::{Read, Write};
@@ -29,6 +31,17 @@ struct ApiStatus {
     packaged_runtime: bool,
     runtime_dir: Option<String>,
     rerun_available: bool,
+    log_dir: String,
+    desktop_log_path: String,
+    backend_log_path: String,
+}
+
+#[derive(serde::Deserialize)]
+struct DiagnosticEvent {
+    level: String,
+    component: String,
+    message: String,
+    context: Option<serde_json::Value>,
 }
 
 struct BackendState {
@@ -36,6 +49,9 @@ struct BackendState {
     packaged_runtime: bool,
     runtime_dir: Option<PathBuf>,
     rerun_available: bool,
+    log_dir: PathBuf,
+    desktop_log_path: PathBuf,
+    backend_log_path: PathBuf,
     child: Mutex<Option<Child>>,
 }
 
@@ -43,6 +59,12 @@ impl Drop for BackendState {
     fn drop(&mut self) {
         if let Ok(child_slot) = self.child.get_mut() {
             if let Some(mut child) = child_slot.take() {
+                let _ = diagnostic_log::write(
+                    "info",
+                    "desktop.backend",
+                    "stopping bundled API process",
+                    Some(serde_json::json!({"pid": child.id()})),
+                );
                 let _ = child.kill();
                 let _ = child.wait();
             }
@@ -56,9 +78,39 @@ async fn api_request(
     state: tauri::State<'_, BackendState>,
 ) -> Result<ApiResponse, String> {
     let port = state.port;
-    tauri::async_runtime::spawn_blocking(move || perform_api_request(request, port))
+    let method = request.method.clone();
+    let path = request.path.clone();
+    let result = tauri::async_runtime::spawn_blocking(move || perform_api_request(request, port))
         .await
-        .map_err(|err| format!("API task failed: {err}"))?
+        .map_err(|err| format!("API task failed: {err}"))?;
+    match &result {
+        Ok(response) if response.status >= 400 => {
+            let _ = diagnostic_log::write(
+                if response.status >= 500 {
+                    "error"
+                } else {
+                    "warn"
+                },
+                "desktop.api_proxy",
+                "local API returned an error response",
+                Some(serde_json::json!({
+                    "method": method,
+                    "path": path,
+                    "status": response.status,
+                })),
+            );
+        }
+        Err(error) => {
+            let _ = diagnostic_log::write(
+                "error",
+                "desktop.api_proxy",
+                error,
+                Some(serde_json::json!({"method": method, "path": path})),
+            );
+        }
+        _ => {}
+    }
+    result
 }
 
 #[tauri::command]
@@ -76,7 +128,21 @@ async fn api_status(state: tauri::State<'_, BackendState>) -> Result<ApiStatus, 
             .as_ref()
             .map(|path| path.to_string_lossy().to_string()),
         rerun_available: state.rerun_available,
+        log_dir: state.log_dir.to_string_lossy().to_string(),
+        desktop_log_path: state.desktop_log_path.to_string_lossy().to_string(),
+        backend_log_path: state.backend_log_path.to_string_lossy().to_string(),
     })
+}
+
+#[tauri::command]
+fn write_diagnostic_log(event: DiagnosticEvent) -> Result<(), String> {
+    diagnostic_log::write(
+        &event.level,
+        &event.component,
+        &event.message,
+        event.context,
+    )
+    .map_err(|error| format!("could not write diagnostic log: {error}"))
 }
 
 fn perform_api_request(request: ApiRequest, port: u16) -> Result<ApiResponse, String> {
@@ -140,6 +206,9 @@ fn api_method_supported(method: &str) -> bool {
 }
 
 fn start_backend(app: &AppHandle) -> Result<BackendState, String> {
+    let log_dir = diagnostic_log::log_dir();
+    let desktop_log_path = diagnostic_log::desktop_log_path();
+    let backend_log_path = diagnostic_log::backend_log_path();
     if external_backend_enabled() {
         let port = env::var("DATASCOPE_API_PORT")
             .ok()
@@ -150,6 +219,9 @@ fn start_backend(app: &AppHandle) -> Result<BackendState, String> {
             packaged_runtime: false,
             runtime_dir: None,
             rerun_available: false,
+            log_dir,
+            desktop_log_path,
+            backend_log_path,
             child: Mutex::new(None),
         });
     }
@@ -182,7 +254,26 @@ fn start_backend(app: &AppHandle) -> Result<BackendState, String> {
     };
 
     let port = reserve_local_port()?;
-    let log_path = backend_log_path(app)?;
+    let log_path = backend_log_path;
+    if let Err(error) = diagnostic_log::rotate_if_needed(&log_path) {
+        let _ = diagnostic_log::write(
+            "warn",
+            "desktop.logging",
+            "could not rotate API log",
+            Some(serde_json::json!({
+                "path": log_path.to_string_lossy(),
+                "error": error.to_string(),
+            })),
+        );
+    }
+    if let Some(parent) = log_path.parent() {
+        fs::create_dir_all(parent).map_err(|err| {
+            format!(
+                "could not create API log directory {}: {err}",
+                parent.display()
+            )
+        })?;
+    }
     let log_file = OpenOptions::new()
         .create(true)
         .append(true)
@@ -216,9 +307,23 @@ fn start_backend(app: &AppHandle) -> Result<BackendState, String> {
     }
     prepend_python_to_path(&mut command, &python)?;
 
-    let mut child = command
-        .spawn()
-        .map_err(|err| format!("could not start DataScope API with {}: {err}", python.display()))?;
+    let mut child = command.spawn().map_err(|err| {
+        format!(
+            "could not start DataScope API with {}: {err}",
+            python.display()
+        )
+    })?;
+    let _ = diagnostic_log::write(
+        "info",
+        "desktop.backend",
+        "started bundled API process",
+        Some(serde_json::json!({
+            "pid": child.id(),
+            "port": port,
+            "python": python.to_string_lossy(),
+            "packaged_runtime": packaged_runtime,
+        })),
+    );
 
     if !wait_for_api(port, Duration::from_secs(30)) {
         let _ = child.kill();
@@ -230,11 +335,23 @@ fn start_backend(app: &AppHandle) -> Result<BackendState, String> {
     }
 
     let rerun_available = runtime_python_has_module(&python, "rerun_cli");
+    let _ = diagnostic_log::write(
+        "info",
+        "desktop.backend",
+        "local API is ready",
+        Some(serde_json::json!({
+            "port": port,
+            "rerun_available": rerun_available,
+        })),
+    );
     Ok(BackendState {
         port,
         packaged_runtime,
         runtime_dir,
         rerun_available,
+        log_dir,
+        desktop_log_path,
+        backend_log_path: log_path,
         child: Mutex::new(Some(child)),
     })
 }
@@ -317,21 +434,13 @@ fn api_ready(port: u16) -> bool {
         .unwrap_or(false)
 }
 
-fn backend_log_path(app: &AppHandle) -> Result<PathBuf, String> {
-    let dir = app
-        .path()
-        .app_log_dir()
-        .or_else(|_| app.path().app_local_data_dir())
-        .map_err(|err| format!("could not resolve app log directory: {err}"))?;
-    fs::create_dir_all(&dir)
-        .map_err(|err| format!("could not create app log directory {}: {err}", dir.display()))?;
-    Ok(dir.join("datascope-api.log"))
-}
-
 fn prepend_python_to_path(command: &mut Command, python: &Path) -> Result<(), String> {
-    let python_dir = python
-        .parent()
-        .ok_or_else(|| format!("could not resolve Python directory for {}", python.display()))?;
+    let python_dir = python.parent().ok_or_else(|| {
+        format!(
+            "could not resolve Python directory for {}",
+            python.display()
+        )
+    })?;
     let mut paths = vec![python_dir.to_path_buf()];
     if let Some(current_path) = env::var_os("PATH") {
         paths.extend(env::split_paths(&current_path));
@@ -397,13 +506,34 @@ fn smoke_test_requested() -> bool {
 }
 
 fn main() {
+    let desktop_log_path = diagnostic_log::initialize();
+    diagnostic_log::install_panic_hook();
+    let _ = diagnostic_log::write(
+        "info",
+        "desktop.lifecycle",
+        "DataScope Studio starting",
+        Some(serde_json::json!({
+            "version": env!("CARGO_PKG_VERSION"),
+            "desktop_log_path": desktop_log_path.to_string_lossy(),
+            "safe_graphics": safe_graphics_enabled(),
+        })),
+    );
     configure_webkit_environment();
     let smoke_test = smoke_test_requested();
 
-    tauri::Builder::default()
+    let result = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .setup(move |app| {
-            let backend_state = start_backend(app.handle())?;
+            let _ = diagnostic_log::write("info", "desktop.lifecycle", "Tauri setup started", None);
+            let backend_state = start_backend(app.handle()).map_err(|error| {
+                let _ = diagnostic_log::write(
+                    "error",
+                    "desktop.startup",
+                    "could not start local API",
+                    Some(serde_json::json!({"error": error})),
+                );
+                error
+            })?;
             let smoke_ok = api_ready(backend_state.port)
                 && backend_state.packaged_runtime
                 && backend_state.runtime_dir.is_some()
@@ -421,9 +551,32 @@ fn main() {
             }
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![api_request, api_status])
-        .run(tauri::generate_context!())
-        .expect("error while running DataScope Studio");
+        .invoke_handler(tauri::generate_handler![
+            api_request,
+            api_status,
+            write_diagnostic_log
+        ])
+        .run(tauri::generate_context!());
+    match result {
+        Ok(()) => {
+            let _ = diagnostic_log::write(
+                "info",
+                "desktop.lifecycle",
+                "DataScope Studio exited normally",
+                None,
+            );
+        }
+        Err(error) => {
+            let _ = diagnostic_log::write(
+                "error",
+                "desktop.startup",
+                "desktop runtime exited with an error",
+                Some(serde_json::json!({"error": error.to_string()})),
+            );
+            eprintln!("DataScope Studio failed to start: {error}");
+            std::process::exit(1);
+        }
+    }
 }
 
 #[cfg(test)]
