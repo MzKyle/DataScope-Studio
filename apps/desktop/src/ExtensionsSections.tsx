@@ -17,6 +17,7 @@ import type {
   Plugin,
   TemplateRegistryItem
 } from "./types";
+import { DiagnosticLogPaths } from "./DiagnosticLogPaths";
 import {
   CardHeader,
   EmptyState,
@@ -49,6 +50,9 @@ type ExtensionsSectionsProps = {
   language: Language;
   defaultExportDir: string;
   defaultArtifactDir: string;
+  diagnosticLogDir: string;
+  desktopLogPath: string;
+  backendLogPath: string;
   isBusy: boolean;
   batchError?: ApiError;
   extensionsError?: ApiError;
@@ -391,6 +395,12 @@ function SettingsSection(props: ExtensionsSectionsProps) {
           </div>
         </div>
       </section>
+      <DiagnosticLogPaths
+        logDir={props.diagnosticLogDir}
+        desktopLogPath={props.desktopLogPath}
+        backendLogPath={props.backendLogPath}
+        t={props.t}
+      />
     </section>
   );
 }

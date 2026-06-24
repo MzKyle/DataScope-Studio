@@ -32,10 +32,12 @@ import {
 
 const SUPPORTED_FORMATS = [
   "CSV",
+  "TSV/TXT",
   "JSONL",
   "Images",
   "PLY",
   "PCD",
+  "XYZ/PTS",
   "NPZ",
   "MCAP",
   "ROS2 DB3"

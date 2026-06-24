@@ -13,8 +13,20 @@ import type { MappingValidationIssue } from "./types";
 describe("ROS2 source selection", () => {
   it("accepts DB3 files and preserves file or folder names for outputs", () => {
     expect(sourceFileExtensions.has("db3")).toBe(true);
+    expect(sourceFileExtensions.has("tif")).toBe(true);
+    expect(sourceFileExtensions.has("xyz")).toBe(true);
+    expect(sourceFileExtensions.has("log")).toBe(true);
     expect(
       sourceFileDialogFilters.some((filter) => filter.extensions.includes("db3"))
+    ).toBe(true);
+    expect(
+      sourceFileDialogFilters.some((filter) => filter.extensions.includes("tif"))
+    ).toBe(true);
+    expect(
+      sourceFileDialogFilters.some((filter) => filter.extensions.includes("xyz"))
+    ).toBe(true);
+    expect(
+      sourceFileDialogFilters.some((filter) => filter.extensions.includes("log"))
     ).toBe(true);
     expect(defaultOutputName("/data/robot/run_001.db3", "file")).toBe("run_001");
     expect(defaultOutputName("/data/robot/bag_run/", "folder")).toBe("bag_run");

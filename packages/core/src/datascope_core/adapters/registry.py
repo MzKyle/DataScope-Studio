@@ -8,6 +8,7 @@ from datascope_core.adapters.jsonl_adapter import JsonlAdapter
 from datascope_core.adapters.mcap_adapter import McapAdapter
 from datascope_core.adapters.point_cloud_adapter import PointCloudAdapter
 from datascope_core.adapters.ros2_db3_adapter import Ros2Db3Adapter, is_ros2_db3_source
+from datascope_core.adapters.text_table_adapter import TextTableAdapter
 from datascope_core.models import DataAdapter, IMAGE_EXTENSIONS, POINT_CLOUD_EXTENSIONS
 
 
@@ -18,6 +19,7 @@ ADAPTERS: dict[str, DataAdapter] = {
     "mcap": McapAdapter(),
     "ros2_db3": Ros2Db3Adapter(),
     "point_cloud": PointCloudAdapter(),
+    "text_table": TextTableAdapter(),
 }
 
 

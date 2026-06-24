@@ -25,9 +25,9 @@ visualization script.
 
 | Source | Examples |
 | --- | --- |
-| Tables and logs | CSV, JSONL |
-| Computer vision | Image folders with detection sidecars |
-| Point clouds | PLY, PCD, NPY, NPZ files or frame directories |
+| Tables and logs | CSV, TSV, TXT/LOG/DAT/LST, JSONL |
+| Computer vision | Image files or folders with optional detection sidecars |
+| Point clouds | PLY, PCD, NPY, NPZ, XYZ, XYZN, XYZRGB, PTS, ASC files or frame directories |
 | Robotics recordings | MCAP and ROS2 DB3 bags, including split bag directories |
 
 DataScope is local-first. Source data, mappings, recordings, and the SQLite catalog remain
@@ -72,7 +72,7 @@ sudo apt install ./DataScope-Studio-v0.3.0-linux-amd64.deb
 ## First Visualization
 
 1. Open DataScope Studio and create or select a project.
-2. Choose a CSV, JSONL, image folder, point cloud, MCAP, or ROS2 DB3 source.
+2. Choose a table/log, image, point cloud, MCAP, or ROS2 DB3 source.
    - For a headerless CSV, select **No header** and enter ordered column names such as
      `timestamp,x,y,z,rx,ry,rz`.
 3. Select **Import & Auto Map**.

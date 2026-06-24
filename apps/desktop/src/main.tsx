@@ -1,7 +1,13 @@
 import React, { Component, type ErrorInfo, type ReactNode } from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
+import {
+  installGlobalDiagnosticHandlers,
+  logDiagnosticError
+} from "./diagnostic-log";
 import "./styles.css";
+
+installGlobalDiagnosticHandlers();
 
 class AppRenderBoundary extends Component<
   { children: ReactNode },
@@ -15,6 +21,9 @@ class AppRenderBoundary extends Component<
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error("DataScope Studio render failed", error, info);
+    logDiagnosticError("frontend.react_boundary", error, {
+      component_stack: info.componentStack?.slice(0, 4_000)
+    });
   }
 
   render() {

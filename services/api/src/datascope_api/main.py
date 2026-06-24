@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import logging
 from contextlib import asynccontextmanager
 from dataclasses import asdict
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -21,6 +22,9 @@ from datascope_core.workspace import (
     Workspace,
 )
 from datascope_api.services import services
+
+
+logger = logging.getLogger("uvicorn.error.datascope")
 
 
 class ProjectCreate(BaseModel):
@@ -182,18 +186,46 @@ def create_app() -> FastAPI:
     )
 
     @app.exception_handler(HTTPException)
-    async def http_exception_handler(_, exc: HTTPException) -> JSONResponse:
+    async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
         detail = exc.detail
+        error = detail.get("error", {}) if isinstance(detail, dict) else {}
+        code = error.get("code", "http_error") if isinstance(error, dict) else "http_error"
+        message = _log_text(
+            error.get("message", str(detail)) if isinstance(error, dict) else str(detail)
+        )
+        logger.warning(
+            "api_error method=%s path=%s status=%s code=%s message=%s",
+            request.method,
+            request.url.path,
+            exc.status_code,
+            code,
+            message,
+        )
         if isinstance(detail, dict) and "error" in detail:
             return JSONResponse(status_code=exc.status_code, content=detail)
         return _api_error(exc.status_code, "http_error", str(detail))
 
     @app.exception_handler(RequestValidationError)
-    async def validation_exception_handler(_, exc: RequestValidationError) -> JSONResponse:
+    async def validation_exception_handler(
+        request: Request,
+        exc: RequestValidationError,
+    ) -> JSONResponse:
+        logger.warning(
+            "api_validation_error method=%s path=%s errors=%s",
+            request.method,
+            request.url.path,
+            len(exc.errors()),
+        )
         return _api_error(422, "validation_error", str(exc))
 
     @app.exception_handler(Exception)
-    async def unhandled_exception_handler(_, exc: Exception) -> JSONResponse:
+    async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+        logger.error(
+            "api_unhandled_exception method=%s path=%s",
+            request.method,
+            request.url.path,
+            exc_info=(type(exc), exc, exc.__traceback__),
+        )
         return _api_error(500, "internal_error", str(exc))
 
     @app.get("/api/health")
@@ -669,6 +701,10 @@ def _api_error(status_code: int, code: str, message: str) -> JSONResponse:
         status_code=status_code,
         content={"error": {"code": code, "message": message}},
     )
+
+
+def _log_text(value: object) -> str:
+    return str(value).replace("\r", "\\r").replace("\n", "\\n")
 
 
 app = create_app()

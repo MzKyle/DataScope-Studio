@@ -7,10 +7,12 @@ import {
   FolderOpen,
   Image,
   ListChecks,
+  LoaderCircle,
   Play,
   Save
 } from "lucide-react";
 
+import { BuildJobStatus, isActiveBuildJob } from "./BuildJobStatus";
 import {
   CardHeader,
   EmptyState,
@@ -23,6 +25,7 @@ import {
 import type { Language, TranslationKey } from "./i18n";
 import type {
   BuildResult,
+  Job,
   MappingDiff,
   MappingPayload,
   MappingSuggestion,
@@ -61,6 +64,8 @@ type ImportWorkflowSectionProps = {
   outputName: string;
   artifactOutputDir: string;
   buildResult: BuildResult | null;
+  buildJob: Job | null;
+  isBuildSubmitting: boolean;
   previewText: string;
   isBusy: boolean;
   language: Language;
@@ -114,6 +119,8 @@ export function ImportWorkflowSection({
   outputName,
   artifactOutputDir,
   buildResult,
+  buildJob,
+  isBuildSubmitting,
   previewText,
   isBusy,
   language,
@@ -139,6 +146,12 @@ export function ImportWorkflowSection({
   onBuildRecording,
   onOpenInRerun
 }: ImportWorkflowSectionProps) {
+  const buildJobActive = isActiveBuildJob(buildJob);
+  const buildControlsLocked = isBusy || isBuildSubmitting || buildJobActive;
+  const buildPercent = Math.round(
+    Math.min(1, Math.max(0, buildJob?.progress ?? 0)) * 100
+  );
+
   return (
     <section className="section-stack" id="import">
       <SectionTitle
@@ -496,16 +509,28 @@ export function ImportWorkflowSection({
               aria-invalid={Boolean(errors.build)}
               value={outputName}
               onChange={(event) => onOutputNameChange(event.target.value)}
+              disabled={buildControlsLocked}
             />
             <button
               className="button-primary"
-              disabled={isBusy || !mappingConfirmed}
+              disabled={buildControlsLocked || !mappingConfirmed}
               onClick={onBuildRecording}
             >
-              <Play size={16} />
-              {t("buildArtifacts")}
+              {isBuildSubmitting || buildJobActive ? (
+                <LoaderCircle className="build-status-spinner" size={16} />
+              ) : (
+                <Play size={16} />
+              )}
+              {isBuildSubmitting
+                ? t("buildSubmitting")
+                : buildJobActive
+                  ? `${t("buildRunning")} ${buildPercent}%`
+                  : t("buildArtifacts")}
             </button>
-            <button disabled={!buildResult || isBusy} onClick={onOpenInRerun}>
+            <button
+              disabled={!buildResult || buildControlsLocked}
+              onClick={onOpenInRerun}
+            >
               <ExternalLink size={16} />
               {t("openInRerun")}
             </button>
@@ -517,18 +542,20 @@ export function ImportWorkflowSection({
                 placeholder={t("artifactOutputPathPlaceholder")}
                 value={artifactOutputDir}
                 onChange={(event) => onArtifactOutputDirChange(event.target.value)}
+                disabled={buildControlsLocked}
               />
             </label>
             <button
               type="button"
               onClick={onChooseArtifactOutputFolder}
-              disabled={isBusy}
+              disabled={buildControlsLocked}
             >
               <FolderOpen size={16} />
               {t("selectArtifactFolder")}
             </button>
           </div>
           <p className="field-hint">{t("artifactOutputPathHint")}</p>
+          <BuildJobStatus job={buildJob} isSubmitting={isBuildSubmitting} t={t} />
           <InlineError id="build-error" error={errors.build} t={t} />
           {buildResult ? (
             <dl className="artifact-list">
@@ -547,9 +574,9 @@ export function ImportWorkflowSection({
                 </dd>
               </div>
             </dl>
-          ) : (
+          ) : !isBuildSubmitting && !buildJob ? (
             <EmptyState text={t("buildEmpty")} />
-          )}
+          ) : null}
         </section>
 
         <section className="card">

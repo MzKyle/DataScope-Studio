@@ -37,7 +37,7 @@ from datascope_cli.main import app as cli_app
 | `models.py` | SourceInfo、StreamInfo、MappingSpec 等共享模型 |
 | `mapping.py` | 自动 mapping 建议和 YAML 读写 |
 | `templates.py` | 内置模板匹配和 blueprint 保存 |
-| `rerun_writer.py` | CSV/JSONL 等 tabular 数据写入 Rerun |
+| `rerun_writer.py` | CSV/JSONL/文本表格等 tabular 数据写入 Rerun |
 | `query.py` | 本地 query index、查询模板和导出 |
 | `workspace.py` | SQLite catalog、项目目录和端到端流程 |
 | `plugin_registry.py` | 本地插件 manifest 校验与注册 |

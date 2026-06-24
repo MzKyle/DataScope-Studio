@@ -61,6 +61,10 @@ class CvSidecar:
 
 def supported_image_paths(root: str | Path) -> list[Path]:
     root_path = Path(root)
+    if root_path.is_file():
+        return [root_path] if root_path.suffix.lower() in IMAGE_EXTENSIONS else []
+    if not root_path.is_dir():
+        return []
     return sorted(
         child
         for child in root_path.rglob("*")
@@ -100,7 +104,12 @@ def load_template_keypoint_sidecar(root: str | Path) -> CvSidecar | None:
     root_path = Path(root)
     class_ids: dict[str, int] = {}
     frames: list[CvFrame] = []
-    for sidecar_path in sorted(root_path.rglob("*_template.json")):
+    sidecars = (
+        sorted(root_path.parent.glob(f"{root_path.stem}_template.json"))
+        if root_path.is_file()
+        else sorted(root_path.rglob("*_template.json"))
+    )
+    for sidecar_path in sidecars:
         frame = _parse_template_keypoint_frame(root_path, sidecar_path, class_ids)
         if frame is not None:
             frames.append(frame)
@@ -134,10 +143,13 @@ def resolve_image_path(root: str | Path, frame_image: str) -> Path:
     candidate = Path(frame_image)
     if candidate.is_absolute():
         return candidate
+    if root_path.is_file() and candidate.name == root_path.name:
+        return root_path
+    base = root_path.parent if root_path.is_file() else root_path
     candidates = [
-        root_path / candidate,
-        root_path.parent / candidate,
-        root_path / candidate.name,
+        base / candidate,
+        base.parent / candidate,
+        base / candidate.name,
     ]
     for path in candidates:
         if path.exists():
@@ -201,11 +213,14 @@ def _parse_template_keypoint_frame(
 
 def _template_image_path(root: Path, sidecar_path: Path, payload: dict[str, Any]) -> Path:
     image_value = payload.get("image_path") or payload.get("image")
+    base = root.parent if root.is_file() else root
     if isinstance(image_value, str) and image_value:
         candidate = Path(image_value)
         if candidate.is_absolute():
             return candidate
-        return root / candidate
+        return base / candidate
+    if root.is_file():
+        return root
     base_name = sidecar_path.name.removesuffix("_template.json")
     for extension in IMAGE_EXTENSIONS:
         candidate = sidecar_path.with_name(f"{base_name}{extension}")
@@ -215,6 +230,8 @@ def _template_image_path(root: Path, sidecar_path: Path, payload: dict[str, Any]
 
 
 def _frame_image_value(root: Path, image_path: Path) -> str:
+    if root.is_file():
+        return image_path.name if image_path.resolve() == root.resolve() else str(image_path)
     try:
         return str(image_path.resolve().relative_to(root.resolve()))
     except ValueError:

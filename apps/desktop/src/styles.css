@@ -1453,6 +1453,123 @@ td {
   margin: 0;
 }
 
+.diagnostic-log-paths {
+  display: grid;
+  gap: var(--space-10, 10px);
+  margin: 0;
+}
+
+.diagnostic-log-paths div {
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-12);
+  padding: var(--space-12);
+}
+
+.diagnostic-log-paths dd {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  user-select: text;
+}
+
+.build-job-status {
+  align-items: flex-start;
+  background: rgba(10, 132, 255, 0.07);
+  border: 1px solid rgba(10, 132, 255, 0.2);
+  border-radius: var(--radius-16);
+  display: flex;
+  gap: var(--space-12);
+  margin: var(--space-16) 0;
+  padding: var(--space-16);
+}
+
+.build-job-status.is-success {
+  background: var(--color-success-soft);
+  border-color: rgba(27, 129, 88, 0.25);
+}
+
+.build-job-status.is-danger {
+  background: rgba(196, 54, 54, 0.08);
+  border-color: rgba(196, 54, 54, 0.24);
+}
+
+.build-job-status.is-neutral {
+  background: var(--color-surface-soft);
+  border-color: var(--color-border);
+}
+
+.build-job-status-icon {
+  color: var(--color-primary);
+  display: flex;
+  flex: 0 0 auto;
+  padding-top: 1px;
+}
+
+.build-job-status.is-success .build-job-status-icon {
+  color: var(--color-success);
+}
+
+.build-job-status.is-danger .build-job-status-icon {
+  color: var(--color-danger);
+}
+
+.build-job-status.is-neutral .build-job-status-icon {
+  color: var(--color-text-muted);
+}
+
+.build-job-status-content {
+  display: grid;
+  flex: 1 1 auto;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+.build-job-status-heading,
+.build-job-progress > div {
+  align-items: center;
+  display: flex;
+  gap: var(--space-12);
+  justify-content: space-between;
+}
+
+.build-job-status-heading span,
+.build-job-id,
+.build-job-progress span {
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.build-job-status p {
+  color: var(--color-text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.build-job-progress {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.build-job-progress progress {
+  accent-color: var(--color-primary);
+  inline-size: 100%;
+}
+
+.build-job-status.is-success progress {
+  accent-color: var(--color-success);
+}
+
+.build-status-spinner {
+  animation: build-status-spin 900ms linear infinite;
+}
+
+@keyframes build-status-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .preview {
   background: #f8fafc;
   border: 1px solid var(--color-border);
@@ -1838,6 +1955,12 @@ td {
     max-width: none;
   }
 
+  .build-job-status-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
   .responsive-table {
     overflow: visible;
   }
@@ -1881,5 +2004,11 @@ td {
     font-weight: 750;
     letter-spacing: 0.04em;
     text-transform: uppercase;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .build-status-spinner {
+    animation: none;
   }
 }

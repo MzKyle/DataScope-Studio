@@ -7,7 +7,7 @@ graph TB
     DESK["Tauri Desktop<br/>React UI"] --> HTTP["FastAPI<br/>127.0.0.1:8000"]
     CLI["datascope CLI"] --> CORE["datascope_core"]
     HTTP --> CORE
-    CORE --> ADAPTERS["Adapters<br/>CSV / JSONL / Image / Point Cloud / MCAP / ROS2 DB3"]
+    CORE --> ADAPTERS["Adapters<br/>CSV / JSONL / Text / Image / Point Cloud / MCAP / ROS2 DB3"]
     CORE --> MAP["Mapping + Templates"]
     CORE --> QUERY["Query Index + Templates"]
     CORE --> DB["SQLite Catalog"]

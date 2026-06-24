@@ -35,7 +35,7 @@ mapping_app.add_typer(mapping_template_app, name="template")
 
 @app.command()
 def inspect(path: Path, json_output: bool = typer.Option(False, "--json", help="Print JSON.")) -> None:
-    """Inspect a CSV, JSONL, image folder, point cloud, MCAP, or ROS2 DB3 source."""
+    """Inspect a table, log, image, point cloud, MCAP, or ROS2 DB3 source."""
     adapter = _adapter_for_cli_path(path)
     source = adapter.inspect(str(path))
     streams = adapter.infer_streams(source)

@@ -251,7 +251,9 @@ def validate_mapping(
 
         present_stats = [field_stats[field] for field in fields if field in field_stats]
         if present_stats and all(
-            int(item.get("non_null_count") or 0) == 0 for item in present_stats
+            item.get("non_null_count") is not None
+            and int(item["non_null_count"]) == 0
+            for item in present_stats
         ):
             _issue(
                 issues,

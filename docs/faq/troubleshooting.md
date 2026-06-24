@@ -1,5 +1,32 @@
 # 故障排查 FAQ
 
+## 诊断日志在哪里
+
+安装版会自动记录桌面启动、内置 API 启动、前端未捕获异常、文件读取错误和后台任务
+崩溃。设置页的“诊断日志”卡片会显示当前机器上的准确路径。
+
+默认日志目录：
+
+| 系统 | 目录 |
+| --- | --- |
+| Linux | `~/.local/share/studio.datascope.desktop/logs/` |
+| Windows | `%LOCALAPPDATA%\studio.datascope.desktop\logs\` |
+| macOS | `~/Library/Logs/studio.datascope.desktop/` |
+
+主要文件：
+
+- `datascope-studio.log`：桌面启动、Tauri、前端 JavaScript 和 API 调用错误，格式为每行一个 JSON 对象。
+- `datascope-api.log`：FastAPI/Uvicorn 输出、文件打不开等 API 错误。
+- `<项目目录>/logs/job_*.log`：转换、批量导入等后台任务的输出与 Python traceback。
+
+两个主日志文件达到约 2 MB 后会自动轮转为 `.1`、`.2`、`.3`。日志只保存在本机，
+不会自动上传。提交问题时请附上故障发生时间附近的日志片段，并检查其中是否包含不希望
+共享的本地路径。
+
+如果安装后完全无法打开界面，可以从终端启动一次应用，再查看
+`datascope-studio.log`。只要桌面进程成功开始执行，启动阶段错误和 Rust panic 都会写入
+该文件；安装器自身在应用进程启动前发生的错误仍需查看操作系统安装日志。
+
 ## 后端健康检查失败
 
 确认 API 正在运行：

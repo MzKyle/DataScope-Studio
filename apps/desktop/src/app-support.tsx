@@ -50,28 +50,80 @@ const DEFAULT_ARTIFACT_DIR_KEY = "datascope.defaultArtifactDir";
 
 export const sourceFileExtensions = new Set([
   "csv",
+  "tsv",
+  "txt",
+  "log",
+  "dat",
+  "lst",
+  "list",
   "jsonl",
   "json",
   "mcap",
   "db3",
+  "jpg",
+  "jpeg",
+  "png",
+  "bmp",
+  "webp",
+  "tif",
+  "tiff",
+  "gif",
   "ply",
   "pcd",
   "npy",
-  "npz"
+  "npz",
+  "xyz",
+  "xyzn",
+  "xyzrgb",
+  "pts",
+  "asc"
 ]);
 
 export const sourceFileDialogFilters = [
   {
     name: "DataScope",
-    extensions: ["csv", "jsonl", "json", "mcap", "db3", "ply", "pcd", "npy", "npz"]
+    extensions: [
+      "csv",
+      "tsv",
+      "txt",
+      "log",
+      "dat",
+      "lst",
+      "list",
+      "jsonl",
+      "json",
+      "mcap",
+      "db3",
+      "jpg",
+      "jpeg",
+      "png",
+      "bmp",
+      "webp",
+      "tif",
+      "tiff",
+      "gif",
+      "ply",
+      "pcd",
+      "npy",
+      "npz",
+      "xyz",
+      "xyzn",
+      "xyzrgb",
+      "pts",
+      "asc"
+    ]
   },
   {
-    name: "Tabular",
-    extensions: ["csv", "jsonl", "json"]
+    name: "Tables and logs",
+    extensions: ["csv", "tsv", "txt", "log", "dat", "lst", "list", "jsonl", "json"]
+  },
+  {
+    name: "Images",
+    extensions: ["jpg", "jpeg", "png", "bmp", "webp", "tif", "tiff", "gif"]
   },
   {
     name: "Point Cloud",
-    extensions: ["ply", "pcd", "npy", "npz"]
+    extensions: ["ply", "pcd", "npy", "npz", "xyz", "xyzn", "xyzrgb", "pts", "asc"]
   },
   {
     name: "MCAP",

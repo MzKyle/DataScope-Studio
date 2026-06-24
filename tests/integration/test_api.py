@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -7,6 +8,25 @@ from tests.api_helpers import wait_for_job
 
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
+
+
+def test_api_logs_file_open_errors(tmp_path: Path, monkeypatch, caplog) -> None:
+    monkeypatch.setenv("DATASCOPE_WORKSPACE", str(tmp_path / "workspace"))
+    client = TestClient(app)
+    project = client.post("/api/projects", json={"name": "Logging"}).json()
+    missing = tmp_path / "missing.ply"
+
+    with caplog.at_level(logging.WARNING, logger="uvicorn.error.datascope"):
+        response = client.post(
+            f"/api/projects/{project['id']}/sources",
+            json={"path": str(missing)},
+        )
+
+    assert response.status_code == 400
+    assert "api_error method=POST" in caplog.text
+    assert f"path=/api/projects/{project['id']}/sources" in caplog.text
+    assert "code=bad_request" in caplog.text
+    assert "missing.ply" in caplog.text
 
 
 def test_api_project_source_mapping_build_flow(tmp_path: Path, monkeypatch) -> None:
