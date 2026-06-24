@@ -7,12 +7,13 @@ import pandas as pd
 
 from datascope_core.adapters.csv_adapter import read_csv_source
 from datascope_core.adapters.jsonl_adapter import _read_jsonl
+from datascope_core.adapters.text_table_adapter import read_text_table_source
 from datascope_core.models import SourceInfo, StreamInfo
 from datascope_core.time_utils import infer_time_unit, normalize_time_value
 
 
 def source_family(source_type: str) -> str:
-    if source_type in {"csv", "jsonl"}:
+    if source_type in {"csv", "jsonl", "text_table"}:
         return "tabular"
     if source_type == "ros2_db3":
         return "mcap"
@@ -25,6 +26,9 @@ def build_schema_profile(source: SourceInfo, streams: list[StreamInfo]) -> dict[
         return _tabular_profile(source, streams, frame)
     if source.source_type == "jsonl":
         frame = pd.DataFrame(_read_jsonl(source.path, limit=1000))
+        return _tabular_profile(source, streams, frame)
+    if source.source_type == "text_table":
+        frame = read_text_table_source(source, nrows=1000)
         return _tabular_profile(source, streams, frame)
 
     fields = []

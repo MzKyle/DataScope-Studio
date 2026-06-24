@@ -18,25 +18,25 @@ from datascope_core.cv_schema import (
     supported_image_paths,
 )
 from datascope_core.inference import safe_slug
-from datascope_core.models import ConvertRequest, MappingSpec, SourceInfo, StreamInfo
+from datascope_core.models import ConvertRequest, IMAGE_EXTENSIONS, MappingSpec, SourceInfo, StreamInfo
 
 
 class ImageFolderAdapter:
     adapter_id = "image_folder"
     display_name = "Image Folder"
-    supported_extensions: list[str] = []
+    supported_extensions = sorted(IMAGE_EXTENSIONS)
 
     def inspect(self, path: str, source_id: str | None = None) -> SourceInfo:
         root = Path(path)
         images = supported_image_paths(root)
         if not images:
-            raise ValueError(f"No supported images found in directory: {path}")
+            raise ValueError(f"No supported images found: {path}")
 
         annotations = load_annotations(root)
         predictions = load_predictions(root)
         classes = merge_classes(annotations, predictions)
         sampled_dimensions = {
-            str(image.relative_to(root)): _image_dimensions(image)
+            _image_display_path(root, image): _image_dimensions(image)
             for image in images[: min(10, len(images))]
         }
         return SourceInfo(
@@ -45,14 +45,12 @@ class ImageFolderAdapter:
             path=str(root),
             metadata={
                 "image_count": len(images),
-                "images": [str(image.relative_to(root)) for image in images],
+                "images": [_image_display_path(root, image) for image in images],
                 "sidecars": {
                     "annotations": str(find_sidecar(root, "annotations.json") or ""),
                     "predictions": str(find_sidecar(root, "predictions.json") or ""),
                 },
-                "template_keypoint_sidecars": [
-                    str(sidecar.relative_to(root)) for sidecar in sorted(root.rglob("*_template.json"))
-                ],
+                "template_keypoint_sidecars": _template_sidecars(root),
                 "annotation_frame_count": len(annotations.frames) if annotations else 0,
                 "prediction_frame_count": len(predictions.frames) if predictions else 0,
                 "annotation_keypoint_count": _keypoint_count(annotations.frames if annotations else []),
@@ -180,7 +178,7 @@ class ImageFolderAdapter:
             prediction_frame = prediction_map.get(key)
             rows.append(
                 {
-                    "image": str(image.relative_to(root)),
+                    "image": _image_display_path(root, image),
                     "dimensions": _image_dimensions(image),
                     "annotation_boxes": len(annotation_frame.boxes) if annotation_frame else 0,
                     "prediction_boxes": len(prediction_frame.boxes) if prediction_frame else 0,
@@ -248,7 +246,7 @@ class ImageFolderAdapter:
                 annotation_frame = annotation_map.get(key)
                 prediction_frame = prediction_map.get(key)
                 rec.set_time("time", duration=_frame_time(index, annotation_frame, prediction_frame))
-                rec.log(image_path, rr.EncodedImage(path=image))
+                rec.log(image_path, _image_archetype(image))
                 if annotation_frame and annotation_frame.boxes:
                     rec.log(gt_boxes_path, _boxes2d(annotation_frame.boxes))
                 if annotation_frame and annotation_frame.keypoints:
@@ -300,6 +298,35 @@ class ImageFolderAdapter:
 def _image_dimensions(path: Path) -> dict[str, int]:
     with Image.open(path) as image:
         return {"width": image.width, "height": image.height}
+
+
+def _image_display_path(root: Path, image: Path) -> str:
+    if root.is_file():
+        return image.name
+    return str(image.relative_to(root))
+
+
+def _template_sidecars(root: Path) -> list[str]:
+    if root.is_file():
+        return [
+            sidecar.name
+            for sidecar in sorted(root.parent.glob(f"{root.stem}_template.json"))
+        ]
+    return [str(sidecar.relative_to(root)) for sidecar in sorted(root.rglob("*_template.json"))]
+
+
+def _image_archetype(path: Path):
+    import numpy as np
+    import rerun as rr
+
+    if path.suffix.lower() in {".jpg", ".jpeg", ".png"}:
+        return rr.EncodedImage(path=path)
+    with Image.open(path) as image:
+        try:
+            image.seek(0)
+        except EOFError:
+            pass
+        return rr.Image(np.asarray(image.convert("RGBA")))
 
 
 def _labels(*frames: CvFrame | None) -> list[str]:

@@ -197,7 +197,7 @@ class WorkspaceStorageMixin:
         confidence = "medium"
         if source["type"] == "ros2_db3":
             estimated = source_bytes * 3
-        elif source["type"] in {"csv", "jsonl"}:
+        elif source["type"] in {"csv", "jsonl", "text_table"}:
             estimated = source_bytes * 2
             with self._connect() as conn:
                 row = conn.execute(

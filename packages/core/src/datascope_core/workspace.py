@@ -188,7 +188,7 @@ class Workspace(
         source_row = self.get_source(source_id)
         self._assert_source_available(source_row)
         adapter = self._adapter_for_type(source_row["type"])
-        if source_row["type"] == "csv":
+        if source_row["type"] in {"csv", "text_table"}:
             source = adapter.inspect(
                 source_row["uri"],
                 source_id=source_id,

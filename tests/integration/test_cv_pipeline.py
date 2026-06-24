@@ -36,6 +36,31 @@ def test_workspace_image_folder_to_rerun_artifacts(tmp_path: Path) -> None:
     assert Path(result["blueprint_path"]).exists()
 
 
+def test_workspace_single_tiff_image_to_rerun_artifacts(tmp_path: Path) -> None:
+    image_path = tmp_path / "frame_001.tif"
+    Image.new("RGB", (64, 48), (100, 160, 220)).save(image_path)
+    workspace = Workspace(tmp_path / "workspace")
+    project = workspace.create_project("Single Image Pipeline")
+    source = workspace.add_source(project["id"], str(image_path))
+    inspection = workspace.inspect_source(source["id"])
+    spec = workspace.suggest_mapping(source["id"], template_id="cv_detection")
+    mapping = workspace.save_mapping(project["id"], source["id"], spec)
+
+    result = workspace.build_recording(
+        project["id"],
+        source["id"],
+        mapping_id=mapping["id"],
+        output_name="single_image_run",
+        template_id="cv_detection",
+    )
+
+    assert source["type"] == "image_folder"
+    assert inspection["source"]["metadata"]["image_count"] == 1
+    assert inspection["streams"][0]["semantic_type"] == "image"
+    assert Path(result["recording_path"]).exists()
+    assert Path(result["blueprint_path"]).exists()
+
+
 def test_api_image_folder_flow(tmp_path: Path, monkeypatch) -> None:
     image_dir = _make_cv_fixture(tmp_path)
     monkeypatch.setenv("DATASCOPE_WORKSPACE", str(tmp_path / "api_workspace"))

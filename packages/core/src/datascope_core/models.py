@@ -15,8 +15,19 @@ JOB_STATUSES = {
     "interrupted",
 }
 TIME_COLUMN_CANDIDATES = {"timestamp", "time", "t", "datetime"}
-IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
-POINT_CLOUD_EXTENSIONS = {".ply", ".pcd", ".npy", ".npz"}
+IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tif", ".tiff", ".gif"}
+POINT_CLOUD_EXTENSIONS = {
+    ".ply",
+    ".pcd",
+    ".npy",
+    ".npz",
+    ".xyz",
+    ".xyzn",
+    ".xyzrgb",
+    ".pts",
+    ".asc",
+}
+TEXT_TABLE_EXTENSIONS = {".tsv", ".txt", ".log", ".dat", ".lst", ".list"}
 
 
 @dataclass(slots=True)
@@ -113,6 +124,10 @@ def detect_source_type(path: str | Path) -> str:
         return "csv"
     if suffix in {".jsonl", ".ndjson"}:
         return "jsonl"
+    if suffix in IMAGE_EXTENSIONS:
+        return "image_folder"
+    if suffix in TEXT_TABLE_EXTENSIONS:
+        return "text_table"
     if suffix == ".mcap":
         return "mcap"
     if suffix == ".db3":

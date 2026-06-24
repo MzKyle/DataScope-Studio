@@ -15,6 +15,9 @@ from datascope_core.models import (
 )
 
 
+TEXT_POINT_CLOUD_EXTENSIONS = {".xyz", ".xyzn", ".xyzrgb", ".pts", ".asc"}
+
+
 @dataclass(slots=True)
 class PointCloudStats:
     path: Path
@@ -214,6 +217,8 @@ def read_point_cloud_points(path: str | Path) -> list[list[float]]:
         return _read_pcd_points(cloud_path)
     if suffix in {".npy", ".npz"}:
         return _read_numpy_points(cloud_path)
+    if suffix in TEXT_POINT_CLOUD_EXTENSIONS:
+        return _read_text_point_cloud_points(cloud_path)
     raise ValueError(f"Unsupported point cloud file: {path}")
 
 
@@ -245,6 +250,8 @@ def _point_count(path: Path) -> int:
         return len(_read_pcd_points(path))
     if suffix in {".npy", ".npz"}:
         return len(_read_numpy_points(path))
+    if suffix in TEXT_POINT_CLOUD_EXTENSIONS:
+        return len(_read_text_point_cloud_points(path))
     return 0
 
 
@@ -584,6 +591,39 @@ def _pcd_struct_format(field_type: str, size: int) -> str:
         return formats[(field_type, size)]
     except KeyError as exc:
         raise ValueError(f"Unsupported PCD field type/size: {field_type}{size}") from exc
+
+
+def _read_text_point_cloud_points(path: Path) -> list[list[float]]:
+    points: list[list[float]] = []
+    saw_data_line = False
+    with open(path, "r", encoding="utf-8-sig", errors="replace") as handle:
+        for raw_line in handle:
+            line = raw_line.strip()
+            if not line or line.startswith(("#", "//", ";")):
+                continue
+            values = line.replace(",", " ").split()
+            if path.suffix.lower() == ".pts" and not saw_data_line and _is_point_count_header(values):
+                saw_data_line = True
+                continue
+            saw_data_line = True
+            if len(values) < 3:
+                continue
+            try:
+                point = _finite_xyz(values[:3])
+            except ValueError:
+                continue
+            if point is not None:
+                points.append(point)
+    return points
+
+
+def _is_point_count_header(values: list[str]) -> bool:
+    if len(values) != 1:
+        return False
+    try:
+        return int(values[0]) >= 0
+    except ValueError:
+        return False
 
 
 def _read_numpy_points(path: Path) -> list[list[float]]:

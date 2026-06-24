@@ -79,7 +79,7 @@ npm run tauri:dev:safe
   - 左侧侧栏用于在模块之间切换（Dashboard、Import、Recordings、Jobs、Templates、Settings 等）。
   - 右上角有刷新按钮与状态指示，遇到接口错误会在顶部显示错误状态与消息。
 - **3D 点云导入**
-  - 支持 `.ply`、`.pcd`、`.npy`、`.npz` 单文件或目录。
+  - 支持 `.ply`、`.pcd`、`.npy`、`.npz`、`.xyz`、`.xyzn`、`.xyzrgb`、`.pts`、`.asc` 单文件或目录。
   - 目录导入时每个点云文件会作为一帧，默认映射到 `/sensors/lidar/points`，推荐模板为 `robotics_debug`。
   - 如果输入框出现类似 `/home/kyle/sany/scan_point_cloud/home/kyle/sany/scan_point_cloud` 的重复路径，前端会在检查数据源前自动归一化为后半段真实路径。
 
@@ -88,7 +88,7 @@ npm run tauri:dev:safe
   - 选择项目后会刷新该项目下的 `recordings` 与 `jobs`。
 
 - **导入数据（Import / Inspect）**
-  - 支持的数据源：CSV、JSONL、Image 目录（配合 annotations.json）、MCAP、ROS2 包等。支持拖拽（将文件或文件夹拖入主窗口即可填入路径）。
+  - 支持的数据源：CSV、TSV/TXT/LOG、JSONL、图片文件或目录（可配合 annotations.json）、点云、MCAP、ROS2 包等。支持拖拽（将文件或文件夹拖入主窗口即可填入路径）。
   - 步骤：
     1. 选择目标项目。输入或拖入 `sourcePath`（本地路径，例如 `/path/to/data.csv` 或 `/path/to/dataset/`）。
     2. 点击 `Inspect`（或界面相应按钮）会调用 `/api/sources/{id}/inspect`，返回流（streams）信息。

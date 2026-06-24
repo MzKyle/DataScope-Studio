@@ -5,6 +5,7 @@ from PIL import Image
 
 from datascope_core.adapters.image_folder_adapter import ImageFolderAdapter
 from datascope_core.mapping import suggest_mapping
+from datascope_core.models import detect_source_type
 from datascope_core.templates import match_templates
 
 
@@ -71,6 +72,35 @@ def test_image_folder_infers_template_json_keypoints(tmp_path: Path) -> None:
     assert "scan3d_custom_001_template.json" in source.metadata["template_keypoint_sidecars"]
     assert any(stream.semantic_type == "points2d" for stream in streams)
     assert preview["rows"][0]["annotation_keypoints"] == 3
+
+
+def test_single_tiff_image_is_supported_source(tmp_path: Path) -> None:
+    image_path = tmp_path / "frame_001.tif"
+    Image.new("RGB", (48, 32), (120, 80, 200)).save(image_path)
+    adapter = ImageFolderAdapter()
+
+    source = adapter.inspect(str(image_path), source_id="source_single_image")
+    streams = adapter.infer_streams(source)
+    preview = adapter.preview(source, "stream_camera_image")
+
+    assert detect_source_type(image_path) == "image_folder"
+    assert source.source_type == "image_folder"
+    assert source.metadata["image_count"] == 1
+    assert source.metadata["images"] == ["frame_001.tif"]
+    assert streams[0].semantic_type == "image"
+    assert preview["rows"][0]["image"] == "frame_001.tif"
+    assert preview["rows"][0]["dimensions"] == {"width": 48, "height": 32}
+
+
+def test_single_gif_image_is_supported_source(tmp_path: Path) -> None:
+    image_path = tmp_path / "frame_002.gif"
+    Image.new("P", (24, 18)).save(image_path)
+
+    source = ImageFolderAdapter().inspect(str(image_path), source_id="source_gif")
+
+    assert detect_source_type(image_path) == "image_folder"
+    assert source.metadata["image_count"] == 1
+    assert source.metadata["sampled_dimensions"]["frame_002.gif"] == {"width": 24, "height": 18}
 
 
 def _make_cv_fixture(tmp_path: Path) -> Path:

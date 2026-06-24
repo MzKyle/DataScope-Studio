@@ -15,6 +15,7 @@ from datascope_core.adapters.point_cloud_adapter import (
     _read_point_cloud_stats,
     supported_point_cloud_paths,
 )
+from datascope_core.adapters.text_table_adapter import _read_text_batches, _source_text_config
 from datascope_core.cv_schema import load_annotations, load_predictions, sidecar_frame_map, supported_image_paths
 from datascope_core.models import MappingSpec, SourceInfo
 from datascope_core.time_utils import prepare_tabular_frame, time_seconds_or_none
@@ -103,6 +104,10 @@ def iter_query_rows(
     if source.source_type == "jsonl":
         for records in _iter_jsonl_batches(source.path, chunk_size):
             yield from _tabular_rows(recording_id, source, spec, pd.DataFrame(records))
+        return
+    if source.source_type == "text_table":
+        for frame in _read_text_batches(source.path, _source_text_config(source), chunk_size):
+            yield from _tabular_rows(recording_id, source, spec, frame)
         return
     if source.source_type == "image_folder":
         yield from _cv_rows(recording_id, source)

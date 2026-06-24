@@ -35,9 +35,13 @@ datascope recordings --project demo
 | 数据源 | 示例 |
 | --- | --- |
 | CSV | `/data/run.csv` |
+| TSV / 文本表格 | `/data/run.tsv`、`/data/run.txt` |
+| 文本日志 | `/data/run.log` |
 | JSONL | `/data/events.jsonl` |
+| 图像文件 | `/data/frame_001.tif` |
 | 图像目录 | `/data/cv_dataset/images` |
 | 点云文件 | `/data/frame_001.ply` |
+| 文本点云文件 | `/data/frame_001.xyz`、`/data/frame_001.pts` |
 | 点云目录 | `/data/point_cloud_run` |
 | MCAP | `/data/run.mcap` |
 | ROS2 SQLite Bag | `/data/run.db3` 或 `/data/rosbag2_run/` |

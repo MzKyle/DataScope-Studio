@@ -60,6 +60,20 @@ def test_cli_point_cloud_inspect(tmp_path: Path, monkeypatch) -> None:
     assert "Point clouds: 2" in inspect_result.output
 
 
+def test_cli_text_point_cloud_inspect(tmp_path: Path, monkeypatch) -> None:
+    cloud_path = tmp_path / "frame_001.xyz"
+    cloud_path.write_text("0 0 0 255 0 0\n1 2 3 0 255 0\n", encoding="utf-8")
+    monkeypatch.setenv("DATASCOPE_WORKSPACE", str(tmp_path / "cli_workspace"))
+    runner = CliRunner()
+
+    inspect_result = runner.invoke(cli_app, ["inspect", str(cloud_path)])
+
+    assert inspect_result.exit_code == 0
+    assert "Source type: point_cloud" in inspect_result.output
+    assert "Point clouds: 1" in inspect_result.output
+    assert "Formats: xyz" in inspect_result.output
+
+
 def _make_point_cloud_fixture(tmp_path: Path) -> Path:
     cloud_dir = tmp_path / "clouds"
     cloud_dir.mkdir()
