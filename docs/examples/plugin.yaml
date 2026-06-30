@@ -1,0 +1,9 @@
+id: example.adapter
+name: Example Adapter
+version: 0.1.0
+min_datascope_version: 0.3.0
+entrypoints:
+  adapters:
+    example: example_plugin.adapter:ExampleAdapter
+permissions:
+  - read_files

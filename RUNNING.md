@@ -1,4 +1,4 @@
-# DataScope Studio v0.3.0 运行与安装说明
+# DataScope Studio v0.3.1 运行与安装说明
 
 ## 安装版
 
@@ -114,12 +114,14 @@ datascope query --project robot_demo --template time_sync
 datascope export-query --project demo --template low_battery --threshold 0.2 --format csv
 datascope diagnose --project robot_demo
 datascope diagnose --project robot_demo --recording <recording_id> --json
-datascope diagnose --project robot_demo --out robot_diagnostics.json
+datascope diagnose --project robot_demo --preset strict --format html --out robot_diagnostics.html
 ```
 
-离线机器人诊断报告不会写入项目数据库。它基于已生成 recording 的 query index 和 source metadata，
+离线机器人诊断普通运行不会写入项目数据库；显式导出时会把 JSON、CSV 或 HTML 报告写入
+项目 `exports/` 并登记 `diagnostic_exports` catalog。它基于已生成 recording 的 query index 和 source metadata，
 汇总 topic coverage、ROS2 可转换性、message volume、time sync、日志/状态、低电量和 CV detection
-问题。桌面端可在左侧 “Diagnostics / 诊断” 页面选择 recording、调整阈值并导出 JSON。
+问题。桌面端可在左侧 “Diagnostics / 诊断” 页面选择 recording、切换 preset、展开 finding evidence，
+并导出 JSON/CSV/HTML。
 
 HTTP API 示例：
 

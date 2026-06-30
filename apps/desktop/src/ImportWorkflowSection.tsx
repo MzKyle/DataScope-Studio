@@ -20,6 +20,7 @@ import {
   MappingIssueCard,
   SectionTitle,
   StreamTable,
+  formatBytes,
   type AreaErrors
 } from "./app-support";
 import type { Language, TranslationKey } from "./i18n";
@@ -567,6 +568,25 @@ export function ImportWorkflowSection({
                 <dt>{t("blueprint")}</dt>
                 <dd>{buildResult.blueprint_path}</dd>
               </div>
+              {buildResult.artifact_info ? (
+                <>
+                  <div>
+                    <dt>{t("artifactStatus")}</dt>
+                    <dd>{t("ready")}</dd>
+                  </div>
+                  <div>
+                    <dt>{t("artifactSizes")}</dt>
+                    <dd>
+                      {formatBytes(buildResult.artifact_info.recording_size_bytes)} /{" "}
+                      {formatBytes(buildResult.artifact_info.blueprint_size_bytes)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>{t("converter")}</dt>
+                    <dd>{buildResult.artifact_info.converter}</dd>
+                  </div>
+                </>
+              ) : null}
               <div>
                 <dt>{t("job")}</dt>
                 <dd>

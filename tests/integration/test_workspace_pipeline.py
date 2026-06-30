@@ -27,6 +27,9 @@ def test_workspace_csv_to_rerun_artifacts(tmp_path: Path) -> None:
     assert result["status"] == "succeeded"
     assert Path(result["recording_path"]).exists()
     assert Path(result["blueprint_path"]).exists()
+    assert result["artifact_info"]["converter"] == "rerun_python_sdk"
+    assert result["artifact_info"]["recording_size_bytes"] > 0
+    assert result["artifact_info"]["blueprint_size_bytes"] > 0
     assert workspace.get_job(result["job_id"])["status"] == "succeeded"
 
 

@@ -6,7 +6,10 @@ use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
-use std::sync::Mutex;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Mutex,
+};
 use std::time::{Duration, Instant};
 
 use tauri::{AppHandle, Manager};
@@ -53,6 +56,11 @@ struct BackendState {
     desktop_log_path: PathBuf,
     backend_log_path: PathBuf,
     child: Mutex<Option<Child>>,
+}
+
+#[derive(Clone, Default)]
+struct SmokeState {
+    frontend_ready: Arc<AtomicBool>,
 }
 
 impl Drop for BackendState {
@@ -135,7 +143,13 @@ async fn api_status(state: tauri::State<'_, BackendState>) -> Result<ApiStatus, 
 }
 
 #[tauri::command]
-fn write_diagnostic_log(event: DiagnosticEvent) -> Result<(), String> {
+fn write_diagnostic_log(
+    event: DiagnosticEvent,
+    smoke_state: tauri::State<'_, SmokeState>,
+) -> Result<(), String> {
+    if event.component == "frontend.lifecycle" && event.message == "frontend initialized" {
+        smoke_state.frontend_ready.store(true, Ordering::SeqCst);
+    }
     diagnostic_log::write(
         &event.level,
         &event.component,
@@ -434,6 +448,17 @@ fn api_ready(port: u16) -> bool {
         .unwrap_or(false)
 }
 
+fn wait_for_frontend_ready(smoke_state: &SmokeState, timeout: Duration) -> bool {
+    let deadline = Instant::now() + timeout;
+    while Instant::now() < deadline {
+        if smoke_state.frontend_ready.load(Ordering::SeqCst) {
+            return true;
+        }
+        std::thread::sleep(Duration::from_millis(100));
+    }
+    smoke_state.frontend_ready.load(Ordering::SeqCst)
+}
+
 fn prepend_python_to_path(command: &mut Command, python: &Path) -> Result<(), String> {
     let python_dir = python.parent().ok_or_else(|| {
         format!(
@@ -523,6 +548,7 @@ fn main() {
 
     let result = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .manage(SmokeState::default())
         .setup(move |app| {
             let _ = diagnostic_log::write("info", "desktop.lifecycle", "Tauri setup started", None);
             let backend_state = start_backend(app.handle()).map_err(|error| {
@@ -534,10 +560,11 @@ fn main() {
                 );
                 error
             })?;
-            let smoke_ok = api_ready(backend_state.port)
+            let smoke_backend_ok = api_ready(backend_state.port)
                 && backend_state.packaged_runtime
                 && backend_state.runtime_dir.is_some()
                 && backend_state.rerun_available;
+            let smoke_state = app.state::<SmokeState>().inner().clone();
             app.manage(backend_state);
             if smoke_test {
                 if let Some(window) = app.get_webview_window("main") {
@@ -545,8 +572,11 @@ fn main() {
                 }
                 let handle = app.handle().clone();
                 std::thread::spawn(move || {
-                    std::thread::sleep(Duration::from_millis(100));
-                    handle.exit(if smoke_ok { 0 } else { 1 });
+                    let frontend_ready = wait_for_frontend_ready(
+                        &smoke_state,
+                        Duration::from_secs(10),
+                    );
+                    handle.exit(if smoke_backend_ok && frontend_ready { 0 } else { 1 });
                 });
             }
             Ok(())

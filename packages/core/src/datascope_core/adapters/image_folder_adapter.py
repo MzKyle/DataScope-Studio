@@ -256,9 +256,13 @@ class ImageFolderAdapter:
                         rec.log(f"{gt_masks_path}/{mask_index}", _segmentation_image(root, mask.path))
                 if prediction_frame and prediction_frame.boxes:
                     rec.log(pred_boxes_path, _boxes2d(prediction_frame.boxes))
-                    scores = [box.score for box in prediction_frame.boxes if box.score is not None]
+                if prediction_frame:
+                    scores = _scores(prediction_frame)
                     if scores:
-                        rec.log(pred_scores_path, rr.Scalars(mean(scores)))
+                        score_mean = mean(scores)
+                        rec.log(pred_scores_path, rr.Scalars(score_mean))
+                        rec.log(f"{pred_scores_path}/min", rr.Scalars(min(scores)))
+                        rec.log(f"{pred_scores_path}/mean", rr.Scalars(score_mean))
                 if prediction_frame and prediction_frame.keypoints:
                     rec.log(pred_keypoints_path, _points2d(prediction_frame.keypoints))
                 if prediction_frame and prediction_frame.masks:

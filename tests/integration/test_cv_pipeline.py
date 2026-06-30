@@ -34,6 +34,8 @@ def test_workspace_image_folder_to_rerun_artifacts(tmp_path: Path) -> None:
     assert templates[0]["template_id"] == "cv_detection"
     assert Path(result["recording_path"]).exists()
     assert Path(result["blueprint_path"]).exists()
+    assert result["artifact_info"]["converter"] == "rerun_python_sdk"
+    assert result["artifact_info"]["recording_size_bytes"] > 0
 
 
 def test_workspace_single_tiff_image_to_rerun_artifacts(tmp_path: Path) -> None:

@@ -1292,6 +1292,13 @@ td {
   grid-template-columns: repeat(2, minmax(160px, 1fr));
 }
 
+.diagnostics-filters {
+  display: grid;
+  gap: var(--space-12);
+  grid-template-columns: repeat(3, minmax(160px, 1fr));
+  margin-bottom: var(--space-16);
+}
+
 .diagnostics-thresholds label {
   display: grid;
   gap: var(--space-6);
@@ -1383,6 +1390,19 @@ td {
   font-weight: 800;
   padding: 4px 8px;
   text-transform: uppercase;
+}
+
+.diagnostic-evidence {
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-10);
+  color: var(--color-text);
+  font-size: 12px;
+  margin: 0;
+  max-height: 260px;
+  overflow: auto;
+  padding: var(--space-12);
+  white-space: pre-wrap;
 }
 
 .severity-critical {
@@ -1621,6 +1641,21 @@ td {
   max-width: 240px;
 }
 
+.inline-actions.compact {
+  gap: var(--space-8);
+}
+
+.inline-actions.compact button {
+  min-height: 32px;
+  padding: 0 var(--space-10);
+}
+
+.batch-manager-controls {
+  display: grid;
+  gap: var(--space-12);
+  margin-bottom: var(--space-16);
+}
+
 .settings-block {
   align-items: center;
   background: var(--color-surface-soft);
@@ -1654,6 +1689,10 @@ td {
   display: grid;
   gap: var(--space-8);
   grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.settings-block > select {
+  max-width: 160px;
 }
 
 .segmented-control {
@@ -1911,6 +1950,7 @@ td {
   .timeline-editor,
   .diff-controls,
   .diagnostics-summary,
+  .diagnostics-filters,
   .diagnostics-thresholds,
   .mapping-template-manager-grid {
     grid-template-columns: 1fr;

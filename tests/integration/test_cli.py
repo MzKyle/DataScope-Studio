@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 
 from typer.testing import CliRunner
 
@@ -37,7 +38,30 @@ def test_cli_import_builds_artifacts(tmp_path: Path, monkeypatch) -> None:
     assert result.exit_code == 0
     assert "Recording:" in result.output
     assert "Blueprint:" in result.output
+    assert "Artifact sizes:" in result.output
     assert (tmp_path / "workspace").exists()
+
+
+def test_cli_import_json_includes_artifact_info(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("DATASCOPE_WORKSPACE", str(tmp_path / "workspace"))
+    result = CliRunner().invoke(
+        app,
+        [
+            "import",
+            str(FIXTURES / "sample_sensor.csv"),
+            "--project",
+            "CLI JSON",
+            "--out",
+            "cli_json_run",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    artifact_info = payload["job"]["result"]["artifact_info"]
+    assert artifact_info["converter"] == "rerun_python_sdk"
+    assert artifact_info["recording_size_bytes"] > 0
 
 
 def test_cli_import_defaults_artifact_names_to_source_name(tmp_path: Path, monkeypatch) -> None:

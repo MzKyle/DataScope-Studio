@@ -62,12 +62,25 @@ describe("ImportWorkflowSection build feedback", () => {
         status: "succeeded",
         recording_id: "recording_1",
         recording_path: "/tmp/run_001.rrd",
-        blueprint_path: "/tmp/run_001.rbl"
+        blueprint_path: "/tmp/run_001.rbl",
+        artifact_info: {
+          recording_size_bytes: 2048,
+          blueprint_size_bytes: 512,
+          app_id: "datascope.sensor_monitor.v1",
+          template_id: "sensor_monitor",
+          rerun_recording_id: "run_001",
+          source_type: "csv",
+          converter: "rerun_python_sdk",
+          rerun_version: "0.32.0"
+        }
       }
     });
 
     expect(screen.getByRole("button", { name: "Open in Rerun" })).toBeEnabled();
     expect(screen.getByText("/tmp/run_001.rrd")).toBeInTheDocument();
+    expect(screen.getByText("Ready")).toBeInTheDocument();
+    expect(screen.getByText("2.0 KiB / 512 B")).toBeInTheDocument();
+    expect(screen.getByText("rerun_python_sdk")).toBeInTheDocument();
   });
 });
 

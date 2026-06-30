@@ -13,6 +13,7 @@ import {
   InlineError,
   ResultTable,
   SectionTitle,
+  formatBytes,
   renderLimitText,
   type AreaErrors
 } from "./app-support";
@@ -127,32 +128,68 @@ export function RecordingsQueriesSection({
                       <th>{t("run")}</th>
                       <th>{t("template")}</th>
                       <th>{t("source")}</th>
+                      <th>{t("artifactStatus")}</th>
                       <th>{t("tags")}</th>
                       <th>{t("action")}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {visibleRecordings.map((recording) => (
-                      <tr key={recording.id}>
-                        <td data-label={t("run")}>
-                          <strong>{recording.run_name}</strong>
-                          <span className="subline">{recording.id}</span>
-                        </td>
-                        <td data-label={t("template")}>{recording.blueprint_id}</td>
-                        <td data-label={t("source")}>{recording.source_type ?? t("unknown")}</td>
-                        <td data-label={t("tags")}>{recording.tags.join(", ") || "-"}</td>
-                        <td data-label={t("action")}>
-                          <button onClick={() => onOpenRecording(recording)} disabled={isBusy}>
-                            <ExternalLink size={16} />
-                            {t("openInRerun")}
-                          </button>
-                          <button onClick={() => onAddTag(recording.id)} disabled={isBusy}>
-                            <Tags size={16} />
-                            {t("addTag")}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {visibleRecordings.map((recording) => {
+                      const artifact = recording.params.rerun_artifact;
+                      const artifactStatus = recording.artifact_status;
+                      const artifactReady = !artifactStatus || artifactStatus.status === "ready";
+                      const recordingSize =
+                        artifact?.recording_size_bytes ?? artifactStatus?.recording_size_bytes;
+                      const blueprintSize =
+                        artifact?.blueprint_size_bytes ?? artifactStatus?.blueprint_size_bytes;
+                      return (
+                        <tr key={recording.id}>
+                          <td data-label={t("run")}>
+                            <strong>{recording.run_name}</strong>
+                            <span className="subline">{recording.id}</span>
+                          </td>
+                          <td data-label={t("template")}>{recording.blueprint_id}</td>
+                          <td data-label={t("source")}>{recording.source_type ?? t("unknown")}</td>
+                          <td data-label={t("artifactStatus")}>
+                            {artifactReady ? (
+                              <>
+                                <strong>{t("ready")}</strong>
+                                {typeof recordingSize === "number" &&
+                                typeof blueprintSize === "number" ? (
+                                  <span className="subline">
+                                    {formatBytes(recordingSize)} / {formatBytes(blueprintSize)}
+                                  </span>
+                                ) : null}
+                              </>
+                            ) : artifactStatus?.status === "empty" ? (
+                              <>
+                                <strong>{t("artifactEmpty")}</strong>
+                                <span className="subline">{artifactStatus.message}</span>
+                              </>
+                            ) : (
+                              <>
+                                <strong>{t("artifactMissing")}</strong>
+                                <span className="subline">{artifactStatus?.message}</span>
+                              </>
+                            )}
+                          </td>
+                          <td data-label={t("tags")}>{recording.tags.join(", ") || "-"}</td>
+                          <td data-label={t("action")}>
+                            <button
+                              onClick={() => onOpenRecording(recording)}
+                              disabled={isBusy || !artifactReady}
+                            >
+                              <ExternalLink size={16} />
+                              {t("openInRerun")}
+                            </button>
+                            <button onClick={() => onAddTag(recording.id)} disabled={isBusy}>
+                              <Tags size={16} />
+                              {t("addTag")}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

@@ -69,6 +69,7 @@ class WorkspaceJobsMixin:
             raise ValueError("Batch import did not match any source paths")
         if storage_mode not in {"copy", "reference"}:
             raise ValueError(f"Unsupported storage mode: {storage_mode}")
+        self._ensure_disk(self.estimate_batch_import(project_id, patterns, storage_mode=storage_mode))
         return self._create_job(
             project_id,
             "batch_import",
@@ -80,6 +81,33 @@ class WorkspaceJobsMixin:
                 "storage_mode": storage_mode,
             },
             resource_type="batch",
+        )
+
+    def enqueue_batch_item_retry(
+        self,
+        project_id: str,
+        batch_id: str,
+        item_id: str,
+    ) -> dict[str, Any]:
+        self.get_project(project_id)
+        batch = self.get_batch(batch_id)
+        if batch["project_id"] != project_id:
+            raise ValueError("Batch does not belong to project")
+        item = next((row for row in batch["items"] if row["id"] == item_id), None)
+        if item is None:
+            raise KeyError(f"Batch item not found: {item_id}")
+        if item["status"] not in {"failed", "cancelled"}:
+            raise ValueError(f"Only failed or cancelled batch items can be retried: {item_id}")
+        return self._create_job(
+            project_id,
+            "batch_item_retry",
+            {
+                "project_id": project_id,
+                "batch_id": batch_id,
+                "item_id": item_id,
+            },
+            resource_type="batch_item",
+            resource_id=item_id,
         )
 
     def _create_job(
@@ -243,6 +271,51 @@ class WorkspaceJobsMixin:
                             "failed": failed,
                         },
                         error_message=message,
+                        finished=True,
+                    )
+                    return result
+                self._update_job(
+                    job_id,
+                    status="succeeded",
+                    progress=1.0,
+                    stage="completed",
+                    result=result,
+                    finished=True,
+                )
+                return result
+            if job["type"] == "batch_item_retry":
+                result = self._execute_batch_item_retry(
+                    payload["project_id"],
+                    payload["batch_id"],
+                    payload["item_id"],
+                    _job_id=job_id,
+                )
+                item = next(
+                    row for row in result["items"] if row["id"] == payload["item_id"]
+                )
+                if item["status"] == "failed":
+                    message = item.get("error_message") or "Batch item retry failed"
+                    self._update_job(
+                        job_id,
+                        status="failed",
+                        progress=1.0,
+                        stage="failed",
+                        error={
+                            "code": "batch_item_failed",
+                            "message": message,
+                            "batch_id": result["id"],
+                            "item_id": item["id"],
+                        },
+                        error_message=message,
+                        finished=True,
+                    )
+                    return result
+                if item["status"] == "cancelled":
+                    self._update_job(
+                        job_id,
+                        status="cancelled",
+                        progress=1.0,
+                        stage="cancelled",
                         finished=True,
                     )
                     return result

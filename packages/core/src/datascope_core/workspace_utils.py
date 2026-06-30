@@ -39,7 +39,51 @@ def recording_from_row(row: sqlite3.Row) -> dict[str, Any]:
     result = row_to_dict(row)
     result["tags"] = json.loads(result.pop("tags_json") or "[]")
     result["params"] = json.loads(result.pop("params_json") or "{}")
+    result["artifact_status"] = _artifact_status(
+        Path(str(result.get("path") or "")),
+        Path(str(result["blueprint_path"])) if result.get("blueprint_path") else None,
+    )
     return result
+
+
+def _artifact_status(recording_path: Path, blueprint_path: Path | None) -> dict[str, Any]:
+    paths = [recording_path]
+    if blueprint_path is not None:
+        paths.append(blueprint_path)
+    missing = [str(path) for path in paths if not path.is_file()]
+    if missing:
+        return {
+            "status": "missing",
+            "message": f"Missing artifact file: {missing[0]}",
+            "recording_path": str(recording_path),
+            "blueprint_path": str(blueprint_path) if blueprint_path is not None else None,
+            "recording_size_bytes": _file_size(recording_path),
+            "blueprint_size_bytes": _file_size(blueprint_path),
+        }
+    empty = [str(path) for path in paths if path.stat().st_size <= 0]
+    if empty:
+        return {
+            "status": "empty",
+            "message": f"Empty artifact file: {empty[0]}",
+            "recording_path": str(recording_path),
+            "blueprint_path": str(blueprint_path) if blueprint_path is not None else None,
+            "recording_size_bytes": _file_size(recording_path),
+            "blueprint_size_bytes": _file_size(blueprint_path),
+        }
+    return {
+        "status": "ready",
+        "message": "",
+        "recording_path": str(recording_path),
+        "blueprint_path": str(blueprint_path) if blueprint_path is not None else None,
+        "recording_size_bytes": _file_size(recording_path),
+        "blueprint_size_bytes": _file_size(blueprint_path),
+    }
+
+
+def _file_size(path: Path | None) -> int | None:
+    if path is None or not path.is_file():
+        return None
+    return path.stat().st_size
 
 
 def job_from_row(row: sqlite3.Row) -> dict[str, Any]:
@@ -99,6 +143,9 @@ def artifact_paths(manifest: dict[str, Any]) -> list[str]:
             if recording.get(key):
                 paths.append(recording[key])
     for export in manifest.get("query_exports", []):
+        if export.get("path"):
+            paths.append(export["path"])
+    for export in manifest.get("diagnostic_exports", []):
         if export.get("path"):
             paths.append(export["path"])
     return paths

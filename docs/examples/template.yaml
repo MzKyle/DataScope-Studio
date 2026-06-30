@@ -1,0 +1,6 @@
+template:
+  id: example_template
+  name: Example Template
+  version: 0.1.0
+  app_id: datascope.example_template.v1
+  description: Example local Rerun blueprint template manifest.

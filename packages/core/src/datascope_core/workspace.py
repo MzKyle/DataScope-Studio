@@ -10,6 +10,7 @@ import zipfile
 from collections.abc import Callable, Iterator
 from dataclasses import asdict
 from datetime import datetime, timezone
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -134,6 +135,18 @@ class ArtifactConflictError(RuntimeError):
             f"Output name '{output_name}' conflicts with existing artifacts: "
             f"{joined_paths}. Choose a different output name."
         )
+
+
+class RerunArtifactError(RuntimeError):
+    code = "rerun_artifact_invalid"
+
+    def __init__(self, message: str, paths: list[Path]) -> None:
+        self.paths = [str(path) for path in paths]
+        super().__init__(message)
+
+
+class BatchItemCancelled(RuntimeError):
+    pass
 
 
 class Workspace(
@@ -576,6 +589,13 @@ class Workspace(
                     stage="blueprint",
                 )
             save_blueprint(spec, template_id, blueprint_path)
+            artifact_info = _build_artifact_info(
+                recording_path,
+                blueprint_path,
+                spec,
+                template_id,
+                source_row,
+            )
             recording_db_id = f"recording_{uuid4().hex[:12]}"
             with self._connect() as conn:
                 conn.execute(
@@ -595,7 +615,10 @@ class Workspace(
                         str(blueprint_path),
                         output_base,
                         "[]",
-                        "{}",
+                        json.dumps(
+                            {"rerun_artifact": artifact_info},
+                            ensure_ascii=False,
+                        ),
                         _now(),
                     ),
                 )
@@ -611,6 +634,7 @@ class Workspace(
                 "recording_id": recording_db_id,
                 "recording_path": str(recording_path),
                 "blueprint_path": str(blueprint_path),
+                "artifact_info": artifact_info,
             }
             if _manage_job and job_id is not None:
                 self._update_job(
@@ -800,21 +824,15 @@ class Workspace(
                     """,
                     (_job_id, _now(), batch_id),
                 )
-            path_indexes = {str(path): index for index, path in enumerate(paths, start=1)}
             work_items = []
             for item in batch["items"]:
                 if item["status"] == "succeeded":
                     continue
                 source_path = Path(item["source_path"])
-                index = path_indexes.get(str(source_path))
-                if index is None:
-                    raise ValueError(
-                        f"Batch retry source is missing from the original payload: {source_path}"
-                    )
+                index = _batch_item_index(batch, item)
                 work_items.append(
                     (item["id"], index, source_path, item.get("source_id"))
                 )
-            work_items.sort(key=lambda item: item[1])
         else:
             batch_id = f"batch_{uuid4().hex[:12]}"
             now = _now()
@@ -822,10 +840,27 @@ class Workspace(
                 conn.execute(
                     """
                     insert into batch_jobs
-                      (id, project_id, job_id, status, total, succeeded, failed, created_at, updated_at)
-                    values (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                      (id, project_id, job_id, status, template_id, output_prefix,
+                       storage_mode, patterns_json, total, succeeded, failed,
+                       cancelled, created_at, updated_at)
+                    values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
-                    (batch_id, project_id, _job_id, "running", len(paths), 0, 0, now, now),
+                    (
+                        batch_id,
+                        project_id,
+                        _job_id,
+                        "running",
+                        template_id,
+                        output_prefix,
+                        storage_mode,
+                        json.dumps([str(path) for path in paths], ensure_ascii=False),
+                        len(paths),
+                        0,
+                        0,
+                        0,
+                        now,
+                        now,
+                    ),
                 )
                 work_items = []
                 for index, path in enumerate(paths, start=1):
@@ -861,105 +896,20 @@ class Workspace(
         ):
             if _job_id is not None:
                 self._check_job_cancelled(_job_id)
-            with self._connect() as conn:
-                conn.execute(
-                    """
-                    update batch_items
-                    set status = 'running', error_message = null, attempt = attempt + ?,
-                        updated_at = ?
-                    where id = ?
-                    """,
-                    (1 if _resume_batch_id else 0, _now(), item_id),
-                )
-            source: dict[str, Any] | None = None
-            created_source = existing_source_id is None
-
-            def discard_failed_source() -> None:
-                if created_source and source is not None:
-                    try:
-                        self._discard_uncommitted_source(source["id"])
-                    except Exception:
-                        pass
-
-            try:
-                source = (
-                    self.get_source(existing_source_id)
-                    if existing_source_id
-                    else self.add_source(project_id, str(path), storage_mode=storage_mode)
-                )
-                self.inspect_source(source["id"])
-                spec = self.suggest_mapping(source["id"], template_id=template_id)
-                mapping = self.save_mapping(project_id, source["id"], spec)
-                result = self.build_recording(
-                    project_id,
-                    source["id"],
-                    mapping_id=mapping["id"],
-                    template_id=template_id,
-                    output_name=f"{output_prefix}_{index:03d}",
-                    _manage_job=False,
-                    _cancel_check=(
-                        (lambda: self._check_job_cancelled(_job_id))
-                        if _job_id is not None
-                        else None
-                    ),
-                )
-                with self._connect() as conn:
-                    conn.execute(
-                        """
-                        update batch_items
-                        set source_id = ?, recording_id = ?, status = ?, error_message = ?, updated_at = ?
-                        where id = ?
-                        """,
-                        (source["id"], result["recording_id"], "succeeded", None, _now(), item_id),
-                    )
-            except JobCancelled:
-                discard_failed_source()
-                with self._connect() as conn:
-                    conn.execute(
-                        "update batch_items set status = 'pending', updated_at = ? where id = ?",
-                        (_now(), item_id),
-                    )
-                raise
-            except Exception as exc:
-                discard_failed_source()
-                with self._connect() as conn:
-                    conn.execute(
-                        """
-                        update batch_items
-                        set status = ?, error_message = ?, updated_at = ?
-                        where id = ?
-                        """,
-                        ("failed", str(exc), _now(), item_id),
-                    )
-
-            with self._connect() as conn:
-                counts = conn.execute(
-                    """
-                    select
-                      sum(case when status = 'succeeded' then 1 else 0 end) as succeeded,
-                      sum(case when status = 'failed' then 1 else 0 end) as failed
-                    from batch_items where batch_id = ?
-                    """,
-                    (batch_id,),
-                ).fetchone()
-                succeeded = int(counts["succeeded"] or 0)
-                failed = int(counts["failed"] or 0)
-                conn.execute(
-                    """
-                    update batch_jobs
-                    set succeeded = ?, failed = ?, status = ?, updated_at = ?
-                    where id = ?
-                    """,
-                    (
-                        succeeded,
-                        failed,
-                        "running"
-                        if succeeded + failed < len(paths)
-                        else ("failed" if failed else "succeeded"),
-                        _now(),
-                        batch_id,
-                    ),
-                )
+            self._process_batch_item(
+                project_id,
+                batch_id,
+                item_id,
+                index,
+                path,
+                existing_source_id,
+                template_id=template_id,
+                output_prefix=output_prefix,
+                storage_mode=storage_mode,
+                increment_attempt=bool(_resume_batch_id),
+                job_id=_job_id,
+            )
+            self._refresh_batch_counts(batch_id)
             if _job_id is not None:
                 self._update_job(
                     _job_id,
@@ -968,6 +918,272 @@ class Workspace(
                     stage="batch_import",
                 )
         return self.get_batch(batch_id)
+
+    def list_batches(
+        self,
+        project_id: str,
+        status: str | None = None,
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
+        self.get_project(project_id)
+        row_limit = max(1, min(int(limit), 1000))
+        conditions = ["project_id = ?"]
+        values: list[Any] = [project_id]
+        if status:
+            conditions.append("status = ?")
+            values.append(status)
+        values.append(row_limit)
+        with self._connect() as conn:
+            rows = conn.execute(
+                f"""
+                select * from batch_jobs
+                where {' and '.join(conditions)}
+                order by created_at desc
+                limit ?
+                """,
+                values,
+            ).fetchall()
+        return [_batch_from_row(row) for row in rows]
+
+    def retry_batch_item(self, batch_id: str, item_id: str) -> dict[str, Any]:
+        batch = self.get_batch(batch_id)
+        return self.enqueue_batch_item_retry(batch["project_id"], batch_id, item_id)
+
+    def cancel_batch_item(self, batch_id: str, item_id: str) -> dict[str, Any]:
+        batch = self.get_batch(batch_id)
+        item = next((row for row in batch["items"] if row["id"] == item_id), None)
+        if item is None:
+            raise KeyError(f"Batch item not found: {item_id}")
+        if item["status"] == "pending":
+            with self._connect() as conn:
+                conn.execute(
+                    """
+                    update batch_items
+                    set status = 'cancelled', cancel_requested_at = ?, updated_at = ?
+                    where id = ?
+                    """,
+                    (_now(), _now(), item_id),
+                )
+            self._refresh_batch_counts(batch_id)
+            return self.get_batch(batch_id)
+        if item["status"] == "running":
+            with self._connect() as conn:
+                conn.execute(
+                    """
+                    update batch_items
+                    set status = 'cancel_requested', cancel_requested_at = ?, updated_at = ?
+                    where id = ?
+                    """,
+                    (_now(), _now(), item_id),
+                )
+            return self.get_batch(batch_id)
+        if item["status"] == "cancel_requested":
+            return batch
+        raise ValueError(f"Only pending or running batch items can be cancelled: {item_id}")
+
+    def _execute_batch_item_retry(
+        self,
+        project_id: str,
+        batch_id: str,
+        item_id: str,
+        *,
+        _job_id: str | None = None,
+    ) -> dict[str, Any]:
+        batch = self.get_batch(batch_id)
+        if batch["project_id"] != project_id:
+            raise ValueError("Batch retry project does not match")
+        item = next((row for row in batch["items"] if row["id"] == item_id), None)
+        if item is None:
+            raise KeyError(f"Batch item not found: {item_id}")
+        if item["status"] not in {"failed", "cancelled"}:
+            raise ValueError(f"Only failed or cancelled batch items can be retried: {item_id}")
+        index = _batch_item_index(batch, item)
+        with self._connect() as conn:
+            conn.execute(
+                """
+                update batch_jobs set status = 'running', job_id = ?, updated_at = ?
+                where id = ?
+                """,
+                (_job_id, _now(), batch_id),
+            )
+        self._process_batch_item(
+            project_id,
+            batch_id,
+            item_id,
+            index,
+            Path(item["source_path"]),
+            item.get("source_id"),
+            template_id=batch.get("template_id") or "sensor_monitor",
+            output_prefix=batch.get("output_prefix") or "batch_run",
+            storage_mode=batch.get("storage_mode") or "copy",
+            increment_attempt=True,
+            job_id=_job_id,
+        )
+        self._refresh_batch_counts(batch_id)
+        return self.get_batch(batch_id)
+
+    def _process_batch_item(
+        self,
+        project_id: str,
+        batch_id: str,
+        item_id: str,
+        index: int,
+        path: Path,
+        existing_source_id: str | None,
+        *,
+        template_id: str,
+        output_prefix: str,
+        storage_mode: str,
+        increment_attempt: bool,
+        job_id: str | None,
+    ) -> None:
+        current_status = self._batch_item_status(item_id)
+        if current_status in {"cancelled", "cancel_requested"}:
+            self._mark_batch_item_cancelled(item_id)
+            return
+        with self._connect() as conn:
+            conn.execute(
+                """
+                update batch_items
+                set status = 'running', error_message = null,
+                    cancel_requested_at = null, attempt = attempt + ?,
+                    updated_at = ?
+                where id = ?
+                """,
+                (1 if increment_attempt else 0, _now(), item_id),
+            )
+        source: dict[str, Any] | None = None
+        created_source = existing_source_id is None
+
+        def discard_failed_source() -> None:
+            if created_source and source is not None:
+                try:
+                    self._discard_uncommitted_source(source["id"])
+                except Exception:
+                    pass
+
+        def check_cancelled() -> None:
+            if job_id is not None:
+                self._check_job_cancelled(job_id)
+            self._check_batch_item_cancelled(item_id)
+
+        try:
+            check_cancelled()
+            source = (
+                self.get_source(existing_source_id)
+                if existing_source_id
+                else self.add_source(project_id, str(path), storage_mode=storage_mode)
+            )
+            check_cancelled()
+            self.inspect_source(source["id"])
+            check_cancelled()
+            spec = self.suggest_mapping(source["id"], template_id=template_id)
+            mapping = self.save_mapping(project_id, source["id"], spec)
+            result = self.build_recording(
+                project_id,
+                source["id"],
+                mapping_id=mapping["id"],
+                template_id=template_id,
+                output_name=f"{output_prefix}_{index:03d}",
+                _manage_job=False,
+                _cancel_check=check_cancelled,
+            )
+            with self._connect() as conn:
+                conn.execute(
+                    """
+                    update batch_items
+                    set source_id = ?, recording_id = ?, status = ?, error_message = ?,
+                        cancel_requested_at = null, updated_at = ?
+                    where id = ?
+                    """,
+                    (source["id"], result["recording_id"], "succeeded", None, _now(), item_id),
+                )
+        except BatchItemCancelled:
+            discard_failed_source()
+            self._mark_batch_item_cancelled(item_id)
+        except JobCancelled:
+            discard_failed_source()
+            with self._connect() as conn:
+                conn.execute(
+                    "update batch_items set status = 'pending', updated_at = ? where id = ?",
+                    (_now(), item_id),
+                )
+            raise
+        except Exception as exc:
+            discard_failed_source()
+            with self._connect() as conn:
+                conn.execute(
+                    """
+                    update batch_items
+                    set status = ?, error_message = ?, updated_at = ?
+                    where id = ?
+                    """,
+                    ("failed", str(exc), _now(), item_id),
+                )
+
+    def _batch_item_status(self, item_id: str) -> str:
+        with self._connect() as conn:
+            row = conn.execute(
+                "select status from batch_items where id = ?",
+                (item_id,),
+            ).fetchone()
+        if row is None:
+            raise KeyError(f"Batch item not found: {item_id}")
+        return str(row["status"])
+
+    def _check_batch_item_cancelled(self, item_id: str) -> None:
+        if self._batch_item_status(item_id) in {"cancel_requested", "cancelled"}:
+            raise BatchItemCancelled(f"Batch item cancellation requested: {item_id}")
+
+    def _mark_batch_item_cancelled(self, item_id: str) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """
+                update batch_items
+                set status = 'cancelled', cancel_requested_at = coalesce(cancel_requested_at, ?),
+                    updated_at = ?
+                where id = ?
+                """,
+                (_now(), _now(), item_id),
+            )
+
+    def _refresh_batch_counts(self, batch_id: str) -> None:
+        with self._connect() as conn:
+            counts = conn.execute(
+                """
+                select
+                  count(*) as total,
+                  sum(case when status = 'succeeded' then 1 else 0 end) as succeeded,
+                  sum(case when status = 'failed' then 1 else 0 end) as failed,
+                  sum(case when status = 'cancelled' then 1 else 0 end) as cancelled,
+                  sum(case when status in ('pending', 'running', 'cancel_requested') then 1 else 0 end)
+                    as active
+                from batch_items where batch_id = ?
+                """,
+                (batch_id,),
+            ).fetchone()
+            total = int(counts["total"] or 0)
+            succeeded = int(counts["succeeded"] or 0)
+            failed = int(counts["failed"] or 0)
+            cancelled = int(counts["cancelled"] or 0)
+            active = int(counts["active"] or 0)
+            if active:
+                status = "running"
+            elif failed:
+                status = "failed"
+            elif cancelled:
+                status = "cancelled"
+            else:
+                status = "succeeded"
+            conn.execute(
+                """
+                update batch_jobs
+                set total = ?, succeeded = ?, failed = ?, cancelled = ?,
+                    status = ?, updated_at = ?
+                where id = ?
+                """,
+                (total, succeeded, failed, cancelled, status, _now(), batch_id),
+            )
 
     def get_batch(self, batch_id: str) -> dict[str, Any]:
         with self._connect() as conn:
@@ -978,6 +1194,79 @@ class Workspace(
             ).fetchall()
         if batch is None:
             raise KeyError(f"Batch not found: {batch_id}")
-        result = _row_to_dict(batch)
+        result = _batch_from_row(batch)
         result["items"] = [_row_to_dict(row) for row in items]
         return result
+
+
+def _build_artifact_info(
+    recording_path: Path,
+    blueprint_path: Path,
+    spec: MappingSpec,
+    template_id: str,
+    source_row: dict[str, Any],
+) -> dict[str, Any]:
+    _validate_rerun_artifact(recording_path, "recording")
+    _validate_rerun_artifact(blueprint_path, "blueprint")
+    return {
+        "recording_size_bytes": recording_path.stat().st_size,
+        "blueprint_size_bytes": blueprint_path.stat().st_size,
+        "app_id": spec.app_id,
+        "template_id": template_id,
+        "rerun_recording_id": spec.recording_id,
+        "source_type": source_row["type"],
+        "converter": _converter_id(str(source_row["type"])),
+        "rerun_version": _rerun_version(),
+    }
+
+
+def _batch_from_row(row: sqlite3.Row) -> dict[str, Any]:
+    result = _row_to_dict(row)
+    result["patterns"] = json.loads(result.pop("patterns_json") or "[]")
+    return result
+
+
+def _batch_item_index(batch: dict[str, Any], item: dict[str, Any]) -> int:
+    source_path = str(item.get("source_path") or "")
+    for index, path in enumerate(batch.get("patterns") or [], start=1):
+        if str(path) == source_path:
+            return index
+    for index, row in enumerate(batch.get("items") or [], start=1):
+        if row.get("id") == item.get("id"):
+            return index
+    return 1
+
+
+def _validate_rerun_artifact(path: Path, artifact_type: str) -> None:
+    if not path.is_file():
+        raise RerunArtifactError(
+            f"Rerun {artifact_type} artifact was not created: {path}",
+            [path],
+        )
+    if path.stat().st_size <= 0:
+        raise RerunArtifactError(
+            f"Rerun {artifact_type} artifact is empty: {path}",
+            [path],
+        )
+
+
+def _converter_id(source_type: str) -> str:
+    if source_type == "mcap":
+        return "rerun_mcap_cli"
+    if source_type == "ros2_db3":
+        return "ros2_db3_to_mcap_to_rerun_cli"
+    if source_type in {"csv", "jsonl", "text_table", "image_folder", "point_cloud"}:
+        return "rerun_python_sdk"
+    return "adapter_python"
+
+
+def _rerun_version() -> str:
+    try:
+        return version("rerun-sdk")
+    except PackageNotFoundError:
+        pass
+    try:
+        import rerun as rr
+    except Exception:
+        return "unknown"
+    return str(getattr(rr, "__version__", "unknown") or "unknown")

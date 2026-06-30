@@ -35,6 +35,7 @@ def test_workspace_mcap_build_uses_rerun_converter(tmp_path: Path, monkeypatch) 
     assert templates[0]["template_id"] == "robotics_debug"
     assert Path(result["recording_path"]).exists()
     assert Path(result["blueprint_path"]).exists()
+    assert result["artifact_info"]["converter"] == "rerun_mcap_cli"
 
 
 def test_api_mcap_flow(tmp_path: Path, monkeypatch) -> None:

@@ -45,10 +45,15 @@ import {
 } from "./i18n";
 import type {
   BatchResult,
+  BatchSummary,
   BuildResult,
+  DiagnosticExport,
+  DiagnosticExportResult,
+  DiagnosticPreset,
   DiagnosticReport,
   DiagnosticThresholds,
   Job,
+  JobSettings,
   MappingPayload,
   MappingDiff,
   MappingSuggestion,
@@ -80,6 +85,7 @@ export type { AreaErrors, ErrorArea } from "./app-support";
 
 const thresholdTemplates = new Set(["low_battery", "detection_failure"]);
 const TABLE_RENDER_LIMIT = 100;
+const JOB_SETTINGS_STORAGE_KEY = "datascope.jobSettings.maxWorkers";
 type RunOptions = {
   area?: ErrorArea | "global";
   retry?: () => void;
@@ -112,6 +118,11 @@ const semanticTypesByFamily: Record<string, string[]> = {
 };
 const timeUnits = ["auto", "relative_s", "unix_s", "unix_ms", "unix_us", "unix_ns", "datetime"];
 type CsvHeaderMode = "auto" | "header" | "no_header";
+
+function getInitialJobSettings(): JobSettings {
+  const stored = Number(window.localStorage.getItem(JOB_SETTINGS_STORAGE_KEY) || "1");
+  return { max_workers: Math.min(4, Math.max(1, Number.isFinite(stored) ? stored : 1)) };
+}
 
 function App() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -155,6 +166,10 @@ function App() {
   const [queryThreshold, setQueryThreshold] = useState("0.5");
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
   const [diagnosticReport, setDiagnosticReport] = useState<DiagnosticReport | null>(null);
+  const [diagnosticPresets, setDiagnosticPresets] = useState<DiagnosticPreset[]>([]);
+  const [diagnosticExports, setDiagnosticExports] = useState<DiagnosticExport[]>([]);
+  const [diagnosticExportResult, setDiagnosticExportResult] =
+    useState<DiagnosticExportResult | null>(null);
   const [apiStatus, setApiStatus] = useState<ApiStatus | null>(null);
   const [compareRecordingIds, setCompareRecordingIds] = useState("");
   const [compareMetric, setCompareMetric] = useState("battery");
@@ -163,6 +178,10 @@ function App() {
   const [batchOutputPrefix, setBatchOutputPrefix] = useState("batch_run");
   const [batchStorageMode, setBatchStorageMode] = useState<"copy" | "reference">("copy");
   const [batchResult, setBatchResult] = useState<BatchResult | null>(null);
+  const [batches, setBatches] = useState<BatchSummary[]>([]);
+  const [selectedBatch, setSelectedBatch] = useState<BatchResult | null>(null);
+  const [batchEstimate, setBatchEstimate] = useState("");
+  const [jobSettings, setJobSettings] = useState<JobSettings>(getInitialJobSettings);
   const [pluginPath, setPluginPath] = useState("");
   const [templatePath, setTemplatePath] = useState("");
   const [exportPath, setExportPath] = useState("");
@@ -228,22 +247,30 @@ function App() {
         logDiagnosticError("frontend.api_status", error);
       });
     }
+    void refreshJobSettings();
   }, []);
 
   useEffect(() => {
     if (selectedProjectId) {
       refreshProjectData(selectedProjectId, activeSection === "recordings");
+      if (activeSection === "diagnostics") {
+        refreshDiagnosticData(selectedProjectId);
+      }
     }
   }, [selectedProjectId]);
 
   useEffect(() => {
     setActiveBuildJobId("");
     setIsBuildSubmitting(false);
+    setSelectedBatch(null);
   }, [selectedProjectId]);
 
   useEffect(() => {
     if (selectedProjectId && ["recordings", "diagnostics"].includes(activeSection)) {
       refreshProjectData(selectedProjectId, true);
+    }
+    if (selectedProjectId && activeSection === "diagnostics") {
+      refreshDiagnosticData(selectedProjectId);
     }
     if (activeSection === "templates") {
       refreshExtensionData();
@@ -294,13 +321,18 @@ function App() {
           if (isBatchResult(job.result)) setBatchResult(job.result);
         });
 
-        const [recordingRows, sourceRows] = await Promise.all([
+        const selectedBatchId = selectedBatch?.id ?? "";
+        const [recordingRows, sourceRows, batchRows, selectedBatchRow] = await Promise.all([
           api.recordings(selectedProjectId),
-          api.sources(selectedProjectId)
+          api.sources(selectedProjectId),
+          api.batches(selectedProjectId),
+          selectedBatchId ? api.batch(selectedBatchId) : Promise.resolve(null)
         ]);
         if (!disposed) {
           setRecordings(recordingRows);
           setProjectSources(sourceRows);
+          setBatches(batchRows);
+          if (selectedBatchRow) setSelectedBatch(selectedBatchRow);
         }
       } catch {
         // The regular refresh path surfaces connectivity errors; polling stays quiet.
@@ -315,7 +347,7 @@ function App() {
       disposed = true;
       window.clearInterval(timer);
     };
-  }, [selectedProjectId]);
+  }, [selectedProjectId, selectedBatch?.id]);
 
   function clearAreaError(area: ErrorArea) {
     setAreaErrors((current) => clearErrorAreaState(current, area));
@@ -382,13 +414,14 @@ function App() {
     const result = await run(
       t("busyRefreshingWorkspace"),
       async () => {
-        const [recordingRows, jobRows, sourceRows] = await Promise.all([
+        const [recordingRows, jobRows, sourceRows, batchRows] = await Promise.all([
           api.recordings(projectId),
           api.jobs(projectId),
-          api.sources(projectId)
+          api.sources(projectId),
+          api.batches(projectId)
         ]);
         const templatesRows = includeQueryTemplates ? await api.queryTemplates(projectId) : null;
-        return { recordingRows, jobRows, sourceRows, templatesRows };
+        return { recordingRows, jobRows, sourceRows, batchRows, templatesRows };
       },
       {
         retry: () => void refreshProjectData(projectId, includeQueryTemplates)
@@ -398,6 +431,10 @@ function App() {
       setRecordings(result.recordingRows);
       setJobs(result.jobRows);
       setProjectSources(result.sourceRows);
+      setBatches(result.batchRows);
+      if (selectedBatch && !result.batchRows.some((batch) => batch.id === selectedBatch.id)) {
+        setSelectedBatch(null);
+      }
       setDiffLeftSourceId((current) =>
         result.sourceRows.some((item) => item.id === current)
           ? current
@@ -415,6 +452,48 @@ function App() {
         }
       }
     }
+    return result !== null;
+  }
+
+  async function refreshDiagnosticData(projectId = selectedProjectId): Promise<boolean> {
+    if (!projectId) return true;
+    const result = await run(
+      t("busyRefreshingWorkspace"),
+      async () => {
+        const [presetRows, exportRows] = await Promise.all([
+          api.diagnosticPresets(projectId),
+          api.diagnosticExports(projectId)
+        ]);
+        return { presetRows, exportRows };
+      },
+      {
+        retry: () => void refreshDiagnosticData(projectId)
+      }
+    );
+    if (result) {
+      setDiagnosticPresets(result.presetRows);
+      setDiagnosticExports(result.exportRows);
+    }
+    return result !== null;
+  }
+
+  async function refreshJobSettings(): Promise<boolean> {
+    const result = await run(
+      t("busyRefreshingWorkspace"),
+      async () => {
+        const remote = await api.jobSettings();
+        const stored = getInitialJobSettings();
+        if (stored.max_workers !== remote.max_workers) {
+          return api.updateJobSettings(stored.max_workers);
+        }
+        return remote;
+      },
+      {
+        area: "settings",
+        retry: () => void refreshJobSettings()
+      }
+    );
+    if (result) setJobSettings(result);
     return result !== null;
   }
 
@@ -1053,15 +1132,34 @@ function App() {
 
   async function runDiagnostics(
     recordingIds: string[],
-    thresholds: DiagnosticThresholds
+    thresholds: DiagnosticThresholds,
+    preset = "balanced"
   ) {
     if (!selectedProjectId) return;
     const result = await run(
       t("busyRunningDiagnostics"),
-      () => api.diagnostics(selectedProjectId, recordingIds, thresholds),
+      () => api.diagnostics(selectedProjectId, recordingIds, thresholds, preset),
       { area: "diagnostics" }
     );
     if (result) setDiagnosticReport(result);
+  }
+
+  async function exportDiagnostics(
+    recordingIds: string[],
+    thresholds: DiagnosticThresholds,
+    preset: string,
+    format: "json" | "csv" | "html"
+  ) {
+    if (!selectedProjectId) return;
+    const result = await run(
+      t("busyExportingDiagnostics"),
+      () => api.exportDiagnostics(selectedProjectId, recordingIds, thresholds, preset, format),
+      { area: "diagnostics" }
+    );
+    if (result) {
+      setDiagnosticExportResult(result);
+      await refreshDiagnosticData(selectedProjectId);
+    }
   }
 
   async function installPlugin() {
@@ -1092,10 +1190,7 @@ function App() {
 
   async function runBatchImport() {
     if (!selectedProjectId || !batchPattern.trim()) return;
-    const patterns = batchPattern
-      .split("\n")
-      .map((value) => value.trim())
-      .filter(Boolean);
+    const patterns = parseBatchPatterns();
     const result = await run(
       t("busyRunningBatch"),
       () =>
@@ -1111,6 +1206,81 @@ function App() {
     if (result) {
       setJobs((current) => [result, ...current.filter((job) => job.id !== result.id)]);
       setBatchResult(null);
+      setBatchEstimate("");
+      await refreshProjectData(selectedProjectId);
+    }
+  }
+
+  function parseBatchPatterns() {
+    return batchPattern
+      .split("\n")
+      .map((value) => value.trim())
+      .filter(Boolean);
+  }
+
+  async function estimateBatchImport() {
+    if (!selectedProjectId || !batchPattern.trim()) return;
+    const result = await run(
+      t("busyEstimatingBatch"),
+      () => api.estimateBatchImport(selectedProjectId, parseBatchPatterns(), batchStorageMode),
+      { area: "batch" }
+    );
+    if (result) {
+      const free = result.free === null ? "-" : result.free.toLocaleString();
+      setBatchEstimate(
+        `${result.required.toLocaleString()} bytes required / ${free} bytes free (${result.confidence})`
+      );
+    }
+  }
+
+  async function selectBatch(batchId: string) {
+    if (!batchId) {
+      setSelectedBatch(null);
+      return;
+    }
+    const result = await run(
+      t("busyRefreshingWorkspace"),
+      () => api.batch(batchId),
+      { area: "batch" }
+    );
+    if (result) setSelectedBatch(result);
+  }
+
+  async function retryBatchItem(batchId: string, itemId: string) {
+    const result = await run(
+      t("busyRetryingJob"),
+      () => api.retryBatchItem(batchId, itemId),
+      { area: "batch" }
+    );
+    if (result) {
+      setJobs((current) => [result, ...current.filter((job) => job.id !== result.id)]);
+      await refreshProjectData(selectedProjectId);
+      await selectBatch(batchId);
+    }
+  }
+
+  async function cancelBatchItem(batchId: string, itemId: string) {
+    const result = await run(
+      t("busyCancellingJob"),
+      () => api.cancelBatchItem(batchId, itemId),
+      { area: "batch" }
+    );
+    if (result) {
+      setSelectedBatch(result);
+      await refreshProjectData(selectedProjectId);
+    }
+  }
+
+  async function updateMaxWorkers(maxWorkers: number) {
+    const next = Math.min(4, Math.max(1, maxWorkers));
+    const result = await run(
+      t("busySavingSettings"),
+      () => api.updateJobSettings(next),
+      { area: "settings" }
+    );
+    if (result) {
+      window.localStorage.setItem(JOB_SETTINGS_STORAGE_KEY, String(result.max_workers));
+      setJobSettings(result);
     }
   }
 
@@ -1516,10 +1686,18 @@ function App() {
               selectedProjectId={selectedProjectId}
               recordings={recordings}
               report={diagnosticReport}
+              presets={diagnosticPresets}
+              exports={diagnosticExports}
+              exportResult={diagnosticExportResult}
               isBusy={isBusy}
               errors={areaErrors}
               t={t}
-              onRun={(recordingIds, thresholds) => void runDiagnostics(recordingIds, thresholds)}
+              onRun={(recordingIds, thresholds, preset) =>
+                void runDiagnostics(recordingIds, thresholds, preset)
+              }
+              onExport={(recordingIds, thresholds, preset, format) =>
+                void exportDiagnostics(recordingIds, thresholds, preset, format)
+              }
             />
           )}
 
@@ -1530,6 +1708,10 @@ function App() {
             batchOutputPrefix={batchOutputPrefix}
             batchStorageMode={batchStorageMode}
             batchResult={batchResult}
+            batches={batches}
+            selectedBatch={selectedBatch}
+            batchEstimate={batchEstimate}
+            jobSettings={jobSettings}
             pluginPath={pluginPath}
             templatePath={templatePath}
             mappingTemplates={mappingTemplates}
@@ -1563,6 +1745,10 @@ function App() {
             }}
             onBatchStorageModeChange={setBatchStorageMode}
             onRunBatch={() => void runBatchImport()}
+            onEstimateBatch={() => void estimateBatchImport()}
+            onSelectBatch={(batchId) => void selectBatch(batchId)}
+            onRetryBatchItem={(batchId, itemId) => void retryBatchItem(batchId, itemId)}
+            onCancelBatchItem={(batchId, itemId) => void cancelBatchItem(batchId, itemId)}
             onPluginPathChange={(value) => {
               setPluginPath(value);
               clearAreaError("extensions");
@@ -1604,6 +1790,7 @@ function App() {
               clearAreaError("settings");
             }}
             onChooseArtifactFolder={() => void chooseArtifactFolder("settings")}
+            onJobSettingsChange={(maxWorkers) => void updateMaxWorkers(maxWorkers)}
           />
         </section>
       </div>

@@ -1,8 +1,10 @@
 import {
+  Ban,
   Database,
   Download,
   FolderOpen,
   ListChecks,
+  RefreshCcw,
   Save,
   Settings,
   Upload,
@@ -13,6 +15,8 @@ import type { ApiError } from "./api";
 import { languageOptions, type Language, type TranslationKey } from "./i18n";
 import type {
   BatchResult,
+  BatchSummary,
+  JobSettings,
   MappingTemplateItem,
   Plugin,
   TemplateRegistryItem
@@ -36,6 +40,10 @@ type ExtensionsSectionsProps = {
   batchOutputPrefix: string;
   batchStorageMode: "copy" | "reference";
   batchResult: BatchResult | null;
+  batches: BatchSummary[];
+  selectedBatch: BatchResult | null;
+  batchEstimate: string;
+  jobSettings: JobSettings;
   pluginPath: string;
   templatePath: string;
   mappingTemplates: MappingTemplateItem[];
@@ -63,6 +71,10 @@ type ExtensionsSectionsProps = {
   onBatchOutputPrefixChange: (value: string) => void;
   onBatchStorageModeChange: (value: "copy" | "reference") => void;
   onRunBatch: () => void;
+  onEstimateBatch: () => void;
+  onSelectBatch: (batchId: string) => void;
+  onRetryBatchItem: (batchId: string, itemId: string) => void;
+  onCancelBatchItem: (batchId: string, itemId: string) => void;
   onPluginPathChange: (value: string) => void;
   onInstallPlugin: () => void;
   onTemplatePathChange: (value: string) => void;
@@ -80,6 +92,7 @@ type ExtensionsSectionsProps = {
   onChooseExportFolder: () => void;
   onDefaultArtifactDirChange: (value: string) => void;
   onChooseArtifactFolder: () => void;
+  onJobSettingsChange: (maxWorkers: number) => void;
 };
 
 export function ExtensionsSections(props: ExtensionsSectionsProps) {
@@ -126,11 +139,24 @@ function TemplatesSection(props: ExtensionsSectionsProps) {
               <Upload size={16} />
               {props.t("runBatch")}
             </button>
+            <button
+              type="button"
+              onClick={props.onEstimateBatch}
+              disabled={!props.selectedProjectId || !props.batchPattern.trim() || props.isBusy}
+            >
+              <Database size={16} />
+              {props.t("estimateDisk")}
+            </button>
           </div>
           <InlineError error={props.batchError} t={props.t} />
+          {props.batchEstimate && (
+            <p className="path-line light">
+              {props.t("diskEstimate")}: {props.batchEstimate}
+            </p>
+          )}
           {props.batchResult && (
             <p className="path-line light">
-              {props.batchResult.id}: {props.batchResult.succeeded}/{props.batchResult.total} succeeded
+              {props.batchResult.id}: {props.batchResult.succeeded}/{props.batchResult.total} {props.t("succeeded")}
             </p>
           )}
         </section>
@@ -164,6 +190,102 @@ function TemplatesSection(props: ExtensionsSectionsProps) {
           <InlineError error={props.extensionsError} t={props.t} />
         </section>
       </div>
+
+      <section className="card">
+        <CardHeader
+          icon={<ListChecks size={18} />}
+          title={props.t("batchManagement")}
+          subtitle={`${props.batches.length} ${props.t("batches")}`}
+        />
+        {props.batches.length ? (
+          <>
+            <div className="batch-manager-controls">
+              <select
+                aria-label={props.t("batch")}
+                value={props.selectedBatch?.id ?? ""}
+                onChange={(event) => props.onSelectBatch(event.target.value)}
+              >
+                <option value="">{props.t("selectBatch")}</option>
+                {props.batches.map((batch) => (
+                  <option key={batch.id} value={batch.id}>
+                    {batch.id} / {batch.status} / {batch.succeeded + batch.failed + batch.cancelled}/{batch.total}
+                  </option>
+                ))}
+              </select>
+              {props.selectedBatch && (
+                <div className="chip-row">
+                  <span className="status-badge neutral">{props.selectedBatch.status}</span>
+                  <span className="chip">{props.t("succeeded")}: {props.selectedBatch.succeeded}</span>
+                  <span className="chip">{props.t("failed")}: {props.selectedBatch.failed}</span>
+                  <span className="chip">{props.t("cancelled")}: {props.selectedBatch.cancelled}</span>
+                  {props.selectedBatch.job_id && (
+                    <span className="chip">{props.t("job")}: {props.selectedBatch.job_id}</span>
+                  )}
+                </div>
+              )}
+            </div>
+            {props.selectedBatch ? (
+              <div className="table-wrap responsive-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>{props.t("source")}</th>
+                      <th>{props.t("recording")}</th>
+                      <th>{props.t("status")}</th>
+                      <th>{props.t("attempt")}</th>
+                      <th>{props.t("message")}</th>
+                      <th>{props.t("action")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {props.selectedBatch.items.map((item) => {
+                      const canRetry = item.status === "failed" || item.status === "cancelled";
+                      const canCancel = item.status === "pending" || item.status === "running";
+                      return (
+                        <tr key={item.id}>
+                          <td data-label={props.t("source")}>{item.source_path}</td>
+                          <td data-label={props.t("recording")}>{item.recording_id ?? "-"}</td>
+                          <td data-label={props.t("status")}>{item.status}</td>
+                          <td data-label={props.t("attempt")}>{item.attempt}</td>
+                          <td data-label={props.t("message")}>{item.error_message ?? "-"}</td>
+                          <td data-label={props.t("action")}>
+                            <div className="inline-actions compact">
+                              <button
+                                type="button"
+                                disabled={!canRetry || props.isBusy}
+                                onClick={() =>
+                                  props.onRetryBatchItem(props.selectedBatch!.id, item.id)
+                                }
+                              >
+                                <RefreshCcw size={16} />
+                                {props.t("retry")}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={!canCancel || props.isBusy}
+                                onClick={() =>
+                                  props.onCancelBatchItem(props.selectedBatch!.id, item.id)
+                                }
+                              >
+                                <Ban size={16} />
+                                {props.t("cancelJob")}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <EmptyState text={props.t("selectBatch")} />
+            )}
+          </>
+        ) : (
+          <EmptyState text={props.t("batchEmpty")} />
+        )}
+      </section>
 
       <section className="card mapping-template-manager">
         <CardHeader
@@ -342,6 +464,23 @@ function SettingsSection(props: ExtensionsSectionsProps) {
               </button>
             ))}
           </div>
+        </div>
+        <div className="settings-block">
+          <div>
+            <strong>{props.t("jobConcurrency")}</strong>
+            <span>{props.t("jobConcurrencySubtitle")}</span>
+          </div>
+          <select
+            aria-label={props.t("maxWorkers")}
+            value={props.jobSettings.max_workers}
+            onChange={(event) => props.onJobSettingsChange(Number(event.target.value))}
+          >
+            {[1, 2, 3, 4].map((value) => (
+              <option key={value} value={value}>
+                {value}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="settings-block vertical">
           <div>

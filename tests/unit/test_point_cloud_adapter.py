@@ -1,7 +1,11 @@
 import struct
 from pathlib import Path
 
-from datascope_core.adapters.point_cloud_adapter import PointCloudAdapter, read_point_cloud_points
+from datascope_core.adapters.point_cloud_adapter import (
+    PointCloudAdapter,
+    read_point_cloud_frame,
+    read_point_cloud_points,
+)
 from datascope_core.mapping import suggest_mapping
 from datascope_core.models import detect_source_type
 from datascope_core.query import build_query_rows
@@ -65,6 +69,7 @@ def test_read_binary_little_endian_ply_with_extra_fields_and_nan(tmp_path: Path)
         [1.5, 2.5, 3.5],
         [-1.0, -2.0, -3.0],
     ]
+    assert read_point_cloud_frame(path).colors == [[10, 20, 30], [70, 80, 90]]
 
     source = PointCloudAdapter().inspect(str(path))
     assert source.metadata["sampled"][0]["point_count"] == 3
@@ -92,6 +97,36 @@ def test_read_binary_pcd_points_with_extra_field_and_nan(tmp_path: Path) -> None
     assert source.metadata["sampled"][0]["warning"] is None
 
 
+def test_read_ascii_pcd_frame_with_explicit_rgb_fields(tmp_path: Path) -> None:
+    path = tmp_path / "cloud_rgb.pcd"
+    path.write_text(
+        "\n".join(
+            [
+                "# .PCD v0.7 - Point Cloud Data file format",
+                "VERSION 0.7",
+                "FIELDS x y z r g b",
+                "SIZE 4 4 4 1 1 1",
+                "TYPE F F F U U U",
+                "COUNT 1 1 1 1 1 1",
+                "WIDTH 3",
+                "HEIGHT 1",
+                "POINTS 3",
+                "DATA ascii",
+                "1 2 3 10 20 30",
+                "nan 4 5 40 50 60",
+                "-1 -2 -3 70 80 90",
+            ]
+        )
+        + "\n",
+        encoding="ascii",
+    )
+
+    frame = read_point_cloud_frame(path)
+
+    assert frame.points == [[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]
+    assert frame.colors == [[10, 20, 30], [70, 80, 90]]
+
+
 def test_read_text_point_cloud_formats(tmp_path: Path) -> None:
     xyz_path = tmp_path / "cloud.xyz"
     xyz_path.write_text(
@@ -117,6 +152,21 @@ def test_read_text_point_cloud_formats(tmp_path: Path) -> None:
     assert source.metadata["formats"] == ["xyz"]
     assert source.metadata["sampled"][0]["point_count"] == 2
     assert preview["rows"][0]["bounds"] == {"min": [0.0, 1.0, 2.0], "max": [3.0, 4.0, 5.0]}
+
+
+def test_read_xyzrgb_frame_preserves_colors(tmp_path: Path) -> None:
+    path = tmp_path / "cloud.xyzrgb"
+    path.write_text(
+        "0 1 2 255 0 0\n"
+        "bad row\n"
+        "3 4 5 0 255 0\n",
+        encoding="utf-8",
+    )
+
+    frame = read_point_cloud_frame(path)
+
+    assert frame.points == [[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]]
+    assert frame.colors == [[255, 0, 0], [0, 255, 0]]
 
 
 def _make_point_cloud_fixture(tmp_path: Path) -> Path:

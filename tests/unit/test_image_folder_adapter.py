@@ -1,11 +1,13 @@
 import json
+import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 from PIL import Image
 
 from datascope_core.adapters.image_folder_adapter import ImageFolderAdapter
 from datascope_core.mapping import suggest_mapping
-from datascope_core.models import detect_source_type
+from datascope_core.models import ConvertRequest, detect_source_type
 from datascope_core.templates import match_templates
 
 
@@ -101,6 +103,70 @@ def test_single_gif_image_is_supported_source(tmp_path: Path) -> None:
     assert detect_source_type(image_path) == "image_folder"
     assert source.metadata["image_count"] == 1
     assert source.metadata["sampled_dimensions"]["frame_002.gif"] == {"width": 24, "height": 18}
+
+
+def test_image_folder_convert_logs_stable_score_paths(tmp_path: Path, monkeypatch) -> None:
+    image_dir = _make_cv_fixture(tmp_path)
+    adapter = ImageFolderAdapter()
+    source = adapter.inspect(str(image_dir), source_id="source_cv")
+    streams = adapter.infer_streams(source)
+    spec = suggest_mapping(source, streams, template_id="cv_detection")
+    recorder = FakeRerunRecording()
+    monkeypatch.setitem(sys.modules, "rerun", FakeRerun(recorder))
+
+    adapter.convert(
+        ConvertRequest(
+            source=source,
+            mappings=spec.streams,
+            output_rrd=str(tmp_path / "cv.rrd"),
+            app_id=spec.app_id,
+            recording_id=spec.recording_id,
+        )
+    )
+
+    logged_paths = [path for path, _, _ in recorder.logs]
+    assert "/camera/pred/scores" in logged_paths
+    assert "/camera/pred/scores/min" in logged_paths
+    assert "/camera/pred/scores/mean" in logged_paths
+
+
+class FakeRerunRecording:
+    def __init__(self) -> None:
+        self.logs = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args) -> None:
+        return None
+
+    def save(self, path: str) -> None:
+        Path(path).write_bytes(b"fake rrd")
+
+    def send_recording_name(self, recording_id: str) -> None:
+        self.recording_id = recording_id
+
+    def set_time(self, timeline: str, **kwargs) -> None:
+        self.time = (timeline, kwargs)
+
+    def log(self, path: str, value, static: bool = False) -> None:
+        self.logs.append((path, value, static))
+
+
+class FakeRerun(SimpleNamespace):
+    def __init__(self, recorder: FakeRerunRecording) -> None:
+        super().__init__(
+            RecordingStream=lambda *args, **kwargs: recorder,
+            EncodedImage=lambda **kwargs: ("EncodedImage", kwargs),
+            AnnotationContext=lambda value: ("AnnotationContext", value),
+            AnnotationInfo=lambda *args: ("AnnotationInfo", args),
+            ClassDescription=lambda **kwargs: ("ClassDescription", kwargs),
+            Boxes2D=lambda **kwargs: ("Boxes2D", kwargs),
+            Box2DFormat=SimpleNamespace(XYWH="XYWH"),
+            Points2D=lambda *args, **kwargs: ("Points2D", args, kwargs),
+            SegmentationImage=lambda value: ("SegmentationImage", value),
+            Scalars=lambda value: ("Scalars", value),
+        )
 
 
 def _make_cv_fixture(tmp_path: Path) -> Path:

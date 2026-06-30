@@ -1,7 +1,7 @@
 {
   "name": "datascope-studio-desktop",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.3.1",
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "runtime:build": "python ../../packaging/runtime/build_runtime.py --output src-tauri/resources/datascope-runtime",
     "runtime:build:dev": "python ../../packaging/runtime/build_runtime.py --output src-tauri/resources/datascope-runtime --use-current-python",
+    "clean:local": "python ../../packaging/dev/clean_local_artifacts.py",
     "tauri:dev": "bash scripts/run-desktop.sh",
     "tauri:dev:safe": "DATASCOPE_SAFE_GRAPHICS=1 bash scripts/run-desktop.sh",
     "tauri:build": "python ../../packaging/runtime/build_tauri.py",

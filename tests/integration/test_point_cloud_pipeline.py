@@ -29,6 +29,8 @@ def test_workspace_point_cloud_to_rerun_artifacts(tmp_path: Path) -> None:
     assert templates[0]["template_id"] == "robotics_debug"
     assert Path(result["recording_path"]).exists()
     assert Path(result["blueprint_path"]).exists()
+    assert result["artifact_info"]["converter"] == "rerun_python_sdk"
+    assert result["artifact_info"]["recording_size_bytes"] > 0
 
 
 def test_workspace_defaults_artifact_names_to_source_folder(tmp_path: Path) -> None:

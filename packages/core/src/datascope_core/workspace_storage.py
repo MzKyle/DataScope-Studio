@@ -222,6 +222,36 @@ class WorkspaceStorageMixin:
             warnings=warnings,
         )
 
+    def estimate_batch_import(
+        self,
+        project_id: str,
+        patterns: list[str],
+        storage_mode: str = "copy",
+    ) -> dict[str, Any]:
+        project = self.get_project(project_id)
+        if storage_mode not in {"copy", "reference"}:
+            raise ValueError(f"Unsupported storage mode: {storage_mode}")
+        from datascope_core.workspace_utils import resolve_patterns
+
+        paths = resolve_patterns(patterns)
+        if not paths:
+            raise ValueError("Batch import did not match any source paths")
+        estimated = 0
+        warnings: list[str] = []
+        for path in paths:
+            if storage_mode == "copy":
+                estimated += source_size(path)
+            estimated += max(source_size(path) * 2, 64 * 1024 * 1024)
+        if storage_mode == "reference":
+            warnings.append("Reference mode does not reserve space for external sources.")
+        return disk_estimate(
+            "batch_import",
+            estimated,
+            Path(project["workspace_path"]),
+            confidence="medium",
+            warnings=warnings,
+        )
+
     def estimate_project_export(
         self,
         project_id: str,

@@ -221,6 +221,17 @@ export function formatDateTime(value: string, language: Language) {
   });
 }
 
+export function formatBytes(value: number) {
+  if (!Number.isFinite(value) || value < 0) return "-";
+  if (value < 1024) return `${value} B`;
+  let current = value;
+  for (const unit of ["KiB", "MiB", "GiB", "TiB"]) {
+    current /= 1024;
+    if (current < 1024 || unit === "TiB") return `${current.toFixed(1)} ${unit}`;
+  }
+  return `${value} B`;
+}
+
 export function renderLimitText(language: Language, shown: number, total: number) {
   return language === "zh" ? `已显示 ${shown} / 共 ${total} 条` : `Showing ${shown} of ${total}`;
 }

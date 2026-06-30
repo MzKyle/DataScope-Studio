@@ -35,6 +35,8 @@ def test_workspace_text_log_to_rerun_artifacts_and_query_index(tmp_path: Path) -
     assert any(stream["semantic_type"] == "text_log" for stream in inspection["streams"])
     assert Path(result["recording_path"]).exists()
     assert Path(result["blueprint_path"]).exists()
+    assert result["artifact_info"]["converter"] == "rerun_python_sdk"
+    assert result["artifact_info"]["recording_size_bytes"] > 0
     assert any("ERROR motor stalled" in str(row["value"]) for row in query_result["rows"])
 
 

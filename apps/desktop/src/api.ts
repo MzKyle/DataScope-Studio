@@ -3,9 +3,13 @@ import { invoke } from "@tauri-apps/api/core";
 import { apiErrorLogContext, logDiagnostic } from "./diagnostic-log";
 import type {
   DiagnosticReport,
+  DiagnosticExport,
+  DiagnosticExportResult,
+  DiagnosticPreset,
   DiagnosticThresholds,
   DiskEstimate,
   Job,
+  JobSettings,
   MappingPayload,
   MappingDiff,
   MappingTemplateItem,
@@ -21,6 +25,8 @@ import type {
   Source,
   SchemaProfile,
   StreamInfo,
+  BatchResult,
+  BatchSummary,
   TemplateMatch,
   TemplateRegistryItem
 } from "./types";
@@ -268,6 +274,12 @@ export const api = {
   recordings: (projectId: string) => request<Recording[]>(`/api/projects/${projectId}/recordings`),
   jobs: (projectId: string) => request<Job[]>(`/api/projects/${projectId}/jobs`),
   job: (jobId: string) => request<Job>(`/api/jobs/${jobId}`),
+  jobSettings: () => request<JobSettings>("/api/jobs/settings"),
+  updateJobSettings: (maxWorkers: number) =>
+    request<JobSettings>("/api/jobs/settings", {
+      method: "PATCH",
+      body: JSON.stringify({ max_workers: maxWorkers })
+    }),
   cancelJob: (jobId: string) =>
     request<Job>(`/api/jobs/${jobId}/cancel`, { method: "POST" }),
   retryJob: (jobId: string) =>
@@ -317,6 +329,7 @@ export const api = {
     projectId: string,
     recordingIds: string[],
     thresholds: DiagnosticThresholds,
+    preset = "balanced",
     limit = 1000
   ) =>
     request<DiagnosticReport>(`/api/projects/${projectId}/diagnostics`, {
@@ -324,6 +337,29 @@ export const api = {
       body: JSON.stringify({
         recording_ids: recordingIds.length ? recordingIds : null,
         thresholds,
+        preset,
+        limit
+      })
+    }),
+  diagnosticPresets: (projectId: string) =>
+    request<DiagnosticPreset[]>(`/api/projects/${projectId}/diagnostics/presets`),
+  diagnosticExports: (projectId: string) =>
+    request<DiagnosticExport[]>(`/api/projects/${projectId}/diagnostics/exports`),
+  exportDiagnostics: (
+    projectId: string,
+    recordingIds: string[],
+    thresholds: DiagnosticThresholds,
+    preset = "balanced",
+    format = "json",
+    limit = 1000
+  ) =>
+    request<DiagnosticExportResult>(`/api/projects/${projectId}/diagnostics/export`, {
+      method: "POST",
+      body: JSON.stringify({
+        recording_ids: recordingIds.length ? recordingIds : null,
+        thresholds,
+        preset,
+        format,
         limit
       })
     }),
@@ -416,6 +452,26 @@ export const api = {
         output_prefix: outputPrefix,
         storage_mode: storageMode
       })
+    }),
+  batches: (projectId: string) =>
+    request<BatchSummary[]>(`/api/projects/${projectId}/batches`),
+  batch: (batchId: string) => request<BatchResult>(`/api/batch/${batchId}`),
+  estimateBatchImport: (
+    projectId: string,
+    patterns: string[],
+    storageMode: "copy" | "reference" = "copy"
+  ) =>
+    request<DiskEstimate>(`/api/projects/${projectId}/estimates/batch-import`, {
+      method: "POST",
+      body: JSON.stringify({ patterns, storage_mode: storageMode })
+    }),
+  retryBatchItem: (batchId: string, itemId: string) =>
+    request<Job>(`/api/batch/${batchId}/items/${itemId}/retry`, {
+      method: "POST"
+    }),
+  cancelBatchItem: (batchId: string, itemId: string) =>
+    request<BatchResult>(`/api/batch/${batchId}/items/${itemId}/cancel`, {
+      method: "POST"
     }),
   compare: (
     projectId: string,

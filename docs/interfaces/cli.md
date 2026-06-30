@@ -38,6 +38,7 @@ datascope mapping template export robot_sensor --out ./exports/
 ```bash
 datascope query --project demo --template low_battery --threshold 0.2
 datascope export-query --project demo --template find_errors --format csv --out errors.csv
+datascope diagnose --project demo --preset strict --format html --out ./exports/diagnostics.html
 datascope compare <recording_id...> --project demo --metric battery
 ```
 

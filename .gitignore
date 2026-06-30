@@ -12,6 +12,7 @@ Thumbs.db
 .venv/
 venv/
 .tooling/
+.cache/
 
 # Python
 __pycache__/

@@ -5,10 +5,12 @@
 Job 状态固定为：
 
 ```text
-pending | running | succeeded | failed
+pending | running | cancel_requested | cancelled | succeeded | failed | interrupted
 ```
 
-转换、批量导入、导出等长任务都会登记到 `jobs` 或 batch 表中，供桌面端和 CLI 查询。
+转换、批量导入、单项批量重试等长任务都会登记到 `jobs` 或 batch 表中，
+供桌面端和 CLI 查询。`cancel_requested` 表示正在等待 worker 协作退出；
+`interrupted` 表示应用重启时发现原 worker 已不存在。
 
 ## Source 生命周期
 
@@ -30,7 +32,10 @@ imported -> inspected -> mapped -> converted
 | `mapping_template_registry` | 工作区全局 Mapping 模板 |
 | `recordings` | `.rrd`、`.rbl`、tags、params |
 | `jobs` | 转换和后台任务 |
+| `batch_jobs` / `batch_items` | 批量导入任务和单项状态 |
 | `query_rows` | 本地查询索引 |
 | `query_exports` | 查询导出记录 |
+| `diagnostic_exports` | 持久化诊断报告导出记录 |
 
-v0.2.0 扩展还包含 plugin、template、batch job 和持久化后台任务相关表。
+plugin、template、batch job、diagnostic export 和持久化后台任务相关表均属于
+本地 catalog。

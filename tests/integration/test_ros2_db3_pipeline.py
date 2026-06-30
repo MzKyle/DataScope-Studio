@@ -58,6 +58,7 @@ def test_workspace_ros2_db3_file_build_and_query(
     assert any(issue["code"] == "ros2_topics_skipped" for issue in validation["warnings"])
     assert Path(result["recording_path"]).name == "robot_run.rrd"
     assert Path(result["blueprint_path"]).name == "robot_run.rbl"
+    assert result["artifact_info"]["converter"] == "ros2_db3_to_mcap_to_rerun_cli"
     assert any(
         row["value"].get("message_type") == "acme_msgs/msg/Unknown"
         and row["value"].get("convertible") is False

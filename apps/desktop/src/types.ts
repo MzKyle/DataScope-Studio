@@ -192,6 +192,27 @@ export type BuildResult = {
   recording_id: string;
   recording_path: string;
   blueprint_path: string;
+  artifact_info?: RerunArtifactInfo;
+};
+
+export type RerunArtifactInfo = {
+  recording_size_bytes: number;
+  blueprint_size_bytes: number;
+  app_id: string;
+  template_id: string;
+  rerun_recording_id: string;
+  source_type: string;
+  converter: string;
+  rerun_version: string;
+};
+
+export type RerunArtifactStatus = {
+  status: "ready" | "missing" | "empty";
+  message: string;
+  recording_path: string;
+  blueprint_path?: string | null;
+  recording_size_bytes?: number | null;
+  blueprint_size_bytes?: number | null;
 };
 
 export type TemplateMatch = {
@@ -212,7 +233,8 @@ export type Recording = {
   blueprint_path?: string | null;
   run_name: string;
   tags: string[];
-  params: Record<string, unknown>;
+  params: Record<string, unknown> & { rerun_artifact?: RerunArtifactInfo };
+  artifact_status?: RerunArtifactStatus;
   created_at: string;
 };
 
@@ -252,7 +274,7 @@ export type Job = {
 };
 
 export type DiskEstimate = {
-  kind: "source_import" | "build" | "project_export";
+  kind: "source_import" | "build" | "batch_import" | "project_export";
   estimated: number;
   margin: number;
   required: number;
@@ -290,6 +312,13 @@ export type DiagnosticThresholds = {
   time_sync_critical_s?: number;
 };
 
+export type DiagnosticPreset = {
+  id: string;
+  name: string;
+  description: string;
+  thresholds: Required<DiagnosticThresholds>;
+};
+
 export type DiagnosticSummary = {
   health_score: number;
   severity: "ok" | "warning" | "critical";
@@ -315,6 +344,7 @@ export type DiagnosticFinding = {
   severity: Exclude<DiagnosticSeverity, "ok">;
   recording_id?: string | null;
   source_id?: string | null;
+  topic?: string | null;
   entity_path?: string | null;
   key?: string | null;
   message: string;
@@ -328,6 +358,27 @@ export type DiagnosticReport = {
   summary: DiagnosticSummary;
   checks: DiagnosticCheck[];
   findings: DiagnosticFinding[];
+};
+
+export type DiagnosticExportResult = {
+  export_id: string;
+  project_id: string;
+  path: string;
+  format: "json" | "csv" | "html";
+  recording_ids: string[];
+  thresholds: Required<DiagnosticThresholds>;
+  summary: DiagnosticSummary;
+};
+
+export type DiagnosticExport = {
+  id: string;
+  project_id: string;
+  recording_ids: string[];
+  thresholds: Required<DiagnosticThresholds>;
+  summary: DiagnosticSummary;
+  path: string;
+  format: "json" | "csv" | "html";
+  created_at: string;
 };
 
 export type Plugin = {
@@ -360,22 +411,44 @@ export type BatchItem = {
   source_path: string;
   source_id?: string | null;
   recording_id?: string | null;
-  status: string;
+  status: BatchItemStatus;
   error_message?: string | null;
   created_at: string;
   updated_at: string;
+  attempt: number;
+  cancel_requested_at?: string | null;
 };
+
+export type BatchItemStatus =
+  | "pending"
+  | "running"
+  | "succeeded"
+  | "failed"
+  | "cancel_requested"
+  | "cancelled";
 
 export type BatchResult = {
   id: string;
   project_id: string;
+  job_id?: string | null;
   status: string;
+  template_id?: string;
+  output_prefix?: string;
+  storage_mode?: "copy" | "reference";
+  patterns?: string[];
   total: number;
   succeeded: number;
   failed: number;
+  cancelled: number;
   created_at: string;
   updated_at: string;
   items: BatchItem[];
+};
+
+export type BatchSummary = Omit<BatchResult, "items">;
+
+export type JobSettings = {
+  max_workers: number;
 };
 
 export type ProjectExportResult = {

@@ -459,20 +459,25 @@ def _finding(
     *,
     recording_id: Any = None,
     source_id: Any = None,
+    topic: Any = None,
     entity_path: Any = None,
     key: Any = None,
     evidence: dict[str, Any] | None = None,
     recommendation: str,
 ) -> dict[str, Any]:
+    evidence = evidence or {}
+    if topic is None and isinstance(evidence, dict):
+        topic = evidence.get("topic")
     return {
         "category": category,
         "severity": severity,
         "recording_id": recording_id,
         "source_id": source_id,
+        "topic": topic,
         "entity_path": entity_path,
         "key": key,
         "message": message,
-        "evidence": evidence or {},
+        "evidence": evidence,
         "recommendation": recommendation,
     }
 

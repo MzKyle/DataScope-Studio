@@ -21,13 +21,22 @@ def test_migrates_v1_database_and_preserves_catalog(tmp_path: Path) -> None:
     assert project["name"] == "Legacy"
     assert source["storage_mode"] == "copy"
     assert source["original_uri"] == source["uri"]
-    assert _pragma(db_path, "user_version") == 2
+    assert _pragma(db_path, "user_version") == 3
     assert _pragma(db_path, "journal_mode") == "wal"
     assert _pragma(db_path, "foreign_keys", workspace) == 1
     assert _pragma(db_path, "busy_timeout", workspace) == 5000
+    assert _table_exists(db_path, "diagnostic_exports")
+    assert {
+        "template_id",
+        "output_prefix",
+        "storage_mode",
+        "patterns_json",
+        "cancelled",
+    }.issubset(_columns(db_path, "batch_jobs"))
+    assert "cancel_requested_at" in _columns(db_path, "batch_items")
 
     Workspace(root)
-    assert _pragma(db_path, "user_version") == 2
+    assert _pragma(db_path, "user_version") == 3
 
 
 def test_rejects_future_database_version(tmp_path: Path) -> None:
@@ -66,6 +75,22 @@ def _pragma(
             return conn.execute(f"pragma {name}").fetchone()[0]
     with sqlite3.connect(db_path) as conn:
         return conn.execute(f"pragma {name}").fetchone()[0]
+
+
+def _columns(db_path: Path, table: str) -> set[str]:
+    with sqlite3.connect(db_path) as conn:
+        return {row[1] for row in conn.execute(f"pragma table_info({table})")}
+
+
+def _table_exists(db_path: Path, table: str) -> bool:
+    with sqlite3.connect(db_path) as conn:
+        return (
+            conn.execute(
+                "select 1 from sqlite_master where type = 'table' and name = ?",
+                (table,),
+            ).fetchone()
+            is not None
+        )
 
 
 def _create_v1_database(db_path: Path, project_path: Path) -> None:

@@ -306,6 +306,52 @@ class WorkspacePackageMixin:
                     ),
                 )
 
+            for export in manifest.get("diagnostic_exports", []):
+                export_id = self._available_id(
+                    "diagnostic_exports",
+                    str(export.get("id") or f"diagnostic_export_{uuid4().hex[:12]}"),
+                    "diagnostic_export",
+                    conn=conn,
+                )
+                old_recording_ids = json_array_text(
+                    export.get("recording_ids_json"),
+                    export.get("recording_ids"),
+                )
+                recording_ids = json.loads(old_recording_ids or "[]")
+                mapped_recording_ids = [
+                    recording_id_map.get(str(recording_id), str(recording_id))
+                    for recording_id in recording_ids
+                ]
+                conn.execute(
+                    """
+                    insert into diagnostic_exports
+                      (id, project_id, recording_ids_json, thresholds_json,
+                       summary_json, path, format, created_at)
+                    values (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        export_id,
+                        project_id,
+                        json.dumps(mapped_recording_ids, ensure_ascii=False),
+                        json_object_text(
+                            export.get("thresholds_json"),
+                            export.get("thresholds"),
+                        ),
+                        json_object_text(
+                            export.get("summary_json"),
+                            export.get("summary"),
+                        ),
+                        relocated_artifact_path(
+                            export.get("path"),
+                            original_project_path,
+                            project_path,
+                        )
+                        or "",
+                        export.get("format") or "json",
+                        export.get("created_at") or now,
+                    ),
+                )
+
         return {
             "project": self.get_project(project_id),
             "recordings": self.list_recordings(project_id),
@@ -344,6 +390,13 @@ class WorkspacePackageMixin:
                     (project_id,),
                 )
             ]
+            diagnostic_exports = [
+                row_to_dict(row)
+                for row in conn.execute(
+                    "select * from diagnostic_exports where project_id = ?",
+                    (project_id,),
+                )
+            ]
         return {
             "datascope_version": __version__,
             "project": project,
@@ -351,6 +404,7 @@ class WorkspacePackageMixin:
             "mappings": mappings,
             "recordings": recordings,
             "query_exports": exports,
+            "diagnostic_exports": diagnostic_exports,
             "templates": self.list_templates(),
             "created_at": utc_now(),
         }

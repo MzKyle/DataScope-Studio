@@ -1,6 +1,6 @@
 [package]
 name = "datascope-studio"
-version = "0.3.0"
+version = "0.3.1"
 description = "DataScope Studio desktop shell"
 authors = ["DataScope Studio"]
 license = "Apache-2.0"

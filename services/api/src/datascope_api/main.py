@@ -132,6 +132,11 @@ class BatchImportRequest(BaseModel):
     storage_mode: str = "copy"
 
 
+class BatchEstimateRequest(BaseModel):
+    patterns: list[str] = Field(min_length=1)
+    storage_mode: str = "copy"
+
+
 class CompareRequest(BaseModel):
     project_id: str
     recording_ids: list[str] = Field(default_factory=list)
@@ -143,7 +148,13 @@ class CompareRequest(BaseModel):
 class DiagnosticsRequest(BaseModel):
     recording_ids: list[str] | None = None
     thresholds: dict[str, float] = Field(default_factory=dict)
+    preset: str | None = None
     limit: int = Field(default=1000, ge=1, le=10000)
+
+
+class DiagnosticsExportRequest(DiagnosticsRequest):
+    format: str = "json"
+    output_path: str | None = None
 
 
 class ProjectExportRequest(BaseModel):
@@ -153,6 +164,10 @@ class ProjectExportRequest(BaseModel):
 class ProjectImportRequest(BaseModel):
     path: str = Field(min_length=1)
     project_name: str | None = None
+
+
+class JobSettingsPatch(BaseModel):
+    max_workers: int = Field(ge=1, le=4)
 
 
 @asynccontextmanager
@@ -389,6 +404,14 @@ def create_app() -> FastAPI:
             )
         )
 
+    @app.get("/api/jobs/settings")
+    def get_job_settings() -> dict[str, int]:
+        return services.job_settings()
+
+    @app.patch("/api/jobs/settings")
+    def patch_job_settings(payload: JobSettingsPatch) -> dict[str, int]:
+        return _guard(lambda: services.update_job_settings(max_workers=payload.max_workers))
+
     @app.get("/api/jobs/{job_id}")
     def get_job(job_id: str) -> dict[str, Any]:
         return _guard(lambda: _workspace().get_job(job_id))
@@ -467,9 +490,35 @@ def create_app() -> FastAPI:
                 project_id,
                 recording_ids=payload.recording_ids,
                 thresholds=payload.thresholds,
+                preset=payload.preset,
                 limit=payload.limit,
             )
         )
+
+    @app.get("/api/projects/{project_id}/diagnostics/presets")
+    def diagnostic_presets(project_id: str) -> list[dict[str, Any]]:
+        return _guard(lambda: _workspace().diagnostic_presets(project_id))
+
+    @app.post("/api/projects/{project_id}/diagnostics/export")
+    def export_diagnostics(
+        project_id: str,
+        payload: DiagnosticsExportRequest,
+    ) -> dict[str, Any]:
+        return _guard(
+            lambda: _workspace().export_diagnostics(
+                project_id,
+                recording_ids=payload.recording_ids,
+                thresholds=payload.thresholds,
+                preset=payload.preset,
+                fmt=payload.format,
+                output_path=payload.output_path,
+                limit=payload.limit,
+            )
+        )
+
+    @app.get("/api/projects/{project_id}/diagnostics/exports")
+    def diagnostic_exports(project_id: str) -> list[dict[str, Any]]:
+        return _guard(lambda: _workspace().list_diagnostic_exports(project_id))
 
     @app.get("/api/plugins")
     def list_plugins() -> list[dict[str, Any]]:
@@ -582,9 +631,40 @@ def create_app() -> FastAPI:
 
         return _guard(enqueue)
 
+    @app.get("/api/projects/{project_id}/batches")
+    def list_batches(
+        project_id: str,
+        status: str | None = None,
+        limit: int = Query(100, ge=1, le=1000),
+    ) -> list[dict[str, Any]]:
+        return _guard(lambda: _workspace().list_batches(project_id, status=status, limit=limit))
+
+    @app.post("/api/projects/{project_id}/estimates/batch-import")
+    def estimate_batch_import(
+        project_id: str,
+        payload: BatchEstimateRequest,
+    ) -> dict[str, Any]:
+        return _guard(
+            lambda: _workspace().estimate_batch_import(
+                project_id,
+                payload.patterns,
+                storage_mode=payload.storage_mode,
+            )
+        )
+
     @app.get("/api/batch/{batch_id}")
     def get_batch(batch_id: str) -> dict[str, Any]:
         return _guard(lambda: _workspace().get_batch(batch_id))
+
+    @app.post("/api/batch/{batch_id}/items/{item_id}/retry", status_code=202)
+    def retry_batch_item(batch_id: str, item_id: str) -> dict[str, Any]:
+        job = _guard(lambda: _workspace().retry_batch_item(batch_id, item_id))
+        services.supervisor().wake()
+        return job
+
+    @app.post("/api/batch/{batch_id}/items/{item_id}/cancel")
+    def cancel_batch_item(batch_id: str, item_id: str) -> dict[str, Any]:
+        return _guard(lambda: _workspace().cancel_batch_item(batch_id, item_id))
 
     @app.post("/api/compare")
     def compare(payload: CompareRequest) -> dict[str, Any]:
@@ -690,9 +770,14 @@ def _guard(operation):
             },
         ) from exc
     except RuntimeError as exc:
+        code = getattr(exc, "code", "runtime_error")
+        error: dict[str, Any] = {"code": str(code), "message": str(exc)}
+        paths = getattr(exc, "paths", None)
+        if isinstance(paths, list):
+            error["paths"] = paths
         raise HTTPException(
             status_code=409,
-            detail={"error": {"code": "runtime_error", "message": str(exc)}},
+            detail={"error": error},
         ) from exc
 
 

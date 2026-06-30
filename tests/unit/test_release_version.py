@@ -17,7 +17,7 @@ SPEC.loader.exec_module(check_version)
 def test_repository_product_versions_match() -> None:
     versions = check_version.collect_versions(REPO_ROOT)
 
-    assert check_version.validate_versions(versions, "v0.3.0") == "0.3.0"
+    assert check_version.validate_versions(versions, "v0.3.1") == "0.3.1"
 
 
 def test_version_validation_rejects_mismatch() -> None:

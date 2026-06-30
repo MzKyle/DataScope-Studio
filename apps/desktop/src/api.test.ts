@@ -76,6 +76,7 @@ describe("apiErrorFromResponse", () => {
     expect(JSON.parse(String(init?.body))).toEqual({
       recording_ids: ["recording_1"],
       thresholds: { battery_low: 0.15 },
+      preset: "balanced",
       limit: 1000
     });
     fetchMock.mockRestore();

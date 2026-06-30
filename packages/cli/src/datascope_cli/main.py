@@ -132,7 +132,7 @@ def import_source(
         template_id=template,
         output_dir=str(output_dir) if output_dir else None,
     )
-    result = _run_job(workspace, job, no_wait=no_wait)
+    result = _run_job(workspace, job, no_wait=no_wait, quiet=json_output)
 
     if json_output:
         _echo_json(
@@ -155,6 +155,13 @@ def import_source(
     typer.echo(f"Mapping: {saved_mapping['path']}")
     typer.echo(f"Recording: {build_result['recording_path']}")
     typer.echo(f"Blueprint: {build_result['blueprint_path']}")
+    artifact_info = build_result.get("artifact_info") or {}
+    if artifact_info:
+        typer.echo(
+            "Artifact sizes: "
+            f"recording={_format_bytes(int(artifact_info.get('recording_size_bytes') or 0))}, "
+            f"blueprint={_format_bytes(int(artifact_info.get('blueprint_size_bytes') or 0))}"
+        )
 
 
 @app.command()
@@ -178,7 +185,9 @@ def diagnose(
         "--recording",
         help="Recording id to include. Repeat to include multiple recordings.",
     ),
-    out: Path | None = typer.Option(None, "--out", help="Write full JSON report to this path."),
+    preset: str = typer.Option("balanced", "--preset", help="balanced, strict, or lenient."),
+    export_format: str = typer.Option("json", "--format", help="json, csv, or html."),
+    out: Path | None = typer.Option(None, "--out", help="Output file or export directory."),
     json_output: bool = typer.Option(False, "--json", help="Print JSON."),
 ) -> None:
     """Run an offline robot diagnostics report."""
@@ -187,12 +196,16 @@ def diagnose(
     report = workspace.run_diagnostics(
         project_row["id"],
         recording_ids=recording or None,
+        preset=preset,
     )
-    if out is not None:
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(
-            json.dumps(report, ensure_ascii=False, indent=2, default=str),
-            encoding="utf-8",
+    export = None
+    if out is not None or not json_output:
+        export = workspace.export_diagnostics(
+            project_row["id"],
+            recording_ids=recording or None,
+            preset=preset,
+            fmt=export_format,
+            output_path=str(out) if out is not None else None,
         )
     if json_output:
         _echo_json(report)
@@ -221,6 +234,8 @@ def diagnose(
                 f"  {finding['severity']} {finding['category']}: "
                 f"{finding['message']}"
             )
+    if export is not None:
+        typer.echo(f"Exported diagnostics to {export['path']}")
     if out is not None:
         typer.echo(f"Report: {out}")
 
@@ -660,11 +675,23 @@ def _echo_json(value) -> None:
     typer.echo(json.dumps(value, ensure_ascii=False, indent=2, default=str))
 
 
+def _format_bytes(value: int) -> str:
+    if value < 1024:
+        return f"{value} B"
+    value_float = float(value)
+    for unit in ("KiB", "MiB", "GiB", "TiB"):
+        value_float /= 1024
+        if value_float < 1024 or unit == "TiB":
+            return f"{value_float:.1f} {unit}"
+    return f"{value} B"
+
+
 def _run_job(
     workspace: Workspace,
     job: dict,
     *,
     no_wait: bool,
+    quiet: bool = False,
 ) -> dict:
     supervisor = JobSupervisor(workspace)
     supervisor.start()
@@ -681,7 +708,7 @@ def _run_job(
         while True:
             current = workspace.get_job(job["id"])
             progress = round(float(current["progress"]) * 100)
-            if progress != last_progress:
+            if not quiet and progress != last_progress:
                 typer.echo(
                     f"{current.get('stage') or current['status']}: {progress}%",
                     err=True,

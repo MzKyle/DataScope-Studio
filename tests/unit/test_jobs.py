@@ -139,6 +139,69 @@ def test_batch_retry_preserves_successful_items(tmp_path: Path) -> None:
     assert len(workspace.list_recordings(project["id"])) == 2
 
 
+def test_batch_item_cancel_and_single_item_retry(tmp_path: Path) -> None:
+    workspace = Workspace(tmp_path / "workspace")
+    project = workspace.create_project("Batch item controls")
+
+    now = "2026-06-29T00:00:00Z"
+    with workspace._connect() as conn:
+        conn.execute(
+            """
+            insert into batch_jobs
+              (id, project_id, job_id, status, template_id, output_prefix,
+               storage_mode, patterns_json, total, succeeded, failed,
+               cancelled, created_at, updated_at)
+            values ('batch_pending', ?, null, 'running', 'sensor_monitor',
+                    'pending_batch', 'copy', '[]', 1, 0, 0, 0, ?, ?)
+            """,
+            (project["id"], now, now),
+        )
+        conn.execute(
+            """
+            insert into batch_items
+              (id, batch_id, source_path, source_id, recording_id, status,
+               error_message, attempt, created_at, updated_at)
+            values ('item_pending', 'batch_pending', '/tmp/pending.csv', null,
+                    null, 'pending', null, 1, ?, ?)
+            """,
+            (now, now),
+        )
+
+    cancelled = workspace.cancel_batch_item("batch_pending", "item_pending")
+    assert cancelled["status"] == "cancelled"
+    assert cancelled["cancelled"] == 1
+    assert cancelled["items"][0]["status"] == "cancelled"
+    assert cancelled["items"][0]["cancel_requested_at"]
+
+    good_path = tmp_path / "good.csv"
+    bad_path = tmp_path / "recoverable.jsonl"
+    good_path.write_text((FIXTURES / "sample_sensor.csv").read_text())
+    bad_path.write_text('{"timestamp": 1, "value": 2}\nnot-json\n')
+    original = workspace.enqueue_batch_import(project["id"], [str(good_path), str(bad_path)])
+
+    supervisor = JobSupervisor(workspace, poll_interval=0.02)
+    supervisor.start()
+    try:
+        failed_job = _wait_for_job(workspace, original["id"])
+        assert failed_job["status"] == "failed"
+        batch = workspace.get_batch(failed_job["resource_id"])
+        failed_item = next(item for item in batch["items"] if item["status"] == "failed")
+
+        bad_path.write_text('{"timestamp": 1, "value": 2}\n')
+        retry_job = workspace.retry_batch_item(batch["id"], failed_item["id"])
+        completed_retry = _wait_for_job(workspace, retry_job["id"])
+    finally:
+        supervisor.stop()
+
+    assert completed_retry["status"] == "succeeded"
+    retried_batch = workspace.get_batch(batch["id"])
+    retried_item = next(item for item in retried_batch["items"] if item["id"] == failed_item["id"])
+    assert retried_batch["status"] == "succeeded"
+    assert retried_batch["succeeded"] == 2
+    assert retried_item["status"] == "succeeded"
+    assert retried_item["attempt"] == 2
+
+
 @pytest.mark.skipif(os.name == "nt", reason="POSIX process group behavior")
 def test_terminate_process_tree_kills_sigterm_ignoring_child(tmp_path: Path) -> None:
     ready_path = tmp_path / "child-ready"

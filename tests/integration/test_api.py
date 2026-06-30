@@ -75,6 +75,11 @@ def test_api_project_source_mapping_build_flow(tmp_path: Path, monkeypatch) -> N
     result = job["result"]
     assert Path(result["recording_path"]).exists()
     assert Path(result["blueprint_path"]).exists()
+    assert result["artifact_info"]["converter"] == "rerun_python_sdk"
+    assert result["artifact_info"]["recording_size_bytes"] > 0
+    recording_response = client.get(f"/api/recordings/{result['recording_id']}")
+    assert recording_response.status_code == 200
+    assert recording_response.json()["params"]["rerun_artifact"] == result["artifact_info"]
 
     conflict_response = client.post(
         "/api/recordings/build",
@@ -94,6 +99,64 @@ def test_api_project_source_mapping_build_flow(tmp_path: Path, monkeypatch) -> N
     assert error["output_name"] == "api_run"
     assert result["recording_path"] in error["paths"]
     assert result["blueprint_path"] in error["paths"]
+
+
+def test_api_batch_management_retry_and_job_settings(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("DATASCOPE_WORKSPACE", str(tmp_path / "batch_workspace"))
+    client = TestClient(app)
+    project = client.post("/api/projects", json={"name": "Batch API"}).json()
+    good_path = tmp_path / "good.csv"
+    bad_path = tmp_path / "recoverable.jsonl"
+    good_path.write_text((FIXTURES / "sample_sensor.csv").read_text(), encoding="utf-8")
+    bad_path.write_text('{"timestamp": 1, "value": 2}\nnot-json\n', encoding="utf-8")
+
+    settings = client.get("/api/jobs/settings")
+    assert settings.status_code == 200
+    patched = client.patch("/api/jobs/settings", json={"max_workers": 2})
+    assert patched.status_code == 200
+    assert patched.json()["max_workers"] == 2
+
+    estimate = client.post(
+        f"/api/projects/{project['id']}/estimates/batch-import",
+        json={"patterns": [str(good_path), str(bad_path)], "storage_mode": "copy"},
+    )
+    assert estimate.status_code == 200
+    assert estimate.json()["kind"] == "batch_import"
+
+    response = client.post(
+        "/api/batch/import",
+        json={
+            "project_id": project["id"],
+            "patterns": [str(good_path), str(bad_path)],
+            "template_id": "sensor_monitor",
+            "output_prefix": "api_retry",
+        },
+    )
+    assert response.status_code == 202
+    failed_job = wait_for_job(client, response.json()["id"])
+    assert failed_job["status"] == "failed"
+    batch_id = failed_job["resource_id"]
+
+    batches = client.get(f"/api/projects/{project['id']}/batches")
+    assert batches.status_code == 200
+    assert batches.json()[0]["id"] == batch_id
+
+    detail = client.get(f"/api/batch/{batch_id}")
+    assert detail.status_code == 200
+    failed_item = next(item for item in detail.json()["items"] if item["status"] == "failed")
+
+    bad_path.write_text('{"timestamp": 1, "value": 2}\n', encoding="utf-8")
+    retry = client.post(f"/api/batch/{batch_id}/items/{failed_item['id']}/retry")
+    assert retry.status_code == 202
+    retry_job = wait_for_job(client, retry.json()["id"])
+    assert retry_job["status"] == "succeeded"
+
+    retried = client.get(f"/api/batch/{batch_id}").json()
+    assert retried["status"] == "succeeded"
+    assert retried["succeeded"] == 2
+    assert next(item for item in retried["items"] if item["id"] == failed_item["id"])[
+        "attempt"
+    ] == 2
 
 
 def test_api_build_defaults_artifact_names_to_source_name(tmp_path: Path, monkeypatch) -> None:

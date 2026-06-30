@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import zipfile
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -37,14 +38,73 @@ def test_workspace_api_and_cli_diagnostics(tmp_path: Path, monkeypatch) -> None:
     assert report["summary"]["recording_count"] == 1
     assert report["summary"]["topic_count"] >= 3
     assert any(check["id"] == "topic_coverage" for check in report["checks"])
+    presets = workspace.diagnostic_presets(project["id"])
+    balanced = next(item for item in presets if item["id"] == "balanced")
+    strict = next(item for item in presets if item["id"] == "strict")
+    assert balanced["thresholds"] == report["thresholds"]
+    assert (
+        strict["thresholds"]["detection_confidence"]
+        > balanced["thresholds"]["detection_confidence"]
+    )
+
+    json_export = workspace.export_diagnostics(
+        project["id"],
+        [result["recording_id"]],
+        preset="strict",
+        fmt="json",
+    )
+    csv_export = workspace.export_diagnostics(
+        project["id"],
+        [result["recording_id"]],
+        fmt="csv",
+        output_path=str(tmp_path / "diagnostics.csv"),
+    )
+    html_export = workspace.export_diagnostics(
+        project["id"],
+        [result["recording_id"]],
+        fmt="html",
+        output_path=str(tmp_path / "diagnostics.html"),
+    )
+    assert Path(json_export["path"]).is_file()
+    assert json.loads(Path(json_export["path"]).read_text(encoding="utf-8"))["summary"][
+        "recording_count"
+    ] == 1
+    assert Path(csv_export["path"]).read_text(encoding="utf-8").startswith(
+        "id,severity,category,recording_id,source_id,topic"
+    )
+    assert "DataScope Diagnostics Report" in Path(html_export["path"]).read_text(encoding="utf-8")
+    assert len(workspace.list_diagnostic_exports(project["id"])) == 3
+
+    package = workspace.export_project(project["id"], str(tmp_path / "diagnostics_project.zip"))
+    with zipfile.ZipFile(package["path"]) as archive:
+        manifest = json.loads(archive.read("manifest.json"))
+    assert len(manifest["diagnostic_exports"]) == 3
+    imported = workspace.import_project_package(package["path"], project_name="Diagnostics Imported")
+    assert len(workspace.list_diagnostic_exports(imported["project"]["id"])) == 3
 
     client = TestClient(api_app)
+    presets_response = client.get(f"/api/projects/{project['id']}/diagnostics/presets")
+    assert presets_response.status_code == 200
+    assert {item["id"] for item in presets_response.json()} >= {"balanced", "strict", "lenient"}
     response = client.post(
         f"/api/projects/{project['id']}/diagnostics",
-        json={"recording_ids": [result["recording_id"]]},
+        json={"recording_ids": [result["recording_id"]], "preset": "lenient"},
     )
     assert response.status_code == 200
     assert response.json()["summary"]["recording_count"] == 1
+    export_response = client.post(
+        f"/api/projects/{project['id']}/diagnostics/export",
+        json={
+            "recording_ids": [result["recording_id"]],
+            "preset": "balanced",
+            "format": "html",
+        },
+    )
+    assert export_response.status_code == 200
+    assert Path(export_response.json()["path"]).is_file()
+    exports_response = client.get(f"/api/projects/{project['id']}/diagnostics/exports")
+    assert exports_response.status_code == 200
+    assert len(exports_response.json()) >= 4
 
     runner = CliRunner()
     cli_json = runner.invoke(
@@ -77,6 +137,25 @@ def test_workspace_api_and_cli_diagnostics(tmp_path: Path, monkeypatch) -> None:
     assert cli_out.exit_code == 0
     assert output_path.is_file()
     assert json.loads(output_path.read_text())["summary"]["topic_count"] >= 3
+    csv_path = tmp_path / "diagnostics_cli.csv"
+    cli_csv = runner.invoke(
+        cli_app,
+        [
+            "diagnose",
+            "--project",
+            project["id"],
+            "--recording",
+            result["recording_id"],
+            "--format",
+            "csv",
+            "--out",
+            str(csv_path),
+        ],
+    )
+    assert cli_csv.exit_code == 0
+    assert csv_path.read_text(encoding="utf-8").startswith(
+        "id,severity,category,recording_id,source_id,topic"
+    )
 
 
 def test_api_diagnostics_after_async_build(tmp_path: Path, monkeypatch) -> None:

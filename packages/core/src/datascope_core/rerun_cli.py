@@ -6,21 +6,25 @@ import subprocess
 from pathlib import Path
 
 
+class RerunCliError(RuntimeError):
+    code = "rerun_cli_missing"
+
+
 def rerun_command() -> list[str]:
     explicit_bin = os.environ.get("DATASCOPE_RERUN_BIN")
     if explicit_bin:
         path = Path(explicit_bin)
         if not path.exists():
-            raise RuntimeError(f"Configured Rerun binary does not exist: {path}")
+            raise RerunCliError(f"Configured Rerun binary does not exist: {path}")
         return [str(path)]
 
     runtime_python = os.environ.get("DATASCOPE_RERUN_PYTHON")
     if runtime_python:
         python = Path(runtime_python)
         if not python.exists():
-            raise RuntimeError(f"Configured Rerun Python runtime does not exist: {python}")
+            raise RerunCliError(f"Configured Rerun Python runtime does not exist: {python}")
         if not _python_has_rerun_cli(python):
-            raise RuntimeError(
+            raise RerunCliError(
                 "The bundled Python runtime is present, but rerun_cli is not importable. "
                 "Rebuild the DataScope runtime package."
             )
@@ -28,7 +32,7 @@ def rerun_command() -> list[str]:
 
     rerun = shutil.which("rerun")
     if rerun is None:
-        raise RuntimeError(
+        raise RerunCliError(
             "Rerun CLI is not installed or not on PATH. Install rerun-sdk in the active "
             "environment, or launch DataScope Studio from an installer with the bundled runtime."
         )

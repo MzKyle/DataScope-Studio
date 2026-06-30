@@ -4,7 +4,7 @@
 
 **重要前置条件**
 - 操作系统：Linux（说明中有一些针对 Debian/Ubuntu 的包）。
-- Python 3.8+（建议使用系统 `python3`）。
+- Python 3.10+（建议使用系统 `python3`）。
 - Node.js >= 20.19.0（桌面端开发/运行需要）。
 - Rust / Cargo（仅在构建 Tauri 原生部分或预先缓存编译时需要）。
 

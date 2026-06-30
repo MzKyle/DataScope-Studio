@@ -28,6 +28,12 @@ class PointCloudStats:
 
 
 @dataclass(slots=True)
+class PointCloudFrame:
+    points: list[list[float]]
+    colors: list[list[int]] | None = None
+
+
+@dataclass(slots=True)
 class PcdHeader:
     fields: list[str]
     sizes: list[int]
@@ -151,11 +157,14 @@ class PointCloudAdapter:
             for index, cloud in enumerate(clouds):
                 if request.cancel_check is not None:
                     request.cancel_check()
-                points = read_point_cloud_points(cloud)
-                if not points:
+                frame = read_point_cloud_frame(cloud)
+                if not frame.points:
                     continue
                 rec.set_time("time", duration=_cloud_time(index, cloud))
-                rec.log(entity_path, rr.Points3D(points))
+                if frame.colors:
+                    rec.log(entity_path, rr.Points3D(frame.points, colors=frame.colors))
+                else:
+                    rec.log(entity_path, rr.Points3D(frame.points))
                 if request.progress_callback is not None:
                     request.progress_callback(
                         "converting",
@@ -209,16 +218,20 @@ def supported_point_cloud_paths(root: str | Path) -> list[Path]:
 
 
 def read_point_cloud_points(path: str | Path) -> list[list[float]]:
+    return read_point_cloud_frame(path).points
+
+
+def read_point_cloud_frame(path: str | Path) -> PointCloudFrame:
     cloud_path = Path(path)
     suffix = cloud_path.suffix.lower()
     if suffix == ".ply":
-        return _read_ply_points(cloud_path)
+        return _read_ply_frame(cloud_path)
     if suffix == ".pcd":
-        return _read_pcd_points(cloud_path)
+        return _read_pcd_frame(cloud_path)
     if suffix in {".npy", ".npz"}:
-        return _read_numpy_points(cloud_path)
+        return PointCloudFrame(_read_numpy_points(cloud_path))
     if suffix in TEXT_POINT_CLOUD_EXTENSIONS:
-        return _read_text_point_cloud_points(cloud_path)
+        return _read_text_point_cloud_frame(cloud_path)
     raise ValueError(f"Unsupported point cloud file: {path}")
 
 
@@ -256,12 +269,16 @@ def _point_count(path: Path) -> int:
 
 
 def _read_ply_points(path: Path) -> list[list[float]]:
+    return _read_ply_frame(path).points
+
+
+def _read_ply_frame(path: Path) -> PointCloudFrame:
     with open(path, "rb") as handle:
         header = _read_ply_header(handle, path.name)
         if header.encoding == "ascii":
-            return _read_ascii_ply_points(handle, header)
+            return _read_ascii_ply_frame(handle, header)
         if header.encoding == "binary_little_endian":
-            return _read_binary_little_endian_ply_points(handle, header, path.name)
+            return _read_binary_little_endian_ply_frame(handle, header, path.name)
         raise ValueError(f"Unsupported PLY encoding '{header.encoding}': {path.name}")
 
 
@@ -345,8 +362,14 @@ def _ply_xyz_property_indices(properties: list[PlyProperty]) -> tuple[int, int, 
 
 
 def _read_ascii_ply_points(handle: BinaryIO, header: PlyHeader) -> list[list[float]]:
+    return _read_ascii_ply_frame(handle, header).points
+
+
+def _read_ascii_ply_frame(handle: BinaryIO, header: PlyHeader) -> PointCloudFrame:
     xyz_indices = _ply_xyz_property_indices(header.vertex_properties)
+    color_indices = _rgb_indices([prop.name for prop in header.vertex_properties])
     points: list[list[float]] = []
+    colors: list[list[int]] = []
     for _ in range(header.vertex_count):
         raw_line = handle.readline()
         if not raw_line:
@@ -357,7 +380,12 @@ def _read_ascii_ply_points(handle: BinaryIO, header: PlyHeader) -> list[list[flo
         point = _finite_xyz(values[index] for index in xyz_indices)
         if point is not None:
             points.append(point)
-    return points
+            if color_indices is not None and len(values) > max(color_indices):
+                colors.append(_rgb_color(values[index] for index in color_indices))
+    return PointCloudFrame(
+        points,
+        colors if color_indices is not None and len(colors) == len(points) else None,
+    )
 
 
 def _read_binary_little_endian_ply_points(
@@ -365,6 +393,14 @@ def _read_binary_little_endian_ply_points(
     header: PlyHeader,
     filename: str,
 ) -> list[list[float]]:
+    return _read_binary_little_endian_ply_frame(handle, header, filename).points
+
+
+def _read_binary_little_endian_ply_frame(
+    handle: BinaryIO,
+    header: PlyHeader,
+    filename: str,
+) -> PointCloudFrame:
     import numpy as np
 
     property_dtypes = [_ply_numpy_dtype(prop.data_type) for prop in header.vertex_properties]
@@ -397,8 +433,25 @@ def _read_binary_little_endian_ply_points(
             for index in xyz_indices
         ]
     )
-    coordinates = coordinates[np.isfinite(coordinates).all(axis=1)]
-    return coordinates.astype(float, copy=False).tolist()
+    valid = np.isfinite(coordinates).all(axis=1)
+    coordinates = coordinates[valid]
+    color_indices = _rgb_indices([prop.name for prop in header.vertex_properties])
+    colors = None
+    if color_indices is not None:
+        color_values = np.column_stack(
+            [
+                np.ndarray(
+                    shape=(header.vertex_count,),
+                    dtype=property_dtypes[index],
+                    buffer=payload,
+                    offset=property_offsets[index],
+                    strides=(stride,),
+                )
+                for index in color_indices
+            ]
+        )[valid]
+        colors = _colors_array(color_values)
+    return PointCloudFrame(coordinates.astype(float, copy=False).tolist(), colors)
 
 
 def _ply_numpy_dtype(data_type: str):
@@ -429,12 +482,16 @@ def _ply_numpy_dtype(data_type: str):
 
 
 def _read_pcd_points(path: Path) -> list[list[float]]:
+    return _read_pcd_frame(path).points
+
+
+def _read_pcd_frame(path: Path) -> PointCloudFrame:
     with open(path, "rb") as handle:
         header = _read_pcd_header(handle)
         if header.data == "ascii":
-            return _read_ascii_pcd_points(handle, header)
+            return _read_ascii_pcd_frame(handle, header)
         if header.data == "binary":
-            return _read_binary_pcd_points(handle, header, path.name)
+            return _read_binary_pcd_frame(handle, header, path.name)
         raise ValueError(f"Unsupported PCD DATA encoding '{header.data}': {path.name}")
 
 
@@ -511,15 +568,26 @@ def _pcd_xyz_field_indices(header: PcdHeader) -> tuple[int, int, int]:
 
 
 def _read_ascii_pcd_points(handle: BinaryIO, header: PcdHeader) -> list[list[float]]:
+    return _read_ascii_pcd_frame(handle, header).points
+
+
+def _read_ascii_pcd_frame(handle: BinaryIO, header: PcdHeader) -> PointCloudFrame:
     xyz_fields = _pcd_xyz_field_indices(header)
+    color_fields = _rgb_indices(header.fields)
     scalar_offsets: list[int] = []
     offset = 0
     for count in header.counts:
         scalar_offsets.append(offset)
         offset += count
     xyz_indices = tuple(scalar_offsets[index] for index in xyz_fields)
+    color_indices = (
+        tuple(scalar_offsets[index] for index in color_fields)
+        if color_fields is not None
+        else None
+    )
 
     points: list[list[float]] = []
+    colors: list[list[int]] = []
     for raw_line in handle:
         values = raw_line.split()
         if len(values) <= max(xyz_indices):
@@ -527,7 +595,12 @@ def _read_ascii_pcd_points(handle: BinaryIO, header: PcdHeader) -> list[list[flo
         point = _finite_xyz(values[index] for index in xyz_indices)
         if point is not None:
             points.append(point)
-    return points
+            if color_indices is not None and len(values) > max(color_indices):
+                colors.append(_rgb_color(values[index] for index in color_indices))
+    return PointCloudFrame(
+        points,
+        colors if color_indices is not None and len(colors) == len(points) else None,
+    )
 
 
 def _read_binary_pcd_points(
@@ -535,7 +608,16 @@ def _read_binary_pcd_points(
     header: PcdHeader,
     filename: str,
 ) -> list[list[float]]:
+    return _read_binary_pcd_frame(handle, header, filename).points
+
+
+def _read_binary_pcd_frame(
+    handle: BinaryIO,
+    header: PcdHeader,
+    filename: str,
+) -> PointCloudFrame:
     xyz_fields = _pcd_xyz_field_indices(header)
+    color_fields = _rgb_indices(header.fields)
     byte_offsets: list[int] = []
     stride = 0
     for size, count in zip(header.sizes, header.counts):
@@ -548,6 +630,12 @@ def _read_binary_pcd_points(
         _pcd_struct_format(header.types[index], header.sizes[index]) for index in xyz_fields
     ]
     coordinate_offsets = [byte_offsets[index] for index in xyz_fields]
+    color_formats = (
+        [_pcd_struct_format(header.types[index], header.sizes[index]) for index in color_fields]
+        if color_fields is not None
+        else []
+    )
+    color_offsets = [byte_offsets[index] for index in color_fields] if color_fields is not None else []
     payload = handle.read()
     point_count = header.point_count
     if point_count is None:
@@ -562,6 +650,7 @@ def _read_binary_pcd_points(
         )
 
     points: list[list[float]] = []
+    colors: list[list[int]] = []
     for point_index in range(point_count):
         base_offset = point_index * stride
         coordinates = [
@@ -571,7 +660,16 @@ def _read_binary_pcd_points(
         point = _finite_xyz(coordinates)
         if point is not None:
             points.append(point)
-    return points
+            if color_fields is not None:
+                color = [
+                    struct.unpack_from(f"<{format_code}", payload, base_offset + color_offset)[0]
+                    for format_code, color_offset in zip(color_formats, color_offsets)
+                ]
+                colors.append(_rgb_color(color))
+    return PointCloudFrame(
+        points,
+        colors if color_fields is not None and len(colors) == len(points) else None,
+    )
 
 
 def _pcd_struct_format(field_type: str, size: int) -> str:
@@ -594,7 +692,13 @@ def _pcd_struct_format(field_type: str, size: int) -> str:
 
 
 def _read_text_point_cloud_points(path: Path) -> list[list[float]]:
+    return _read_text_point_cloud_frame(path).points
+
+
+def _read_text_point_cloud_frame(path: Path) -> PointCloudFrame:
     points: list[list[float]] = []
+    colors: list[list[int]] = []
+    reads_rgb = path.suffix.lower() == ".xyzrgb"
     saw_data_line = False
     with open(path, "r", encoding="utf-8-sig", errors="replace") as handle:
         for raw_line in handle:
@@ -614,7 +718,9 @@ def _read_text_point_cloud_points(path: Path) -> list[list[float]]:
                 continue
             if point is not None:
                 points.append(point)
-    return points
+                if reads_rgb and len(values) >= 6:
+                    colors.append(_rgb_color(values[3:6]))
+    return PointCloudFrame(points, colors if reads_rgb and len(colors) == len(points) else None)
 
 
 def _is_point_count_header(values: list[str]) -> bool:
@@ -653,6 +759,35 @@ def _npz_points_array(data) -> Any:
         if getattr(array, "ndim", 0) >= 2 and array.shape[-1] >= 3:
             return array
     raise ValueError("NPZ file must contain a point cloud array")
+
+
+def _rgb_indices(names: list[str]) -> tuple[int, int, int] | None:
+    normalized = [name.lower() for name in names]
+    for red, green, blue in (("r", "g", "b"), ("red", "green", "blue")):
+        try:
+            return (
+                normalized.index(red),
+                normalized.index(green),
+                normalized.index(blue),
+            )
+        except ValueError:
+            continue
+    return None
+
+
+def _rgb_color(values) -> list[int]:
+    return [_clamp_color(float(value)) for value in values]
+
+
+def _clamp_color(value: float) -> int:
+    return int(min(max(round(value), 0), 255))
+
+
+def _colors_array(values) -> list[list[int]]:
+    import numpy as np
+
+    clipped = np.clip(np.rint(values), 0, 255).astype(int, copy=False)
+    return clipped.tolist()
 
 
 def _finite_xyz(values) -> list[float] | None:

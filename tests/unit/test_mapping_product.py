@@ -342,6 +342,78 @@ def test_tabular_geometry_logging(monkeypatch) -> None:
     assert rec.logs == [("/world/point", ("Points3D", [[1.0, 2.0, 3.0]]))]
 
 
+def test_tabular_writer_logs_supported_semantic_types(monkeypatch) -> None:
+    fake_rerun = FakeRerun()
+    monkeypatch.setitem(sys.modules, "rerun", fake_rerun)
+    rec = FakeLogRecording()
+    row = pd.Series(
+        {
+            "value": 3.5,
+            "temperature": 22.0,
+            "status": "RUNNING",
+            "level": "WARN",
+            "message": "motor warm",
+            "x": 1.0,
+            "y": 2.0,
+            "z": 3.0,
+            "w": 20.0,
+            "h": 10.0,
+            "qx": 0.0,
+            "qy": 0.0,
+            "qz": 0.0,
+            "qw": 1.0,
+        }
+    )
+
+    for mapping in [
+        {"semantic_type": "scalar", "source_fields": ["value"], "entity_path": "/metrics/value"},
+        {
+            "semantic_type": "scalar_group",
+            "source_fields": ["temperature"],
+            "entity_path": "/metrics",
+        },
+        {"semantic_type": "state", "source_fields": ["status"], "entity_path": "/states/status"},
+        {
+            "semantic_type": "text_log",
+            "source_fields": ["level", "message"],
+            "entity_path": "/logs",
+        },
+        {"semantic_type": "points2d", "source_fields": ["x", "y"], "entity_path": "/image/point"},
+        {
+            "semantic_type": "points3d",
+            "source_fields": ["x", "y", "z"],
+            "entity_path": "/world/point",
+        },
+        {
+            "semantic_type": "trajectory3d",
+            "source_fields": ["x", "y", "z"],
+            "entity_path": "/world/path",
+        },
+        {"semantic_type": "boxes2d", "source_fields": ["x", "y", "w", "h"], "entity_path": "/boxes"},
+        {
+            "semantic_type": "transform3d",
+            "source_fields": ["x", "y", "z", "qx", "qy", "qz", "qw"],
+            "entity_path": "/world/robot",
+        },
+    ]:
+        _log_mapping(rec, row, {"enabled": True, **mapping})
+
+    assert [path for path, _ in rec.logs] == [
+        "/metrics/value",
+        "/metrics/temperature",
+        "/states/status",
+        "/logs",
+        "/image/point",
+        "/world/point",
+        "/world/path",
+        "/boxes",
+        "/world/robot",
+    ]
+    assert rec.logs[0][1] == ("Scalars", 3.5)
+    assert rec.logs[2][1] == ("StateChange", "RUNNING")
+    assert rec.logs[8][1][0] == "Transform3D"
+
+
 def test_state_logging_falls_back_for_rerun_without_state_change(monkeypatch) -> None:
     fake_rerun = SimpleNamespace(TextLog=lambda value: ("TextLog", value))
     monkeypatch.setitem(sys.modules, "rerun", fake_rerun)
@@ -431,5 +503,22 @@ class FakeLogRecording:
 class FakeRerun(SimpleNamespace):
     def __init__(self) -> None:
         super().__init__(
-            Points3D=lambda values: ("Points3D", values),
+            Scalars=lambda value: ("Scalars", value),
+            StateChange=lambda state: ("StateChange", state),
+            TextLog=lambda value, level=None: ("TextLog", value, level),
+            TextLogLevel=SimpleNamespace(
+                ERROR="ERROR",
+                WARN="WARN",
+                DEBUG="DEBUG",
+                INFO="INFO",
+            ),
+            Points2D=lambda values: ("Points2D", values),
+            Points3D=lambda values, **kwargs: (
+                ("Points3D", values, kwargs) if kwargs else ("Points3D", values)
+            ),
+            LineStrips3D=lambda values: ("LineStrips3D", values),
+            Boxes2D=lambda **kwargs: ("Boxes2D", kwargs),
+            Box2DFormat=SimpleNamespace(XYWH="XYWH"),
+            Quaternion=lambda xyzw: ("Quaternion", xyzw),
+            Transform3D=lambda **kwargs: ("Transform3D", kwargs),
         )

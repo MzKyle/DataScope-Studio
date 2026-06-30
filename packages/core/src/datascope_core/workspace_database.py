@@ -5,7 +5,7 @@ from pathlib import Path
 from uuid import uuid4
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 class WorkspaceDatabaseMixin:
@@ -30,6 +30,9 @@ class WorkspaceDatabaseMixin:
                     conn.execute("pragma user_version = 1")
                 if version == 1:
                     self._migrate_v1_to_v2(conn)
+                    version = 2
+                if version == 2:
+                    self._migrate_v2_to_v3(conn)
             conn.execute("pragma journal_mode = WAL")
             conn.execute("pragma synchronous = NORMAL")
 
@@ -250,9 +253,14 @@ class WorkspaceDatabaseMixin:
               project_id text not null,
               job_id text,
               status text not null,
+              template_id text not null default 'sensor_monitor',
+              output_prefix text not null default 'batch_run',
+              storage_mode text not null default 'copy',
+              patterns_json text not null default '[]',
               total integer not null,
               succeeded integer not null,
               failed integer not null,
+              cancelled integer not null default 0,
               created_at text not null,
               updated_at text not null,
               foreign key(project_id) references projects(id),
@@ -267,11 +275,23 @@ class WorkspaceDatabaseMixin:
               status text not null,
               error_message text,
               attempt integer not null default 1,
+              cancel_requested_at text,
               created_at text not null,
               updated_at text not null,
               foreign key(batch_id) references batch_jobs(id),
               foreign key(source_id) references sources(id),
               foreign key(recording_id) references recordings(id)
+            );
+            create table diagnostic_exports (
+              id text primary key,
+              project_id text not null,
+              recording_ids_json text not null default '[]',
+              thresholds_json text not null default '{}',
+              summary_json text not null default '{}',
+              path text not null,
+              format text not null,
+              created_at text not null,
+              foreign key(project_id) references projects(id)
             );
             """
         )
@@ -299,7 +319,48 @@ class WorkspaceDatabaseMixin:
         _ensure_column(conn, "batch_jobs", "job_id", "text")
         _ensure_column(conn, "batch_items", "attempt", "integer not null default 1")
         conn.execute(
+            """
+            create table if not exists diagnostic_exports (
+              id text primary key,
+              project_id text not null,
+              recording_ids_json text not null default '[]',
+              thresholds_json text not null default '{}',
+              summary_json text not null default '{}',
+              path text not null,
+              format text not null,
+              created_at text not null,
+              foreign key(project_id) references projects(id)
+            )
+            """
+        )
+        conn.execute(
             "update sources set original_uri = uri where original_uri is null or original_uri = ''"
+        )
+        _create_indexes(conn)
+        conn.execute("pragma user_version = 2")
+
+    @staticmethod
+    def _migrate_v2_to_v3(conn: sqlite3.Connection) -> None:
+        _ensure_column(conn, "batch_jobs", "template_id", "text not null default 'sensor_monitor'")
+        _ensure_column(conn, "batch_jobs", "output_prefix", "text not null default 'batch_run'")
+        _ensure_column(conn, "batch_jobs", "storage_mode", "text not null default 'copy'")
+        _ensure_column(conn, "batch_jobs", "patterns_json", "text not null default '[]'")
+        _ensure_column(conn, "batch_jobs", "cancelled", "integer not null default 0")
+        _ensure_column(conn, "batch_items", "cancel_requested_at", "text")
+        conn.execute(
+            """
+            create table if not exists diagnostic_exports (
+              id text primary key,
+              project_id text not null,
+              recording_ids_json text not null default '[]',
+              thresholds_json text not null default '{}',
+              summary_json text not null default '{}',
+              path text not null,
+              format text not null,
+              created_at text not null,
+              foreign key(project_id) references projects(id)
+            )
+            """
         )
         _create_indexes(conn)
         conn.execute(f"pragma user_version = {SCHEMA_VERSION}")
@@ -318,6 +379,8 @@ def _create_indexes(conn: sqlite3.Connection) -> None:
           on batch_jobs(project_id, status, created_at);
         create index if not exists idx_batch_items_batch_status
           on batch_items(batch_id, status, created_at);
+        create index if not exists idx_diagnostic_exports_project_created
+          on diagnostic_exports(project_id, created_at);
         create index if not exists idx_query_rows_recording
           on query_rows(recording_id);
         create index if not exists idx_query_rows_key
