@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pickle
 import sqlite3
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -51,11 +51,11 @@ def write_tabular_chunks(frames: Iterable[pd.DataFrame], request: ConvertRequest
 def _source_order_rows(
     frames: Iterable[pd.DataFrame],
     request: ConvertRequest,
-) -> Iterable[pd.Series]:
+) -> Iterable[dict[str, Any]]:
     processed = 0
     for frame in frames:
         _check_cancel(request)
-        for _, row in frame.iterrows():
+        for row in _frame_records(frame):
             processed += 1
             yield row
         _report_progress(request, "converting", _fraction(processed, request))
@@ -64,7 +64,7 @@ def _source_order_rows(
 def _externally_sorted_rows(
     frames: Iterable[pd.DataFrame],
     request: ConvertRequest,
-) -> Iterable[pd.Series]:
+) -> Iterable[dict[str, Any]]:
     cache_dir = Path(request.cache_dir or Path(request.output_rrd).parent)
     cache_dir.mkdir(parents=True, exist_ok=True)
     sort_db = cache_dir / "tabular-sort.sqlite"
@@ -78,7 +78,7 @@ def _externally_sorted_rows(
             for frame in frames:
                 _check_cancel(request)
                 values = []
-                for _, row in frame.iterrows():
+                for row in _frame_records(frame):
                     timestamp = (
                         time_seconds_or_none(row[request.primary_timeline], unit=request.timeline_unit)
                         if request.primary_timeline
@@ -91,7 +91,7 @@ def _externally_sorted_rows(
                             int(timestamp is None),
                             float(timestamp or 0.0),
                             ordinal,
-                            sqlite3.Binary(pickle.dumps(row.to_dict(), protocol=pickle.HIGHEST_PROTOCOL)),
+                            sqlite3.Binary(pickle.dumps(row, protocol=pickle.HIGHEST_PROTOCOL)),
                         )
                     )
                     ordinal += 1
@@ -112,9 +112,15 @@ def _externally_sorted_rows(
                         "converting",
                         0.5 + (_fraction(index, request) * 0.5),
                     )
-                yield pd.Series(pickle.loads(payload))
+                yield pickle.loads(payload)
     finally:
         sort_db.unlink(missing_ok=True)
+
+
+def _frame_records(frame: pd.DataFrame) -> Iterator[dict[str, Any]]:
+    columns = list(frame.columns)
+    for values in frame.itertuples(index=False, name=None):
+        yield dict(zip(columns, values))
 
 
 def _fraction(processed: int, request: ConvertRequest) -> float:
@@ -136,7 +142,7 @@ def _check_cancel(request: ConvertRequest) -> None:
 
 def _set_row_time(
     rec: Any,
-    row: pd.Series,
+    row: Mapping[str, Any],
     row_index: int,
     mappings: list[dict[str, Any]],
     *,
@@ -170,7 +176,7 @@ def _primary_time_key(mappings: list[dict[str, Any]]) -> str | None:
     return None
 
 
-def _log_mapping(rec: Any, row: pd.Series, mapping: dict[str, Any]) -> None:
+def _log_mapping(rec: Any, row: Mapping[str, Any], mapping: dict[str, Any]) -> None:
     import rerun as rr
 
     semantic_type = mapping.get("semantic_type")
@@ -226,14 +232,14 @@ def _log_mapping(rec: Any, row: pd.Series, mapping: dict[str, Any]) -> None:
             rec.log(entity_path, rr.Transform3D(**kwargs))
 
 
-def _first_present(row: pd.Series, fields: list[str]) -> Any:
+def _first_present(row: Mapping[str, Any], fields: list[str]) -> Any:
     for field in fields:
         if field in row:
             return row[field]
     return None
 
 
-def _message_from_fields(row: pd.Series, fields: list[str]) -> str:
+def _message_from_fields(row: Mapping[str, Any], fields: list[str]) -> str:
     parts: list[str] = []
     for field in fields:
         if field in row and pd.notna(row[field]):
@@ -241,7 +247,7 @@ def _message_from_fields(row: pd.Series, fields: list[str]) -> str:
     return " ".join(parts)
 
 
-def _log_level(row: pd.Series, fields: list[str]) -> Any:
+def _log_level(row: Mapping[str, Any], fields: list[str]) -> Any:
     import rerun as rr
 
     for field in fields:
@@ -257,7 +263,7 @@ def _log_level(row: pd.Series, fields: list[str]) -> Any:
 
 
 def _coordinate_values(
-    row: pd.Series,
+    row: Mapping[str, Any],
     fields: list[str],
     roles: tuple[str, ...],
 ) -> list[float] | None:
@@ -271,7 +277,7 @@ def _coordinate_values(
     return values
 
 
-def _box_values(row: pd.Series, fields: list[str]) -> list[float] | None:
+def _box_values(row: Mapping[str, Any], fields: list[str]) -> list[float] | None:
     xywh = _coordinate_values(row, fields, ("x", "y", "w", "h"))
     if xywh is not None:
         return xywh

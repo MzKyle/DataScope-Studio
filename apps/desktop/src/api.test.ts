@@ -81,4 +81,17 @@ describe("apiErrorFromResponse", () => {
     });
     fetchMock.mockRestore();
   });
+
+  it("adds lightweight job list query parameters", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify([]), { status: 200 })
+    );
+
+    await api.jobs("project", { limit: 50, activeOnly: true });
+
+    expect(String(fetchMock.mock.calls[0][0])).toContain(
+      "/api/projects/project/jobs?active_only=true&limit=50"
+    );
+    fetchMock.mockRestore();
+  });
 });

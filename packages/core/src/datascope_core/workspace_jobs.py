@@ -162,12 +162,30 @@ class WorkspaceJobsMixin:
             raise KeyError(f"Job not found: {job_id}")
         return job_from_row(row)
 
-    def list_jobs(self, project_id: str) -> list[dict[str, Any]]:
+    def list_jobs(
+        self,
+        project_id: str,
+        *,
+        active_only: bool = False,
+        limit: int | None = None,
+    ) -> list[dict[str, Any]]:
         self.get_project(project_id)
+        conditions = ["project_id = ?"]
+        values: list[Any] = [project_id]
+        if active_only:
+            conditions.append("status in ('pending', 'running', 'cancel_requested')")
+        row_limit = None if limit is None else max(1, min(int(limit), 1000))
+        if row_limit is not None:
+            values.append(row_limit)
         with self._connect() as conn:
             rows = conn.execute(
-                "select * from jobs where project_id = ? order by created_at desc",
-                (project_id,),
+                f"""
+                select * from jobs
+                where {' and '.join(conditions)}
+                order by created_at desc
+                {'' if row_limit is None else 'limit ?'}
+                """,
+                values,
             ).fetchall()
         return [job_from_row(row) for row in rows]
 

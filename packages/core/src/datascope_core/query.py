@@ -4,7 +4,7 @@ import csv
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from typing import Any
 
 import pandas as pd
@@ -245,7 +245,7 @@ def _tabular_rows(
         time_unit=spec.effective_timeline_unit or spec.timeline_unit,
         timeline_sort=spec.timeline_sort,
     )
-    for row_index, row in frame.iterrows():
+    for row in _frame_records(frame):
         timestamp = _row_time(
             row,
             spec.primary_timeline,
@@ -383,7 +383,7 @@ def _append_field_values(
     timestamp: float | None,
     entity_path: str,
     semantic_type: str,
-    row: pd.Series,
+    row: Mapping[str, Any],
     fields: list[str],
 ) -> None:
     for field in fields:
@@ -397,7 +397,7 @@ def _field_values(
     timestamp: float | None,
     entity_path: str,
     semantic_type: str,
-    row: pd.Series,
+    row: Mapping[str, Any],
     fields: list[str],
 ) -> Iterator[QueryRow]:
     for field in fields:
@@ -436,7 +436,13 @@ def _iter_jsonl_batches(path: str, batch_size: int) -> Iterator[list[dict[str, A
         yield batch
 
 
-def _row_time(row: pd.Series, time_key: str, time_unit: str) -> float | None:
+def _frame_records(frame: pd.DataFrame) -> Iterator[dict[str, Any]]:
+    columns = list(frame.columns)
+    for values in frame.itertuples(index=False, name=None):
+        yield dict(zip(columns, values))
+
+
+def _row_time(row: Mapping[str, Any], time_key: str, time_unit: str) -> float | None:
     if time_key in row and pd.notna(row[time_key]):
         return time_seconds_or_none(row[time_key], unit=time_unit)
     return None

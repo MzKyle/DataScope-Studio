@@ -417,8 +417,18 @@ def create_app() -> FastAPI:
         return _guard(lambda: _workspace().get_job(job_id))
 
     @app.get("/api/projects/{project_id}/jobs")
-    def list_jobs(project_id: str) -> list[dict[str, Any]]:
-        return _guard(lambda: _workspace().list_jobs(project_id))
+    def list_jobs(
+        project_id: str,
+        active_only: bool = False,
+        limit: int | None = Query(None, ge=1, le=1000),
+    ) -> list[dict[str, Any]]:
+        return _guard(
+            lambda: _workspace().list_jobs(
+                project_id,
+                active_only=active_only,
+                limit=limit,
+            )
+        )
 
     @app.post("/api/jobs/{job_id}/cancel")
     def cancel_job(job_id: str) -> dict[str, Any]:

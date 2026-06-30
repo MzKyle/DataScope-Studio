@@ -85,6 +85,7 @@ export type { AreaErrors, ErrorArea } from "./app-support";
 
 const thresholdTemplates = new Set(["low_battery", "detection_failure"]);
 const TABLE_RENDER_LIMIT = 100;
+const JOB_POLL_LIMIT = 50;
 const JOB_SETTINGS_STORAGE_KEY = "datascope.jobSettings.maxWorkers";
 type RunOptions = {
   area?: ErrorArea | "global";
@@ -304,7 +305,7 @@ function App() {
       if (polling) return;
       polling = true;
       try {
-        const jobRows = await api.jobs(selectedProjectId);
+        const jobRows = await api.jobs(selectedProjectId, { limit: JOB_POLL_LIMIT });
         if (disposed) return;
         setJobs(jobRows);
 

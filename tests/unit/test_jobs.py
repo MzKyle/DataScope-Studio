@@ -53,6 +53,25 @@ def test_pending_job_cancel_and_retry_keep_audit_history(tmp_path: Path) -> None
     assert workspace.get_job(original["id"])["status"] == "cancelled"
 
 
+def test_list_jobs_supports_limit_and_active_filter(tmp_path: Path) -> None:
+    workspace = Workspace(tmp_path / "workspace")
+    project = workspace.create_project("Job list")
+    source = workspace.add_source(project["id"], str(FIXTURES / "sample_sensor.csv"))
+    first = workspace.enqueue_build_recording(project["id"], source["id"])
+    second = workspace.enqueue_build_recording(project["id"], source["id"])
+    third = workspace.enqueue_build_recording(project["id"], source["id"])
+
+    workspace.cancel_job(first["id"])
+    assert len(workspace.list_jobs(project["id"])) == 3
+
+    limited = workspace.list_jobs(project["id"], limit=2)
+    assert len(limited) == 2
+
+    active = workspace.list_jobs(project["id"], active_only=True)
+    assert {job["id"] for job in active} == {second["id"], third["id"]}
+    assert all(job["status"] == "pending" for job in active)
+
+
 def test_startup_marks_orphaned_running_job_interrupted(tmp_path: Path) -> None:
     workspace = Workspace(tmp_path / "workspace")
     project = workspace.create_project("Recovery")

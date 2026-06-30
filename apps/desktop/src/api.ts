@@ -43,6 +43,11 @@ type ApiCommandResponse = {
   body: string;
 };
 
+type JobListOptions = {
+  activeOnly?: boolean;
+  limit?: number;
+};
+
 export type ApiStatus = {
   status: string;
   port: number;
@@ -85,6 +90,22 @@ function delay(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
+let tauriApiBasePromise: Promise<string> | null = null;
+
+function setTauriApiBase(status: ApiStatus) {
+  tauriApiBasePromise = Promise.resolve(`http://127.0.0.1:${status.port}`);
+}
+
+function getTauriApiBase() {
+  if (!tauriApiBasePromise) {
+    tauriApiBasePromise = invoke<ApiStatus>("api_status").then((status) => {
+      setTauriApiBase(status);
+      return `http://127.0.0.1:${status.port}`;
+    });
+  }
+  return tauriApiBasePromise;
+}
+
 async function fetchWithRetry(url: string, init: RequestInit): Promise<Response> {
   let lastError: unknown;
   for (let attempt = 0; attempt <= NETWORK_RETRIES; attempt += 1) {
@@ -105,30 +126,19 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     if (init?.body && !headers.has("Content-Type")) {
       headers.set("Content-Type", "application/json");
     }
+    const requestInit = {
+      ...init,
+      headers
+    };
     if (isTauriRuntime()) {
-      const body = typeof init?.body === "string" ? init.body : undefined;
-      const result = await invoke<ApiCommandResponse>("api_request", {
-        request: {
-          method,
-          path,
-          body
-        }
-      });
-      const parsedBody = parseBody(result.body);
-      if (result.status < 200 || result.status >= 300) {
-        throw apiErrorFromResponse(parsedBody, result.status, `HTTP ${result.status}`);
+      try {
+        return await requestWithFetch<T>(`${await getTauriApiBase()}${path}`, requestInit);
+      } catch (error) {
+        if (error instanceof ApiError) throw error;
+        return await requestWithTauriProxy<T>(path, method, init);
       }
-      return parsedBody as T;
     }
-    const response = await fetchWithRetry(`${API_BASE}${path}`, {
-      headers,
-      ...init
-    });
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw apiErrorFromResponse(body, response.status, response.statusText);
-    }
-    return body as T;
+    return await requestWithFetch<T>(`${API_BASE}${path}`, requestInit);
   } catch (error) {
     const apiError = asApiError(error);
     logDiagnostic(
@@ -139,6 +149,35 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     );
     throw error;
   }
+}
+
+async function requestWithFetch<T>(url: string, init: RequestInit): Promise<T> {
+  const response = await fetchWithRetry(url, init);
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw apiErrorFromResponse(body, response.status, response.statusText);
+  }
+  return body as T;
+}
+
+async function requestWithTauriProxy<T>(
+  path: string,
+  method: string,
+  init?: RequestInit
+): Promise<T> {
+  const body = typeof init?.body === "string" ? init.body : undefined;
+  const result = await invoke<ApiCommandResponse>("api_request", {
+    request: {
+      method,
+      path,
+      body
+    }
+  });
+  const parsedBody = parseBody(result.body);
+  if (result.status < 200 || result.status >= 300) {
+    throw apiErrorFromResponse(parsedBody, result.status, `HTTP ${result.status}`);
+  }
+  return parsedBody as T;
 }
 
 function isTauriRuntime() {
@@ -170,8 +209,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+function jobListQuery(options: JobListOptions): string {
+  const params = new URLSearchParams();
+  if (options.activeOnly) params.set("active_only", "true");
+  if (options.limit !== undefined) params.set("limit", String(options.limit));
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
 export const api = {
-  status: () => invoke<ApiStatus>("api_status"),
+  status: async () => {
+    const status = await invoke<ApiStatus>("api_status");
+    setTauriApiBase(status);
+    return status;
+  },
   projects: () => request<Project[]>("/api/projects"),
   createProject: (name: string) =>
     request<Project>("/api/projects", {
@@ -272,7 +323,8 @@ export const api = {
       body: JSON.stringify({ recording_path: recordingPath, blueprint_path: blueprintPath })
     }),
   recordings: (projectId: string) => request<Recording[]>(`/api/projects/${projectId}/recordings`),
-  jobs: (projectId: string) => request<Job[]>(`/api/projects/${projectId}/jobs`),
+  jobs: (projectId: string, options: JobListOptions = {}) =>
+    request<Job[]>(`/api/projects/${projectId}/jobs${jobListQuery(options)}`),
   job: (jobId: string) => request<Job>(`/api/jobs/${jobId}`),
   jobSettings: () => request<JobSettings>("/api/jobs/settings"),
   updateJobSettings: (maxWorkers: number) =>
