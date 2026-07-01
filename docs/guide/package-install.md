@@ -76,6 +76,22 @@ npm run package:windows
 npm run package:macos
 ```
 
+Linux 本机打包完成后，产物默认位于：
+
+```text
+apps/desktop/src-tauri/target/release/bundle/deb/
+apps/desktop/src-tauri/target/release/bundle/appimage/
+```
+
+本机安装刚生成的 Debian 包可以执行：
+
+```bash
+sudo apt install "./src-tauri/target/release/bundle/deb/DataScope Studio_0.3.1_amd64.deb"
+```
+
+安装后可通过系统应用列表启动 **DataScope Studio**，也可以用 `dpkg -L
+data-scope-studio` 查看安装路径。AppImage 不需要安装，添加执行权限后直接运行。
+
 `runtime:build` 会从 `astral-sh/python-build-standalone` 下载当前平台的独立
 CPython，并在 `apps/desktop/src-tauri/resources/datascope-runtime/` 生成：
 

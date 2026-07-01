@@ -47,6 +47,20 @@ separately for normal desktop use.
 - Run offline robot diagnostics and export JSON, CSV, or HTML reports.
 - Export and reopen complete DataScope project packages.
 
+## Performance and Responsiveness
+
+- The Tauri desktop app talks directly to the local FastAPI server first and only falls
+  back to the Tauri proxy when direct requests fail, reducing normal API overhead.
+- API startup warms the workspace in the background, so health checks and window startup do
+  not wait for a full workspace scan.
+- **Import & Auto Map** uses one import workflow request for adding the source, inspecting
+  it, selecting templates, saving a draft mapping, previewing rows, and validating the
+  mapping.
+- Conversion jobs throttle progress writes to SQLite so large conversions do not spend
+  excessive time updating job metadata.
+- Query templates prefer the lightweight query index created during conversion and stream
+  rows with limits where possible to reduce memory pressure on large projects.
+
 ## Supported Data
 
 | Source | Examples | Typical Template |
