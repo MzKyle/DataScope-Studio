@@ -6,6 +6,7 @@ import glob
 import os
 import shutil
 import sqlite3
+import time
 import zipfile
 from collections.abc import Callable, Iterator
 from dataclasses import asdict
@@ -536,6 +537,11 @@ class Workspace(
             )
         )
         cache_dir.mkdir(parents=True, exist_ok=True)
+        progress_update_min_delta = 0.01
+        progress_update_min_seconds = 0.5
+        last_progress_stage: str | None = None
+        last_progress_value: float | None = None
+        last_progress_at = 0.0
 
         def check_cancel() -> None:
             if _cancel_check is not None:
@@ -544,14 +550,27 @@ class Workspace(
                 self._check_job_cancelled(job_id)
 
         def report_progress(stage: str, progress: float) -> None:
+            nonlocal last_progress_at, last_progress_stage, last_progress_value
             check_cancel()
             if _manage_job and job_id is not None:
+                next_progress = 0.1 + min(max(progress, 0.0), 1.0) * 0.65
+                now_monotonic = time.monotonic()
+                if (
+                    last_progress_stage == stage
+                    and last_progress_value is not None
+                    and abs(next_progress - last_progress_value) < progress_update_min_delta
+                    and now_monotonic - last_progress_at < progress_update_min_seconds
+                ):
+                    return
                 self._update_job(
                     job_id,
                     status="running",
-                    progress=0.1 + min(max(progress, 0.0), 1.0) * 0.65,
+                    progress=next_progress,
                     stage=stage,
                 )
+                last_progress_stage = stage
+                last_progress_value = next_progress
+                last_progress_at = now_monotonic
 
         try:
             if _manage_job and job_id is not None:

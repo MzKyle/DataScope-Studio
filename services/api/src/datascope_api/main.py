@@ -39,6 +39,10 @@ class SourceCreate(BaseModel):
     import_options: dict[str, Any] = Field(default_factory=dict)
 
 
+class SourceImportWorkflowRequest(SourceCreate):
+    template_id: str | None = None
+
+
 class SourceEstimateRequest(BaseModel):
     path: str = Field(min_length=1)
     storage_mode: str = "copy"
@@ -172,7 +176,7 @@ class JobSettingsPatch(BaseModel):
 
 @asynccontextmanager
 async def _lifespan(_: FastAPI):
-    _workspace()
+    services.warm_workspace()
     try:
         yield
     finally:
@@ -275,6 +279,49 @@ def create_app() -> FastAPI:
                 import_options=payload.import_options,
             )
         )
+
+    @app.post("/api/projects/{project_id}/sources/import-workflow")
+    def import_source_workflow(
+        project_id: str,
+        payload: SourceImportWorkflowRequest,
+    ) -> dict[str, Any]:
+        def run() -> dict[str, Any]:
+            workspace = _workspace()
+            added = workspace.add_source(
+                project_id,
+                payload.path,
+                storage_mode=payload.storage_mode,
+                import_options=payload.import_options,
+            )
+            inspection = workspace.inspect_source(added["id"])
+            template_matches = workspace.suggest_templates(added["id"])
+            selected_template_id = (
+                payload.template_id
+                or (
+                    str(template_matches[0]["template_id"])
+                    if template_matches
+                    else "sensor_monitor"
+                )
+            )
+            spec = workspace.suggest_mapping(
+                added["id"],
+                template_id=selected_template_id,
+            )
+            saved_mapping = workspace.save_mapping(project_id, added["id"], spec)
+            mapping_preview = workspace.mapping_preview(added["id"], spec)
+            return {
+                "source": inspection["source"],
+                "streams": inspection["streams"],
+                "template_matches": template_matches,
+                "template_id": selected_template_id,
+                "mapping": {"mapping": mapping_preview["mapping"]},
+                "saved_mapping": saved_mapping,
+                "preview": mapping_preview["preview"],
+                "schema_profile": mapping_preview["schema_profile"],
+                "validation": mapping_preview["validation"],
+            }
+
+        return _guard(run)
 
     @app.post("/api/projects/{project_id}/estimates/source-import")
     def estimate_source_import(

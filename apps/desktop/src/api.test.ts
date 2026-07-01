@@ -94,4 +94,40 @@ describe("apiErrorFromResponse", () => {
     );
     fetchMock.mockRestore();
   });
+
+  it("posts source import workflow requests in one API round trip", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          source: {},
+          streams: [],
+          template_matches: [],
+          template_id: "sensor_monitor",
+          mapping: { mapping: {} },
+          saved_mapping: { id: "mapping_1", path: "/tmp/mapping.yaml" },
+          preview: { columns: [], rows: [] },
+          schema_profile: {},
+          validation: {}
+        }),
+        { status: 200 }
+      )
+    );
+
+    await api.importWorkflow("project", "/tmp/source.csv", "copy", {
+      csv: { header_mode: "header", column_names: ["timestamp", "value"] }
+    });
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toContain("/api/projects/project/sources/import-workflow");
+    expect(init?.method).toBe("POST");
+    expect(JSON.parse(String(init?.body))).toEqual({
+      path: "/tmp/source.csv",
+      storage_mode: "copy",
+      import_options: {
+        csv: { header_mode: "header", column_names: ["timestamp", "value"] }
+      },
+      template_id: null
+    });
+    fetchMock.mockRestore();
+  });
 });

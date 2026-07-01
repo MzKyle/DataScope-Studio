@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import os
+import logging
 import threading
 from pathlib import Path
 
 from datascope_core.job_supervisor import JobSupervisor
 from datascope_core.workspace import Workspace, default_workspace_path
+
+
+logger = logging.getLogger("uvicorn.error.datascope.services")
 
 
 class AppServices:
@@ -15,6 +19,7 @@ class AppServices:
         self._workspace: Workspace | None = None
         self._supervisor: JobSupervisor | None = None
         self._max_workers = int(os.environ.get("DATASCOPE_MAX_WORKERS", "1"))
+        self._warmup_thread: threading.Thread | None = None
 
     def workspace(self) -> Workspace:
         root = Path(os.environ.get("DATASCOPE_WORKSPACE") or default_workspace_path())
@@ -32,6 +37,23 @@ class AppServices:
                 self._supervisor = JobSupervisor(workspace, max_workers=self._max_workers)
                 self._supervisor.start()
             return self._supervisor
+
+    def warm_workspace(self) -> None:
+        with self._lock:
+            if self._warmup_thread is not None and self._warmup_thread.is_alive():
+                return
+            self._warmup_thread = threading.Thread(
+                target=self._warm_workspace,
+                name="datascope-workspace-warmup",
+                daemon=True,
+            )
+            self._warmup_thread.start()
+
+    def _warm_workspace(self) -> None:
+        try:
+            self.workspace()
+        except Exception:
+            logger.exception("workspace_warmup_failed")
 
     def job_settings(self) -> dict[str, int]:
         with self._lock:

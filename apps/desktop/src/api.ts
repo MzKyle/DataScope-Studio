@@ -48,6 +48,18 @@ type JobListOptions = {
   limit?: number;
 };
 
+type ImportWorkflowResult = {
+  source: Source;
+  streams: StreamInfo[];
+  template_matches: TemplateMatch[];
+  template_id: string;
+  mapping: MappingPayload;
+  saved_mapping: { id: string; path: string };
+  preview: { columns: string[]; rows: Record<string, unknown>[] };
+  schema_profile: SchemaProfile;
+  validation: MappingValidation;
+};
+
 export type ApiStatus = {
   status: string;
   port: number;
@@ -241,6 +253,22 @@ export const api = {
         path,
         storage_mode: storageMode,
         import_options: importOptions
+      })
+    }),
+  importWorkflow: (
+    projectId: string,
+    path: string,
+    storageMode: "copy" | "reference" = "copy",
+    importOptions: Record<string, unknown> = {},
+    templateId?: string
+  ) =>
+    request<ImportWorkflowResult>(`/api/projects/${projectId}/sources/import-workflow`, {
+      method: "POST",
+      body: JSON.stringify({
+        path,
+        storage_mode: storageMode,
+        import_options: importOptions,
+        template_id: templateId || null
       })
     }),
   estimateSourceImport: (

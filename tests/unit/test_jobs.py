@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 from datascope_core.job_supervisor import JobSupervisor, _terminate_process_tree
+from datascope_core.models import ConvertRequest
 from datascope_core.workspace import Workspace
 
 
@@ -70,6 +71,45 @@ def test_list_jobs_supports_limit_and_active_filter(tmp_path: Path) -> None:
     active = workspace.list_jobs(project["id"], active_only=True)
     assert {job["id"] for job in active} == {second["id"], third["id"]}
     assert all(job["status"] == "pending" for job in active)
+
+
+def test_conversion_progress_updates_are_throttled(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    workspace = Workspace(tmp_path / "workspace")
+    project = workspace.create_project("Progress throttle")
+    source = workspace.add_source(project["id"], str(FIXTURES / "sample_sensor.csv"))
+    workspace.inspect_source(source["id"])
+    spec = workspace.suggest_mapping(source["id"])
+    mapping = workspace.save_mapping(project["id"], source["id"], spec)
+    converting_updates = []
+    original_update_job = workspace._update_job
+
+    class NoisyProgressAdapter:
+        def convert(self, request: ConvertRequest) -> None:
+            for index in range(1000):
+                if request.progress_callback is not None:
+                    request.progress_callback("converting", index / 999)
+            Path(request.output_rrd).write_bytes(b"rrd")
+
+    def tracked_update_job(*args, **kwargs):
+        if kwargs.get("stage") == "converting":
+            converting_updates.append(kwargs.get("progress"))
+        return original_update_job(*args, **kwargs)
+
+    monkeypatch.setattr(workspace, "_adapter_for_path", lambda *_: NoisyProgressAdapter())
+    monkeypatch.setattr(workspace, "_update_job", tracked_update_job)
+
+    result = workspace.build_recording(
+        project["id"],
+        source["id"],
+        mapping_id=mapping["id"],
+        output_name="progress_throttle",
+    )
+
+    assert result["status"] == "succeeded"
+    assert 0 < len(converting_updates) < 120
 
 
 def test_startup_marks_orphaned_running_job_interrupted(tmp_path: Path) -> None:

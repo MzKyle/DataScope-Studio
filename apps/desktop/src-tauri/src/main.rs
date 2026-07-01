@@ -51,7 +51,8 @@ struct BackendState {
     port: u16,
     packaged_runtime: bool,
     runtime_dir: Option<PathBuf>,
-    rerun_available: bool,
+    rerun_python: Option<PathBuf>,
+    rerun_available: Mutex<Option<bool>>,
     log_dir: PathBuf,
     desktop_log_path: PathBuf,
     backend_log_path: PathBuf,
@@ -123,6 +124,7 @@ async fn api_request(
 
 #[tauri::command]
 async fn api_status(state: tauri::State<'_, BackendState>) -> Result<ApiStatus, String> {
+    let rerun_available = cached_rerun_available(&state);
     Ok(ApiStatus {
         status: if api_ready(state.port) {
             "online".to_string()
@@ -135,7 +137,7 @@ async fn api_status(state: tauri::State<'_, BackendState>) -> Result<ApiStatus, 
             .runtime_dir
             .as_ref()
             .map(|path| path.to_string_lossy().to_string()),
-        rerun_available: state.rerun_available,
+        rerun_available,
         log_dir: state.log_dir.to_string_lossy().to_string(),
         desktop_log_path: state.desktop_log_path.to_string_lossy().to_string(),
         backend_log_path: state.backend_log_path.to_string_lossy().to_string(),
@@ -232,7 +234,8 @@ fn start_backend(app: &AppHandle) -> Result<BackendState, String> {
             port,
             packaged_runtime: false,
             runtime_dir: None,
-            rerun_available: false,
+            rerun_python: None,
+            rerun_available: Mutex::new(Some(false)),
             log_dir,
             desktop_log_path,
             backend_log_path,
@@ -348,21 +351,21 @@ fn start_backend(app: &AppHandle) -> Result<BackendState, String> {
         ));
     }
 
-    let rerun_available = runtime_python_has_module(&python, "rerun_cli");
     let _ = diagnostic_log::write(
         "info",
         "desktop.backend",
         "local API is ready",
         Some(serde_json::json!({
             "port": port,
-            "rerun_available": rerun_available,
+            "rerun_available": "deferred",
         })),
     );
     Ok(BackendState {
         port,
         packaged_runtime,
         runtime_dir,
-        rerun_available,
+        rerun_python: Some(python),
+        rerun_available: Mutex::new(None),
         log_dir,
         desktop_log_path,
         backend_log_path: log_path,
@@ -490,6 +493,27 @@ fn runtime_python_has_module(python: &Path, module: &str) -> bool {
     status.map(|status| status.success()).unwrap_or(false)
 }
 
+fn cached_rerun_available(state: &BackendState) -> bool {
+    if let Ok(cache) = state.rerun_available.lock() {
+        if let Some(value) = *cache {
+            return value;
+        }
+    }
+
+    let Some(python) = state.rerun_python.clone() else {
+        if let Ok(mut cache) = state.rerun_available.lock() {
+            *cache = Some(false);
+        }
+        return false;
+    };
+
+    let available = runtime_python_has_module(&python, "rerun_cli");
+    if let Ok(mut cache) = state.rerun_available.lock() {
+        *cache = Some(available);
+    }
+    available
+}
+
 fn external_backend_enabled() -> bool {
     matches!(
         env::var("DATASCOPE_DEV_BACKEND").as_deref(),
@@ -563,7 +587,7 @@ fn main() {
             let smoke_backend_ok = api_ready(backend_state.port)
                 && backend_state.packaged_runtime
                 && backend_state.runtime_dir.is_some()
-                && backend_state.rerun_available;
+                && cached_rerun_available(&backend_state);
             let smoke_state = app.state::<SmokeState>().inner().clone();
             app.manage(backend_state);
             if smoke_test {
@@ -572,11 +596,13 @@ fn main() {
                 }
                 let handle = app.handle().clone();
                 std::thread::spawn(move || {
-                    let frontend_ready = wait_for_frontend_ready(
-                        &smoke_state,
-                        Duration::from_secs(10),
-                    );
-                    handle.exit(if smoke_backend_ok && frontend_ready { 0 } else { 1 });
+                    let frontend_ready =
+                        wait_for_frontend_ready(&smoke_state, Duration::from_secs(10));
+                    handle.exit(if smoke_backend_ok && frontend_ready {
+                        0
+                    } else {
+                        1
+                    });
                 });
             }
             Ok(())

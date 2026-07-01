@@ -101,6 +101,37 @@ def test_api_project_source_mapping_build_flow(tmp_path: Path, monkeypatch) -> N
     assert result["blueprint_path"] in error["paths"]
 
 
+def test_api_source_import_workflow_batches_import_inspect_and_mapping(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("DATASCOPE_WORKSPACE", str(tmp_path / "workflow_workspace"))
+    client = TestClient(app)
+    project = client.post("/api/projects", json={"name": "Import Workflow"}).json()
+
+    response = client.post(
+        f"/api/projects/{project['id']}/sources/import-workflow",
+        json={
+            "path": str(FIXTURES / "sample_sensor.csv"),
+            "storage_mode": "copy",
+            "template_id": "sensor_monitor",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["source"]["status"] == "inspected"
+    assert payload["source"]["project_id"] == project["id"]
+    assert payload["streams"]
+    assert payload["template_id"] == "sensor_monitor"
+    assert payload["template_matches"]
+    assert payload["mapping"]["mapping"]["source"] == payload["source"]["id"]
+    assert payload["saved_mapping"]["id"] == payload["mapping"]["mapping"]["id"]
+    assert payload["preview"]["rows"]
+    assert payload["schema_profile"]["source_id"] == payload["source"]["id"]
+    assert "valid" in payload["validation"]
+
+
 def test_api_batch_management_retry_and_job_settings(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("DATASCOPE_WORKSPACE", str(tmp_path / "batch_workspace"))
     client = TestClient(app)

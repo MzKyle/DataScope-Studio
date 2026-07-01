@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -7,10 +8,12 @@ from uuid import uuid4
 from datascope_core.models import MappingSpec
 from datascope_core.query import (
     QUERY_TEMPLATES,
+    STREAMABLE_QUERY_TEMPLATES,
     compare_recordings,
     export_query_result,
     iter_query_rows,
     run_query_template,
+    run_query_template_stream,
 )
 from datascope_core.workspace_utils import row_to_dict, source_info_from_row, utc_now
 
@@ -32,6 +35,17 @@ class WorkspaceQueryMixin:
         limit: int = 1000,
     ) -> dict[str, Any]:
         self.get_project(project_id)
+        if template_id in STREAMABLE_QUERY_TEMPLATES:
+            return run_query_template_stream(
+                self._iter_query_rows(
+                    project_id,
+                    template_id=template_id,
+                    recording_ids=recording_ids,
+                ),
+                template_id,
+                params,
+                limit,
+            )
         rows = self._query_rows(
             project_id,
             template_id=template_id,
@@ -128,6 +142,55 @@ class WorkspaceQueryMixin:
         semantic_types: list[str] | None = None,
         search_tokens: list[str] | None = None,
     ) -> list[dict[str, Any]]:
+        return list(
+            self._iter_query_rows(
+                project_id,
+                template_id=template_id,
+                recording_ids=recording_ids,
+                semantic_types=semantic_types,
+                search_tokens=search_tokens,
+            )
+        )
+
+    def _iter_query_rows(
+        self,
+        project_id: str,
+        *,
+        template_id: str | None = None,
+        recording_ids: list[str] | None = None,
+        semantic_types: list[str] | None = None,
+        search_tokens: list[str] | None = None,
+    ) -> Iterator[dict[str, Any]]:
+        conditions, values = self._query_conditions(
+            project_id,
+            template_id=template_id,
+            recording_ids=recording_ids,
+            semantic_types=semantic_types,
+            search_tokens=search_tokens,
+        )
+        with self._connect() as conn:
+            cursor = conn.execute(
+                f"""
+                select qr.*
+                from query_rows qr
+                join recordings r on r.id = qr.recording_id
+                where {' and '.join(conditions)}
+                order by qr.recording_id, qr.time, qr.entity_path, qr.key
+                """,
+                values,
+            )
+            for row in cursor:
+                yield row_to_dict(row)
+
+    def _query_conditions(
+        self,
+        project_id: str,
+        *,
+        template_id: str | None = None,
+        recording_ids: list[str] | None = None,
+        semantic_types: list[str] | None = None,
+        search_tokens: list[str] | None = None,
+    ) -> tuple[list[str], list[Any]]:
         conditions = ["r.project_id = ?"]
         values: list[Any] = [project_id]
         if recording_ids:
@@ -153,18 +216,7 @@ class WorkspaceQueryMixin:
                 values.extend([pattern, pattern])
             if token_conditions:
                 conditions.append(f"({' or '.join(token_conditions)})")
-        with self._connect() as conn:
-            rows = conn.execute(
-                f"""
-                select qr.*
-                from query_rows qr
-                join recordings r on r.id = qr.recording_id
-                where {' and '.join(conditions)}
-                order by qr.recording_id, qr.time, qr.entity_path, qr.key
-                """,
-                values,
-            ).fetchall()
-        return [row_to_dict(row) for row in rows]
+        return conditions, values
 
 
 def _insert_query_rows(conn: Any, rows: list[tuple[Any, ...]]) -> None:

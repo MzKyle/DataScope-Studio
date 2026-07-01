@@ -591,40 +591,35 @@ function App() {
           projectIdForImport = projectForImport.id;
         }
 
-        const added = await api.addSource(
+        const importOptions = nextSourcePath.toLowerCase().endsWith(".csv")
+          ? {
+              csv: {
+                header_mode: csvHeaderMode,
+                column_names: csvColumnNames
+                  .split(",")
+                  .map((name) => name.trim())
+                  .filter(Boolean)
+              }
+            }
+          : {};
+        const imported = await api.importWorkflow(
           projectIdForImport,
           nextSourcePath,
           sourceStorageMode,
-          nextSourcePath.toLowerCase().endsWith(".csv")
-            ? {
-                csv: {
-                  header_mode: csvHeaderMode,
-                  column_names: csvColumnNames
-                    .split(",")
-                    .map((name) => name.trim())
-                    .filter(Boolean)
-                }
-              }
-            : {}
+          importOptions
         );
-        const inspection = await api.inspect(added.id);
-        const templateMatches = await api.suggestTemplates(added.id);
-        const nextTemplateId = templateMatches[0]?.template_id ?? "sensor_monitor";
-        const suggested = await api.suggestMappingForTemplate(added.id, nextTemplateId);
-        const savedMapping = await api.saveMapping(added.id, suggested.mapping);
-        const mappingPreview = await api.previewMapping(added.id, suggested.mapping);
         return {
-          added,
+          added: imported.source,
           project: projectForImport,
           projectRows,
-          streams: inspection.streams,
-          templateMatches,
-          nextTemplateId,
-          suggested,
-          savedMappingId: savedMapping.id,
-          previewRows: mappingPreview.preview.rows,
-          schemaProfile: mappingPreview.schema_profile,
-          validation: mappingPreview.validation
+          streams: imported.streams,
+          templateMatches: imported.template_matches,
+          nextTemplateId: imported.template_id,
+          suggested: imported.mapping,
+          savedMappingId: imported.saved_mapping.id,
+          previewRows: imported.preview.rows,
+          schemaProfile: imported.schema_profile,
+          validation: imported.validation
         };
       },
       { area: "import" }

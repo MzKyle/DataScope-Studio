@@ -4,7 +4,7 @@ import csv
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from collections.abc import Iterator, Mapping
+from collections.abc import Iterable, Iterator, Mapping
 from typing import Any
 
 import pandas as pd
@@ -62,6 +62,12 @@ QUERY_TEMPLATES = [
 
 
 QUERY_COLUMNS = ["recording_id", "time", "entity_path", "key", "value"]
+STREAMABLE_QUERY_TEMPLATES = {
+    "find_errors",
+    "low_battery",
+    "detection_failure",
+    "topic_summary",
+}
 
 
 @dataclass(slots=True)
@@ -149,6 +155,27 @@ def run_query_template(
         raise ValueError(f"Unsupported query template: {template_id}")
 
     return {"columns": QUERY_COLUMNS, "rows": result[:limit]}
+
+
+def run_query_template_stream(
+    rows: Iterable[dict[str, Any]],
+    template_id: str,
+    params: dict[str, Any] | None,
+    limit: int,
+) -> dict[str, Any]:
+    if template_id not in STREAMABLE_QUERY_TEMPLATES:
+        return run_query_template(list(rows), template_id, None, params, limit)
+
+    params = params or {}
+    result: list[dict[str, Any]] = []
+    for row in rows:
+        selected = _stream_query_row(row, template_id, params)
+        if selected is None:
+            continue
+        result.append(selected)
+        if len(result) >= limit:
+            break
+    return {"columns": QUERY_COLUMNS, "rows": result}
 
 
 def compare_recordings(
@@ -485,6 +512,41 @@ def _find_errors(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if any(needle in text for needle in needles):
             result.append(_result_row(row))
     return result
+
+
+def _stream_query_row(
+    row: dict[str, Any],
+    template_id: str,
+    params: dict[str, Any],
+) -> dict[str, Any] | None:
+    if template_id == "find_errors":
+        if row["semantic_type"] not in {"text_log", "state"}:
+            return None
+        text = str(_db_value(row)).lower()
+        if any(needle in text for needle in ("error", "warn", "fault")):
+            return _result_row(row)
+        return None
+    if template_id == "low_battery":
+        key_text = f"{row['key']} {row['entity_path']}".lower()
+        if "battery" not in key_text:
+            return None
+        value = _db_value(row)
+        if isinstance(value, (int, float)) and value < float(params.get("threshold", 0.2)):
+            return _result_row(row)
+        return None
+    if template_id == "detection_failure":
+        if "/camera/pred" not in row["entity_path"]:
+            return None
+        value = _db_value(row)
+        threshold = float(params.get("threshold", 0.5))
+        if row["key"] == "pred_box_count" and value == 0:
+            return _result_row(row, {"reason": "no_prediction", "value": value})
+        if row["key"] in {"score_min", "score_mean"} and isinstance(value, (int, float)) and value < threshold:
+            return _result_row(row, {"reason": "low_score", "value": value})
+        return None
+    if template_id == "topic_summary" and row["key"] == "topic_summary":
+        return _result_row(row)
+    return None
 
 
 def _low_battery(rows: list[dict[str, Any]], threshold: float) -> list[dict[str, Any]]:
