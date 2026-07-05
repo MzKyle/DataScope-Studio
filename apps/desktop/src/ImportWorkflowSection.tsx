@@ -64,6 +64,14 @@ type ImportWorkflowSectionProps = {
   outputNameRef: RefObject<HTMLInputElement | null>;
   outputName: string;
   artifactOutputDir: string;
+  mcapDecoders: string;
+  rrdOptimizeProfile: string;
+  artifactValidation: string;
+  catalogEnabled: boolean;
+  catalogDataset: string;
+  catalogManagedLocal: boolean;
+  catalogServerUrl: string;
+  rerun033Available: boolean;
   buildResult: BuildResult | null;
   buildJob: Job | null;
   isBuildSubmitting: boolean;
@@ -92,6 +100,13 @@ type ImportWorkflowSectionProps = {
   onRunMappingDiff: () => void;
   onOutputNameChange: (name: string) => void;
   onArtifactOutputDirChange: (path: string) => void;
+  onMcapDecodersChange: (value: string) => void;
+  onRrdOptimizeProfileChange: (value: string) => void;
+  onArtifactValidationChange: (value: string) => void;
+  onCatalogEnabledChange: (value: boolean) => void;
+  onCatalogDatasetChange: (value: string) => void;
+  onCatalogManagedLocalChange: (value: boolean) => void;
+  onCatalogServerUrlChange: (value: string) => void;
   onChooseArtifactOutputFolder: () => void;
   onBuildRecording: () => void;
   onOpenInRerun: () => void;
@@ -119,6 +134,14 @@ export function ImportWorkflowSection({
   outputNameRef,
   outputName,
   artifactOutputDir,
+  mcapDecoders,
+  rrdOptimizeProfile,
+  artifactValidation,
+  catalogEnabled,
+  catalogDataset,
+  catalogManagedLocal,
+  catalogServerUrl,
+  rerun033Available,
   buildResult,
   buildJob,
   isBuildSubmitting,
@@ -143,12 +166,20 @@ export function ImportWorkflowSection({
   onRunMappingDiff,
   onOutputNameChange,
   onArtifactOutputDirChange,
+  onMcapDecodersChange,
+  onRrdOptimizeProfileChange,
+  onArtifactValidationChange,
+  onCatalogEnabledChange,
+  onCatalogDatasetChange,
+  onCatalogManagedLocalChange,
+  onCatalogServerUrlChange,
   onChooseArtifactOutputFolder,
   onBuildRecording,
   onOpenInRerun
 }: ImportWorkflowSectionProps) {
   const buildJobActive = isActiveBuildJob(buildJob);
   const buildControlsLocked = isBusy || isBuildSubmitting || buildJobActive;
+  const sourceUsesMcapImporter = source?.type === "mcap" || source?.type === "ros2_db3";
   const buildPercent = Math.round(
     Math.min(1, Math.max(0, buildJob?.progress ?? 0)) * 100
   );
@@ -556,6 +587,87 @@ export function ImportWorkflowSection({
             </button>
           </div>
           <p className="field-hint">{t("artifactOutputPathHint")}</p>
+          <div className="advanced-build-options">
+            {sourceUsesMcapImporter && (
+              <label>
+                <span>{t("mcapDecoders")}</span>
+                <input
+                  placeholder={t("mcapDecodersPlaceholder")}
+                  value={mcapDecoders}
+                  onChange={(event) => onMcapDecodersChange(event.target.value)}
+                  disabled={buildControlsLocked || !rerun033Available}
+                />
+              </label>
+            )}
+            <label>
+              <span>{t("rrdOptimizeProfile")}</span>
+              <select
+                value={rrdOptimizeProfile}
+                onChange={(event) => onRrdOptimizeProfileChange(event.target.value)}
+                disabled={buildControlsLocked || !rerun033Available}
+              >
+                <option value="none">{t("none")}</option>
+                <option value="live">live</option>
+                <option value="object-store">object-store</option>
+              </select>
+            </label>
+            <label>
+              <span>{t("artifactValidation")}</span>
+              <select
+                value={artifactValidation}
+                onChange={(event) => onArtifactValidationChange(event.target.value)}
+                disabled={buildControlsLocked || !rerun033Available}
+              >
+                <option value="basic">basic</option>
+                <option value="verify">verify</option>
+                <option value="strict">strict</option>
+              </select>
+            </label>
+            <label className="checkbox-line">
+              <input
+                type="checkbox"
+                checked={catalogEnabled}
+                onChange={(event) => onCatalogEnabledChange(event.target.checked)}
+                disabled={buildControlsLocked || !rerun033Available}
+              />
+              <span>{t("catalogRegistration")}</span>
+            </label>
+            {catalogEnabled && (
+              <>
+                <label>
+                  <span>{t("catalogDataset")}</span>
+                  <input
+                    value={catalogDataset}
+                    onChange={(event) => onCatalogDatasetChange(event.target.value)}
+                    disabled={buildControlsLocked || !rerun033Available}
+                  />
+                </label>
+                <label className="checkbox-line">
+                  <input
+                    type="checkbox"
+                    checked={catalogManagedLocal}
+                    onChange={(event) => onCatalogManagedLocalChange(event.target.checked)}
+                    disabled={buildControlsLocked || !rerun033Available}
+                  />
+                  <span>{t("managedLocalCatalog")}</span>
+                </label>
+                {!catalogManagedLocal && (
+                  <label>
+                    <span>{t("catalogServerUrl")}</span>
+                    <input
+                      value={catalogServerUrl}
+                      onChange={(event) => onCatalogServerUrlChange(event.target.value)}
+                      disabled={buildControlsLocked || !rerun033Available}
+                      placeholder="rerun+http://127.0.0.1:51234"
+                    />
+                  </label>
+                )}
+              </>
+            )}
+            {!rerun033Available && (
+              <p className="field-hint">{t("rerun033Unavailable")}</p>
+            )}
+          </div>
           <BuildJobStatus job={buildJob} isSubmitting={isBuildSubmitting} t={t} />
           <InlineError id="build-error" error={errors.build} t={t} />
           {buildResult ? (
@@ -585,6 +697,20 @@ export function ImportWorkflowSection({
                     <dt>{t("converter")}</dt>
                     <dd>{buildResult.artifact_info.converter}</dd>
                   </div>
+                  <div>
+                    <dt>{t("artifactValidation")}</dt>
+                    <dd>{buildResult.artifact_info.artifact_validation ?? "basic"}</dd>
+                  </div>
+                  <div>
+                    <dt>{t("rrdOptimizeProfile")}</dt>
+                    <dd>{buildResult.artifact_info.rrd_optimize_profile ?? "none"}</dd>
+                  </div>
+                  {buildResult.artifact_info.catalog_registration?.enabled ? (
+                    <div>
+                      <dt>{t("catalogRegistration")}</dt>
+                      <dd>{buildResult.artifact_info.catalog_registration.status}</dd>
+                    </div>
+                  ) : null}
                 </>
               ) : null}
               <div>

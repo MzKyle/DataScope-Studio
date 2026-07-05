@@ -64,6 +64,7 @@ describe("BuildJobStatus", () => {
 
   it("localizes known stages and preserves unknown adapter stages", () => {
     expect(buildStageLabel("blueprint", t)).toBe("Generating Blueprint");
+    expect(buildStageLabel("rrd_optimize", t)).toBe("Optimizing RRD");
     expect(buildStageLabel("custom_adapter_stage", t)).toBe("custom_adapter_stage");
     expect(buildStageLabel("converting", createTranslator("zh"))).toBe("正在转换数据");
   });

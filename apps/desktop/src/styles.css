@@ -1584,6 +1584,35 @@ td {
   animation: build-status-spin 900ms linear infinite;
 }
 
+.advanced-build-options {
+  border-top: 1px solid var(--color-border);
+  display: grid;
+  gap: var(--space-12);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin-top: var(--space-16);
+  padding-top: var(--space-16);
+}
+
+.advanced-build-options label {
+  display: grid;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.advanced-build-options .checkbox-line {
+  align-items: center;
+  display: flex;
+  gap: var(--space-8);
+}
+
+.advanced-build-options .checkbox-line input {
+  inline-size: auto;
+}
+
+.advanced-build-options .field-hint {
+  grid-column: 1 / -1;
+}
+
 @keyframes build-status-spin {
   to {
     transform: rotate(360deg);

@@ -30,6 +30,7 @@ const STAGE_TRANSLATIONS: Record<string, TranslationKey> = {
   converting: "buildStageConverting",
   ros2_to_mcap: "buildStageRos2ToMcap",
   rerun_mcap: "buildStageRerunMcap",
+  rrd_optimize: "buildStageRrdOptimize",
   blueprint: "buildStageBlueprint",
   completed: "buildStageCompleted",
   failed: "buildStageFailed",

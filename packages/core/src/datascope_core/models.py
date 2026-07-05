@@ -28,6 +28,20 @@ POINT_CLOUD_EXTENSIONS = {
     ".asc",
 }
 TEXT_TABLE_EXTENSIONS = {".tsv", ".txt", ".log", ".dat", ".lst", ".list"}
+MCAP_DECODERS = {
+    "raw",
+    "schema",
+    "stats",
+    "metadata",
+    "attachments",
+    "protobuf",
+    "recording_info",
+    "urdf",
+    "ros2msg",
+    "foxglove",
+}
+RRD_OPTIMIZE_PROFILES = {"none", "live", "object-store"}
+ARTIFACT_VALIDATION_MODES = {"basic", "verify", "strict"}
 
 
 @dataclass(slots=True)
@@ -63,6 +77,7 @@ class ConvertRequest:
     progress_callback: Callable[[str, float], None] | None = None
     cancel_check: Callable[[], None] | None = None
     poll_subprocess: bool = False
+    mcap_decoders: list[str] | None = None
 
 
 @dataclass(slots=True)

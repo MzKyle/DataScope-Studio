@@ -195,6 +195,15 @@ export type BuildResult = {
   artifact_info?: RerunArtifactInfo;
 };
 
+export type CatalogRegistrationInfo = {
+  enabled: boolean;
+  dataset_name: string;
+  server_url?: string | null;
+  managed_local: boolean;
+  status: string;
+  recording_uri?: string;
+};
+
 export type RerunArtifactInfo = {
   recording_size_bytes: number;
   blueprint_size_bytes: number;
@@ -204,6 +213,12 @@ export type RerunArtifactInfo = {
   source_type: string;
   converter: string;
   rerun_version: string;
+  mcap_decoders?: string[] | null;
+  rrd_optimize_profile?: string;
+  rrd_optimize?: Record<string, unknown>;
+  artifact_validation?: string;
+  artifact_checks?: Record<string, unknown>;
+  catalog_registration?: CatalogRegistrationInfo;
 };
 
 export type RerunArtifactStatus = {

@@ -190,6 +190,13 @@ function App() {
   const [openedPackagePath, setOpenedPackagePath] = useState("");
   const [defaultExportDir, setDefaultExportDir] = useState(getInitialDefaultExportDir);
   const [defaultArtifactDir, setDefaultArtifactDir] = useState(getInitialDefaultArtifactDir);
+  const [mcapDecoders, setMcapDecoders] = useState("");
+  const [rrdOptimizeProfile, setRrdOptimizeProfile] = useState("none");
+  const [artifactValidation, setArtifactValidation] = useState("basic");
+  const [catalogEnabled, setCatalogEnabled] = useState(false);
+  const [catalogDataset, setCatalogDataset] = useState("datascope");
+  const [catalogManagedLocal, setCatalogManagedLocal] = useState(true);
+  const [catalogServerUrl, setCatalogServerUrl] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [busy, setBusy] = useState("");
   const [areaErrors, setAreaErrors] = useState<AreaErrors>({});
@@ -742,7 +749,21 @@ function App() {
         mappingId,
         outputName,
         selectedTemplateId,
-        normalizeSourcePathInput(defaultArtifactDir) || undefined
+        normalizeSourcePathInput(defaultArtifactDir) || undefined,
+        {
+          mcap_decoders:
+            source.type === "mcap" || source.type === "ros2_db3"
+              ? parseListInput(mcapDecoders)
+              : null,
+          rrd_optimize_profile: rrdOptimizeProfile,
+          artifact_validation: artifactValidation,
+          catalog_registration: {
+            enabled: catalogEnabled,
+            dataset_name: catalogDataset,
+            server_url: catalogManagedLocal ? null : normalizeSourcePathInput(catalogServerUrl),
+            managed_local: catalogManagedLocal
+          }
+        }
       );
       setSavedMappingId(mappingId);
       setActiveBuildJobId(built.id);
@@ -1572,6 +1593,14 @@ function App() {
               outputNameRef={outputNameRef}
               outputName={outputName}
               artifactOutputDir={defaultArtifactDir}
+              mcapDecoders={mcapDecoders}
+              rrdOptimizeProfile={rrdOptimizeProfile}
+              artifactValidation={artifactValidation}
+              catalogEnabled={catalogEnabled}
+              catalogDataset={catalogDataset}
+              catalogManagedLocal={catalogManagedLocal}
+              catalogServerUrl={catalogServerUrl}
+              rerun033Available={Boolean(apiStatus?.rerun_features?.rerun_033)}
               buildResult={buildResult}
               buildJob={buildJob}
               isBuildSubmitting={isBuildSubmitting}
@@ -1612,6 +1641,34 @@ function App() {
               }}
               onArtifactOutputDirChange={(value) => {
                 setDefaultArtifactDir(value);
+                clearAreaError("build");
+              }}
+              onMcapDecodersChange={(value) => {
+                setMcapDecoders(value);
+                clearAreaError("build");
+              }}
+              onRrdOptimizeProfileChange={(value) => {
+                setRrdOptimizeProfile(value);
+                clearAreaError("build");
+              }}
+              onArtifactValidationChange={(value) => {
+                setArtifactValidation(value);
+                clearAreaError("build");
+              }}
+              onCatalogEnabledChange={(value) => {
+                setCatalogEnabled(value);
+                clearAreaError("build");
+              }}
+              onCatalogDatasetChange={(value) => {
+                setCatalogDataset(value);
+                clearAreaError("build");
+              }}
+              onCatalogManagedLocalChange={(value) => {
+                setCatalogManagedLocal(value);
+                clearAreaError("build");
+              }}
+              onCatalogServerUrlChange={(value) => {
+                setCatalogServerUrl(value);
                 clearAreaError("build");
               }}
               onChooseArtifactOutputFolder={() => void chooseArtifactFolder("build")}
@@ -1807,3 +1864,11 @@ function App() {
 }
 
 export default App;
+
+function parseListInput(value: string): string[] | null {
+  const items = value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+  return items.length ? items : null;
+}

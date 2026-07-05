@@ -130,4 +130,56 @@ describe("apiErrorFromResponse", () => {
     });
     fetchMock.mockRestore();
   });
+
+  it("posts advanced build options", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: "job_1",
+          project_id: "project",
+          type: "conversion",
+          status: "pending",
+          progress: 0,
+          payload: {},
+          result: null,
+          attempt: 1,
+          created_at: "2026-06-23T00:00:00Z",
+          updated_at: "2026-06-23T00:00:00Z"
+        }),
+        { status: 202 }
+      )
+    );
+
+    await api.build("project", "source", "mapping", "run", "robotics_debug", "/tmp/out", {
+      mcap_decoders: ["ros2msg", "foxglove"],
+      rrd_optimize_profile: "object-store",
+      artifact_validation: "strict",
+      catalog_registration: {
+        enabled: true,
+        dataset_name: "robot_runs",
+        server_url: null,
+        managed_local: true
+      }
+    });
+
+    const [, init] = fetchMock.mock.calls[0];
+    expect(JSON.parse(String(init?.body))).toEqual({
+      project_id: "project",
+      source_id: "source",
+      mapping_id: "mapping",
+      template_id: "robotics_debug",
+      output_name: "run",
+      output_dir: "/tmp/out",
+      mcap_decoders: ["ros2msg", "foxglove"],
+      rrd_optimize_profile: "object-store",
+      artifact_validation: "strict",
+      catalog_registration: {
+        enabled: true,
+        dataset_name: "robot_runs",
+        server_url: null,
+        managed_local: true
+      }
+    });
+    fetchMock.mockRestore();
+  });
 });

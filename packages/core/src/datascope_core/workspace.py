@@ -11,7 +11,6 @@ import zipfile
 from collections.abc import Callable, Iterator
 from dataclasses import asdict
 from datetime import datetime, timezone
-from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -57,6 +56,17 @@ from datascope_core.query import (
     export_query_result,
     iter_query_rows,
     run_query_template,
+)
+from datascope_core.rerun_artifacts import (
+    normalize_artifact_validation,
+    normalize_catalog_registration,
+    normalize_mcap_decoders,
+    normalize_rrd_optimize_profile,
+    optimize_rrd,
+    register_recording_with_catalog,
+    require_supported_artifact_options,
+    rerun_version,
+    validate_artifacts,
 )
 from datascope_core.template_registry import (
     BUILTIN_TEMPLATES,
@@ -468,6 +478,10 @@ class Workspace(
         output_name: str | None = None,
         template_id: str = "sensor_monitor",
         output_dir: str | None = None,
+        mcap_decoders: list[str] | None = None,
+        rrd_optimize_profile: str = "none",
+        artifact_validation: str = "basic",
+        catalog_registration: dict[str, Any] | None = None,
         *,
         _job_id: str | None = None,
         _manage_job: bool = True,
@@ -475,6 +489,16 @@ class Workspace(
         _cancel_check: Callable[[], None] | None = None,
         _background_job: bool = False,
     ) -> dict[str, Any]:
+        mcap_decoders = normalize_mcap_decoders(mcap_decoders)
+        rrd_optimize_profile = normalize_rrd_optimize_profile(rrd_optimize_profile)
+        artifact_validation = normalize_artifact_validation(artifact_validation)
+        catalog_registration = normalize_catalog_registration(catalog_registration)
+        require_supported_artifact_options(
+            mcap_decoders=mcap_decoders,
+            rrd_optimize_profile=rrd_optimize_profile,
+            artifact_validation=artifact_validation,
+            catalog_registration=catalog_registration,
+        )
         template_app_ids = self.template_app_ids()
         if template_id not in template_app_ids:
             raise ValueError(f"Unsupported template: {template_id}")
@@ -523,6 +547,10 @@ class Workspace(
                     "output_name": output_name,
                     "template_id": template_id,
                     "output_dir": output_dir,
+                    "mcap_decoders": mcap_decoders,
+                    "rrd_optimize_profile": rrd_optimize_profile,
+                    "artifact_validation": artifact_validation,
+                    "catalog_registration": catalog_registration,
                 },
                 resource_type="source",
                 resource_id=source_id,
@@ -597,8 +625,25 @@ class Workspace(
                 progress_callback=report_progress,
                 cancel_check=check_cancel,
                 poll_subprocess=_background_job,
+                mcap_decoders=mcap_decoders,
             )
             self._adapter_for_path(source_row["uri"], source_row["type"]).convert(request)
+            check_cancel()
+            if rrd_optimize_profile != "none":
+                if _manage_job and job_id is not None:
+                    self._update_job(
+                        job_id,
+                        status="running",
+                        progress=0.72,
+                        stage="rrd_optimize",
+                    )
+                optimize_result = optimize_rrd(
+                    recording_path,
+                    rrd_optimize_profile,
+                    cancel_check=check_cancel,
+                )
+            else:
+                optimize_result = {"status": "skipped", "profile": "none"}
             check_cancel()
             if _manage_job and job_id is not None:
                 self._update_job(
@@ -614,6 +659,21 @@ class Workspace(
                 spec,
                 template_id,
                 source_row,
+                mcap_decoders=mcap_decoders,
+                rrd_optimize_profile=rrd_optimize_profile,
+                artifact_validation=artifact_validation,
+                artifact_checks=validate_artifacts(
+                    recording_path,
+                    blueprint_path,
+                    artifact_validation,
+                    output_dir=cache_dir,
+                    cancel_check=check_cancel,
+                ),
+                optimize_result=optimize_result,
+                catalog_registration=register_recording_with_catalog(
+                    recording_path,
+                    catalog_registration,
+                ),
             )
             recording_db_id = f"recording_{uuid4().hex[:12]}"
             with self._connect() as conn:
@@ -1224,6 +1284,13 @@ def _build_artifact_info(
     spec: MappingSpec,
     template_id: str,
     source_row: dict[str, Any],
+    *,
+    mcap_decoders: list[str] | None,
+    rrd_optimize_profile: str,
+    artifact_validation: str,
+    artifact_checks: dict[str, Any],
+    optimize_result: dict[str, Any],
+    catalog_registration: dict[str, Any],
 ) -> dict[str, Any]:
     _validate_rerun_artifact(recording_path, "recording")
     _validate_rerun_artifact(blueprint_path, "blueprint")
@@ -1236,6 +1303,12 @@ def _build_artifact_info(
         "source_type": source_row["type"],
         "converter": _converter_id(str(source_row["type"])),
         "rerun_version": _rerun_version(),
+        "mcap_decoders": mcap_decoders,
+        "rrd_optimize_profile": rrd_optimize_profile,
+        "rrd_optimize": optimize_result,
+        "artifact_validation": artifact_validation,
+        "artifact_checks": artifact_checks,
+        "catalog_registration": catalog_registration,
     }
 
 
@@ -1280,12 +1353,4 @@ def _converter_id(source_type: str) -> str:
 
 
 def _rerun_version() -> str:
-    try:
-        return version("rerun-sdk")
-    except PackageNotFoundError:
-        pass
-    try:
-        import rerun as rr
-    except Exception:
-        return "unknown"
-    return str(getattr(rr, "__version__", "unknown") or "unknown")
+    return rerun_version()

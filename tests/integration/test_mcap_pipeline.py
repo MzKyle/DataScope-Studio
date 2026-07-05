@@ -5,6 +5,8 @@ from mcap.writer import Writer
 from typer.testing import CliRunner
 
 import datascope_core.adapters.mcap_adapter as mcap_adapter
+import datascope_core.workspace as workspace_module
+from datascope_core.rerun_artifacts import normalize_mcap_decoders
 from datascope_api.main import app as api_app
 from datascope_cli.main import app as cli_app
 from datascope_core.workspace import Workspace
@@ -13,7 +15,7 @@ from tests.api_helpers import install_fake_rerun, wait_for_job
 
 def test_workspace_mcap_build_uses_rerun_converter(tmp_path: Path, monkeypatch) -> None:
     mcap_path = _make_mcap_fixture(tmp_path)
-    _mock_rerun_converter(monkeypatch)
+    commands = _mock_rerun_converter(monkeypatch)
     workspace = Workspace(tmp_path / "workspace")
     project = workspace.create_project("Robot Pipeline")
     source = workspace.add_source(project["id"], str(mcap_path))
@@ -36,6 +38,52 @@ def test_workspace_mcap_build_uses_rerun_converter(tmp_path: Path, monkeypatch) 
     assert Path(result["recording_path"]).exists()
     assert Path(result["blueprint_path"]).exists()
     assert result["artifact_info"]["converter"] == "rerun_mcap_cli"
+    assert "-d" not in commands[0]
+
+
+def test_workspace_mcap_build_passes_selected_decoders(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    mcap_path = _make_mcap_fixture(tmp_path)
+    commands = _mock_rerun_converter(monkeypatch)
+    monkeypatch.setattr(
+        workspace_module,
+        "require_supported_artifact_options",
+        lambda **kwargs: None,
+    )
+    workspace = Workspace(tmp_path / "workspace")
+    project = workspace.create_project("Robot Decoders")
+    source = workspace.add_source(project["id"], str(mcap_path))
+    workspace.inspect_source(source["id"])
+    spec = workspace.suggest_mapping(source["id"], template_id="robotics_debug")
+    mapping = workspace.save_mapping(project["id"], source["id"], spec)
+
+    result = workspace.build_recording(
+        project["id"],
+        source["id"],
+        mapping_id=mapping["id"],
+        output_name="robot_decoders",
+        template_id="robotics_debug",
+        mcap_decoders=["ros2msg", "foxglove"],
+    )
+
+    decoder_args = [
+        value
+        for index, value in enumerate(commands[0])
+        if index > 0 and commands[0][index - 1] == "-d"
+    ]
+    assert decoder_args == ["ros2msg", "foxglove"]
+    assert result["artifact_info"]["mcap_decoders"] == ["ros2msg", "foxglove"]
+
+
+def test_mcap_decoder_validation_rejects_invalid_decoder() -> None:
+    try:
+        normalize_mcap_decoders(["ros2msg", "invalid"])
+    except ValueError as exc:
+        assert "Unsupported MCAP decoder" in str(exc)
+    else:
+        raise AssertionError("invalid MCAP decoder was accepted")
 
 
 def test_api_mcap_flow(tmp_path: Path, monkeypatch) -> None:
@@ -132,13 +180,16 @@ def _make_mcap_fixture(tmp_path: Path) -> Path:
     return path
 
 
-def _mock_rerun_converter(monkeypatch) -> None:
+def _mock_rerun_converter(monkeypatch) -> list[list[str]]:
+    commands: list[list[str]] = []
+
     class Result:
         returncode = 0
         stdout = ""
         stderr = ""
 
     def fake_run(command, capture_output, text, check, env=None):
+        commands.append(list(command))
         output = Path(command[command.index("--output") + 1])
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_bytes(b"mock rrd")
@@ -146,3 +197,4 @@ def _mock_rerun_converter(monkeypatch) -> None:
 
     monkeypatch.setattr(mcap_adapter, "rerun_command", lambda: ["/usr/bin/rerun"])
     monkeypatch.setattr(mcap_adapter.subprocess, "run", fake_run)
+    return commands

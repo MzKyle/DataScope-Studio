@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import os
 import logging
+import subprocess
 import threading
 from pathlib import Path
 
 from datascope_core.job_supervisor import JobSupervisor
+from datascope_core.rerun_artifacts import LOCAL_CATALOG_URL
+from datascope_core.rerun_cli import rerun_command, rerun_subprocess_env
 from datascope_core.workspace import Workspace, default_workspace_path
 
 
@@ -18,6 +21,7 @@ class AppServices:
         self._root: Path | None = None
         self._workspace: Workspace | None = None
         self._supervisor: JobSupervisor | None = None
+        self._catalog_process: subprocess.Popen[bytes] | None = None
         self._max_workers = int(os.environ.get("DATASCOPE_MAX_WORKERS", "1"))
         self._warmup_thread: threading.Thread | None = None
 
@@ -68,6 +72,25 @@ class AppServices:
                 self._supervisor.max_workers = max_workers
             return {"max_workers": self._max_workers}
 
+    def ensure_local_catalog_server(self) -> str:
+        with self._lock:
+            if self._catalog_process is not None and self._catalog_process.poll() is None:
+                return LOCAL_CATALOG_URL
+            self._catalog_process = subprocess.Popen(
+                [
+                    *rerun_command(),
+                    "server",
+                    "--host",
+                    "127.0.0.1",
+                    "--port",
+                    "51234",
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                env=rerun_subprocess_env(),
+            )
+            return LOCAL_CATALOG_URL
+
     def stop(self) -> None:
         with self._lock:
             self._stop_locked()
@@ -75,7 +98,15 @@ class AppServices:
     def _stop_locked(self) -> None:
         if self._supervisor is not None:
             self._supervisor.stop()
+        if self._catalog_process is not None and self._catalog_process.poll() is None:
+            self._catalog_process.terminate()
+            try:
+                self._catalog_process.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                self._catalog_process.kill()
+                self._catalog_process.wait(timeout=3)
         self._supervisor = None
+        self._catalog_process = None
         self._workspace = None
 
 

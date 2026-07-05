@@ -34,9 +34,22 @@ struct ApiStatus {
     packaged_runtime: bool,
     runtime_dir: Option<String>,
     rerun_available: bool,
+    rerun_version: Option<String>,
+    rerun_features: RerunFeatures,
     log_dir: String,
     desktop_log_path: String,
     backend_log_path: String,
+}
+
+#[derive(serde::Serialize)]
+struct RerunFeatures {
+    rerun_033: bool,
+    mcap_decoders: bool,
+    rrd_optimize: bool,
+    artifact_verify: bool,
+    headless_screenshot: bool,
+    catalog: bool,
+    legacy_intel_mac: bool,
 }
 
 #[derive(serde::Deserialize)]
@@ -125,6 +138,8 @@ async fn api_request(
 #[tauri::command]
 async fn api_status(state: tauri::State<'_, BackendState>) -> Result<ApiStatus, String> {
     let rerun_available = cached_rerun_available(&state);
+    let rerun_version = runtime_rerun_version(state.rerun_python.as_deref());
+    let rerun_features = rerun_features(rerun_version.as_deref());
     Ok(ApiStatus {
         status: if api_ready(state.port) {
             "online".to_string()
@@ -138,6 +153,8 @@ async fn api_status(state: tauri::State<'_, BackendState>) -> Result<ApiStatus, 
             .as_ref()
             .map(|path| path.to_string_lossy().to_string()),
         rerun_available,
+        rerun_version,
+        rerun_features,
         log_dir: state.log_dir.to_string_lossy().to_string(),
         desktop_log_path: state.desktop_log_path.to_string_lossy().to_string(),
         backend_log_path: state.backend_log_path.to_string_lossy().to_string(),
@@ -512,6 +529,55 @@ fn cached_rerun_available(state: &BackendState) -> bool {
         *cache = Some(available);
     }
     available
+}
+
+fn runtime_rerun_version(python: Option<&Path>) -> Option<String> {
+    let python = python?;
+    let output = Command::new(python)
+        .args([
+            "-c",
+            "from importlib.metadata import version, PackageNotFoundError\ntry:\n print(version('rerun-sdk'))\nexcept PackageNotFoundError:\n print('unknown')",
+        ])
+        .env("PYTHONNOUSERSITE", "1")
+        .env_remove("PYTHONHOME")
+        .env_remove("PYTHONPATH")
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let value = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if value.is_empty() || value == "unknown" {
+        None
+    } else {
+        Some(value)
+    }
+}
+
+fn rerun_features(version: Option<&str>) -> RerunFeatures {
+    let legacy_intel_mac = cfg!(all(target_os = "macos", target_arch = "x86_64"));
+    let supports_033 = version_at_least(version.unwrap_or("0.0.0"), (0, 33, 0));
+    let enabled = supports_033 && !legacy_intel_mac;
+    RerunFeatures {
+        rerun_033: enabled,
+        mcap_decoders: enabled,
+        rrd_optimize: enabled,
+        artifact_verify: enabled,
+        headless_screenshot: enabled,
+        catalog: enabled,
+        legacy_intel_mac,
+    }
+}
+
+fn version_at_least(version: &str, minimum: (u32, u32, u32)) -> bool {
+    let mut parts = [0_u32, 0, 0];
+    for (index, piece) in version.split('.').take(3).enumerate() {
+        let digits: String = piece.chars().take_while(|ch| ch.is_ascii_digit()).collect();
+        if let Ok(value) = digits.parse::<u32>() {
+            parts[index] = value;
+        }
+    }
+    (parts[0], parts[1], parts[2]) >= minimum
 }
 
 fn external_backend_enabled() -> bool {

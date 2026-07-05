@@ -18,9 +18,11 @@ CSV 列。
 转换任务中的“Rerun 产物目录”用于指定 `.rrd` 与 `.rbl` 的共同输出目录。留空时
 保持默认项目结构：`recordings/<name>.rrd` 与 `blueprints/<name>.rbl`。
 
-构建成功表示 `.rrd` recording 和 `.rbl` blueprint 都已经写入并通过非空校验。
-任务结果会包含 `artifact_info`，用于查看产物大小、Rerun app id、模板、转换链路
-和 Rerun 版本；同一份信息也会保存到 recording 的 `params.rerun_artifact`。
+构建成功表示 `.rrd` recording 和 `.rbl` blueprint 都已经写入并通过所选 artifact
+校验。默认只做非空校验；启用高级选项后可增加 `rerun rrd verify/stats`、
+headless 截图校验、`rrd optimize` 或 Rerun Catalog 注册。任务结果会包含
+`artifact_info`，用于查看产物大小、Rerun app id、模板、转换链路、Rerun 版本和
+高级构建选项；同一份信息也会保存到 recording 的 `params.rerun_artifact`。
 
 自动 Mapping 首次保存为 draft。任何编辑都会撤销 confirmed 状态，必须重新
 校验和确认。Mapping 模板可以跨项目复用，并可通过 YAML 导入/导出。

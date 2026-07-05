@@ -10,6 +10,25 @@ from tests.api_helpers import wait_for_job
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 
 
+def test_api_status_includes_rerun_capabilities() -> None:
+    response = TestClient(app).get("/api/status")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert isinstance(payload["rerun_version"], str)
+    assert set(payload["rerun_features"]).issuperset(
+        {
+            "rerun_033",
+            "mcap_decoders",
+            "rrd_optimize",
+            "artifact_verify",
+            "headless_screenshot",
+            "catalog",
+            "legacy_intel_mac",
+        }
+    )
+
+
 def test_api_logs_file_open_errors(tmp_path: Path, monkeypatch, caplog) -> None:
     monkeypatch.setenv("DATASCOPE_WORKSPACE", str(tmp_path / "workspace"))
     client = TestClient(app)

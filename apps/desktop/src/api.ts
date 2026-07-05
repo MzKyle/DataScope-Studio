@@ -66,9 +66,21 @@ export type ApiStatus = {
   packaged_runtime: boolean;
   runtime_dir: string | null;
   rerun_available: boolean;
+  rerun_version?: string | null;
+  rerun_features?: RerunFeatures;
   log_dir: string;
   desktop_log_path: string;
   backend_log_path: string;
+};
+
+export type RerunFeatures = {
+  rerun_033: boolean;
+  mcap_decoders: boolean;
+  rrd_optimize: boolean;
+  artifact_verify: boolean;
+  headless_screenshot: boolean;
+  catalog: boolean;
+  legacy_intel_mac: boolean;
 };
 
 export type ApiErrorDetails = {
@@ -328,7 +340,13 @@ export const api = {
     mappingId: string,
     outputName: string,
     templateId: string,
-    outputDir?: string
+    outputDir?: string,
+    options?: {
+      mcap_decoders?: string[] | null;
+      rrd_optimize_profile?: string;
+      artifact_validation?: string;
+      catalog_registration?: Record<string, unknown> | null;
+    }
   ) =>
     request<Job>("/api/recordings/build", {
       method: "POST",
@@ -338,7 +356,11 @@ export const api = {
         mapping_id: mappingId,
         template_id: templateId,
         output_name: outputName,
-        output_dir: outputDir || null
+        output_dir: outputDir || null,
+        mcap_decoders: options?.mcap_decoders ?? null,
+        rrd_optimize_profile: options?.rrd_optimize_profile ?? "none",
+        artifact_validation: options?.artifact_validation ?? "basic",
+        catalog_registration: options?.catalog_registration ?? null
       })
     }),
   estimateBuild: (projectId: string, sourceId: string) =>
