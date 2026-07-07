@@ -677,19 +677,27 @@ function mappingSuggestionLabel(suggestion: MappingSuggestion, language: Languag
 
 export const NavButton = memo(function NavButton({
   active,
+  badge,
   icon,
   label,
   onClick
 }: {
   active: boolean;
+  badge?: number | string;
   icon: ReactNode;
   label: string;
   onClick: () => void;
 }) {
   return (
-    <button className={`nav-item ${active ? "is-active" : ""}`} onClick={onClick}>
+    <button
+      aria-current={active ? "page" : undefined}
+      className={`nav-item ${active ? "is-active" : ""}`}
+      onClick={onClick}
+      type="button"
+    >
       {icon}
-      <span>{label}</span>
+      <span className="nav-label">{label}</span>
+      {badge !== undefined && badge !== "" && <em className="nav-badge">{badge}</em>}
     </button>
   );
 });

@@ -1,6 +1,7 @@
 import React, { Component, type ErrorInfo, type ReactNode } from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
+import { AppProviders } from "./app/AppProviders";
 import {
   installGlobalDiagnosticHandlers,
   logDiagnosticError
@@ -45,7 +46,9 @@ class AppRenderBoundary extends Component<
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
     <AppRenderBoundary>
-      <App />
+      <AppProviders>
+        <App />
+      </AppProviders>
     </AppRenderBoundary>
   </React.StrictMode>
 );

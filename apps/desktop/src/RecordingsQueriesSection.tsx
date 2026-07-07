@@ -13,13 +13,13 @@ import {
   EmptyState,
   InlineError,
   ResultTable,
-  SegmentedControl,
   SectionTitle,
   formatBytes,
   renderLimitText,
   type AreaErrors
 } from "./app-support";
 import { JobList } from "./JobList";
+import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 import type { Language, TranslationKey } from "./i18n";
 import type {
   CustomQueryFilters,
@@ -156,12 +156,26 @@ export function RecordingsQueriesSection({
         subtitle={t("recordingsQueriesSubtitle")}
       />
 
-      <SegmentedControl
-        ariaLabel={t("recordingsQuerySections")}
+      <Tabs
+        aria-label={t("recordingsQuerySections")}
         value={activePanel}
-        options={panelOptions}
-        onChange={(value) => setActivePanel(value as RecordingsPanel)}
-      />
+        onValueChange={(value) => setActivePanel(value as RecordingsPanel)}
+      >
+        <TabsList>
+          {panelOptions.map((option) => (
+            <TabsTrigger
+              key={option.value}
+              value={option.value}
+              onClick={() => setActivePanel(option.value)}
+            >
+              {option.label}
+              {typeof option.count === "number" && (
+                <span className="tab-count">{option.count}</span>
+              )}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
       {activePanel === "recordings" && (
         <section className="card">

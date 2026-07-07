@@ -7,15 +7,33 @@ import {
   ListChecks,
   RefreshCcw,
   Settings,
-  Upload
+  Upload,
+  type LucideIcon
 } from "lucide-react";
 
 import type { ApiError } from "./api";
 import type { TranslationKey } from "./i18n";
+import type { SectionId } from "./stores/ui-store";
 import type { Project } from "./types";
-import { InlineError, NavButton, StatusBadge } from "./app-support";
+import { InlineError, NavButton } from "./app-support";
+import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
 
 type Translate = (key: TranslationKey) => string;
+
+const navigationItems: {
+  badge?: "recordingCount" | "templateCount";
+  icon: LucideIcon;
+  id: SectionId;
+  labelKey: TranslationKey;
+}[] = [
+  { id: "dashboard", icon: LayoutDashboard, labelKey: "dashboard" },
+  { id: "import", icon: Upload, labelKey: "import" },
+  { id: "recordings", icon: ListChecks, labelKey: "recordings", badge: "recordingCount" },
+  { id: "diagnostics", icon: Activity, labelKey: "diagnostics" },
+  { id: "templates", icon: Image, labelKey: "templates", badge: "templateCount" },
+  { id: "settings", icon: Settings, labelKey: "settings" }
+];
 
 type AppNavigationProps = {
   activeSection: string;
@@ -38,6 +56,9 @@ type AppNavigationProps = {
 };
 
 export function AppTopbar(props: AppNavigationProps) {
+  const currentSection =
+    navigationItems.find((item) => item.id === props.activeSection)?.labelKey ?? "dashboard";
+
   return (
     <header className="topbar">
       <div className="brand-mark" aria-hidden="true"><Database size={20} /></div>
@@ -45,23 +66,33 @@ export function AppTopbar(props: AppNavigationProps) {
         <h1>DataScope Studio</h1>
         <span>{props.t("localCatalog")}</span>
       </div>
+      <div className="topbar-context" title={props.selectedProject?.workspace_path}>
+        <span>{props.t(currentSection)}</span>
+        <strong>{props.selectedProject?.name ?? props.t("selectProject")}</strong>
+      </div>
       <div className="topbar-spacer" />
-      <StatusBadge tone="success" label={props.t("online")} />
+      <Badge className="topbar-online" tone="success">{props.t("online")}</Badge>
       {props.busy && <span className="busy-indicator">{props.busy}</span>}
-      <button
+      <Button
+        aria-label={props.t("refreshWorkspace")}
         className="icon-button"
         onClick={props.onRefreshAll}
+        size="icon"
         title={props.t("refreshWorkspace")}
+        variant="secondary"
       >
         <RefreshCcw size={16} />
-      </button>
-      <button
+      </Button>
+      <Button
+        aria-label={props.t("settings")}
         className="icon-button"
         onClick={() => props.onSectionChange("settings")}
+        size="icon"
         title={props.t("settings")}
+        variant="secondary"
       >
         <Settings size={16} />
-      </button>
+      </Button>
     </header>
   );
 }
@@ -69,55 +100,36 @@ export function AppTopbar(props: AppNavigationProps) {
 export function AppSidebar(props: AppNavigationProps) {
   return (
     <aside className="sidebar">
-        <nav className="sidebar-nav" aria-label="Primary">
-          <NavButton
-            active={props.activeSection === "dashboard"}
-            icon={<LayoutDashboard size={17} />}
-            label={props.t("dashboard")}
-            onClick={() => props.onSectionChange("dashboard")}
-          />
-          <NavButton
-            active={props.activeSection === "import"}
-            icon={<Upload size={17} />}
-            label={props.t("import")}
-            onClick={() => props.onSectionChange("import")}
-          />
-          <NavButton
-            active={props.activeSection === "recordings"}
-            icon={<ListChecks size={17} />}
-            label={props.t("recordings")}
-            onClick={() => props.onSectionChange("recordings")}
-          />
-          <NavButton
-            active={props.activeSection === "diagnostics"}
-            icon={<Activity size={17} />}
-            label={props.t("diagnostics")}
-            onClick={() => props.onSectionChange("diagnostics")}
-          />
-          <NavButton
-            active={props.activeSection === "templates"}
-            icon={<Image size={17} />}
-            label={props.t("templates")}
-            onClick={() => props.onSectionChange("templates")}
-          />
-          <NavButton
-            active={props.activeSection === "settings"}
-            icon={<Settings size={17} />}
-            label={props.t("settings")}
-            onClick={() => props.onSectionChange("settings")}
-          />
+        <nav className="sidebar-nav" aria-label="Primary sections">
+          {navigationItems.map((item) => {
+            const Icon = item.icon;
+            const badge = item.badge ? props[item.badge] : undefined;
+            return (
+              <NavButton
+                active={props.activeSection === item.id}
+                badge={badge}
+                icon={<Icon size={17} />}
+                key={item.id}
+                label={props.t(item.labelKey)}
+                onClick={() => props.onSectionChange(item.id)}
+              />
+            );
+          })}
         </nav>
 
         <section className="sidebar-card">
           <div className="sidebar-card-title">
             <span>{props.t("workspace")}</span>
-            <button
+            <Button
+              aria-label={props.t("busyRefreshingProjects")}
               className="mini-button"
               onClick={props.onRefreshProjects}
+              size="icon"
               title={props.t("busyRefreshingProjects")}
+              variant="ghost"
             >
               <RefreshCcw size={14} />
-            </button>
+            </Button>
           </div>
           <label className="field-label" htmlFor="project-select">
             {props.t("currentProject")}
@@ -138,13 +150,16 @@ export function AppSidebar(props: AppNavigationProps) {
               value={props.projectName}
               onChange={(event) => props.onProjectNameChange(event.target.value)}
             />
-            <button
+            <Button
+              aria-label={props.t("createProject")}
               className="icon-button"
               onClick={props.onCreateProject}
+              size="icon"
               title={props.t("createProject")}
+              variant="secondary"
             >
               <FolderPlus size={16} />
-            </button>
+            </Button>
           </div>
           <InlineError error={props.projectError} t={props.t} />
           {props.selectedProject && (
