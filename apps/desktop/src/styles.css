@@ -499,6 +499,24 @@ dt {
   margin-top: 6px;
 }
 
+.inline-link-button {
+  align-self: start;
+  background: transparent;
+  border: 0;
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 700;
+  min-height: 28px;
+  padding: 0;
+  width: fit-content;
+}
+
+.inline-link-button:hover:not(:disabled) {
+  background: transparent;
+  border-color: transparent;
+  color: var(--color-primary-hover);
+}
+
 .inline-error-paths {
   display: grid;
   gap: var(--space-4);
@@ -544,6 +562,8 @@ dt {
 }
 
 .error-toast-content {
+  display: grid;
+  gap: var(--space-4);
   min-width: 0;
 }
 
@@ -559,8 +579,14 @@ dt {
   font-size: 11px;
 }
 
-.error-toast-content button {
-  margin-top: var(--space-12);
+.toast-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  margin-top: var(--space-8);
+}
+
+.toast-actions button {
   min-height: 32px;
   padding: 0 var(--space-12);
 }
@@ -573,6 +599,129 @@ dt {
   min-height: 32px;
   padding: 0;
   width: 32px;
+}
+
+.dialog-backdrop {
+  align-items: center;
+  background: rgba(17, 24, 39, 0.36);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: var(--space-20);
+  position: fixed;
+  z-index: 120;
+}
+
+.error-dialog {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-16);
+  box-shadow: 0 22px 70px rgba(20, 24, 32, 0.22);
+  color: var(--color-text);
+  display: grid;
+  gap: var(--space-16);
+  max-height: min(720px, calc(100vh - 48px));
+  max-width: 620px;
+  overflow: auto;
+  padding: var(--space-20);
+  width: min(100%, 620px);
+}
+
+.error-dialog.is-danger {
+  border-top: 3px solid var(--color-danger);
+}
+
+.error-dialog.is-warning {
+  border-top: 3px solid #b7791f;
+}
+
+.error-dialog-header {
+  align-items: flex-start;
+  display: grid;
+  gap: var(--space-12);
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.error-dialog-icon {
+  align-items: center;
+  background: var(--color-danger-soft);
+  border-radius: var(--radius-10);
+  color: var(--color-danger);
+  display: inline-flex;
+  height: 36px;
+  justify-content: center;
+  width: 36px;
+}
+
+.error-dialog.is-warning .error-dialog-icon {
+  background: #fff7e8;
+  color: #b7791f;
+}
+
+.error-dialog h2 {
+  font-size: 18px;
+  line-height: 1.25;
+  margin: 0;
+}
+
+.error-dialog-header p {
+  color: var(--color-text-muted);
+  margin: var(--space-4) 0 0;
+  overflow-wrap: anywhere;
+}
+
+.error-dialog-guidance {
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-12);
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-12);
+}
+
+.error-dialog-guidance strong {
+  font-size: 12px;
+}
+
+.error-dialog-guidance span {
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.error-dialog-details {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-12);
+  overflow: hidden;
+}
+
+.error-dialog-details summary {
+  cursor: pointer;
+  font-weight: 700;
+  padding: var(--space-12);
+}
+
+.error-dialog-details pre {
+  background: #0f172a;
+  color: #e5e7eb;
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0;
+  max-height: 260px;
+  overflow: auto;
+  padding: var(--space-12);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.error-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  justify-content: flex-end;
+}
+
+.error-dialog-actions button {
+  min-height: 36px;
 }
 
 .dashboard {
@@ -2424,6 +2573,25 @@ td {
     left: var(--space-16);
     right: var(--space-16);
     width: auto;
+  }
+
+  .dialog-backdrop {
+    align-items: flex-end;
+    padding: var(--space-12);
+  }
+
+  .error-dialog {
+    max-height: calc(100vh - 24px);
+    padding: var(--space-16);
+  }
+
+  .error-dialog-header {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .error-dialog-actions {
+    display: grid;
+    grid-template-columns: 1fr;
   }
 
   .drop-zone {

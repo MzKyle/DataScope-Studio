@@ -112,6 +112,7 @@ type ImportWorkflowSectionProps = {
   onCatalogServerUrlChange: (value: string) => void;
   onChooseArtifactOutputFolder: () => void;
   onBuildRecording: () => void;
+  onShowBuildJobDetails: (job: Job) => void;
   onOpenInRerun: () => void;
 };
 
@@ -179,6 +180,7 @@ export function ImportWorkflowSection({
   onCatalogServerUrlChange,
   onChooseArtifactOutputFolder,
   onBuildRecording,
+  onShowBuildJobDetails,
   onOpenInRerun
 }: ImportWorkflowSectionProps) {
   const [advancedBuildOpen, setAdvancedBuildOpen] = useState(false);
@@ -703,7 +705,12 @@ export function ImportWorkflowSection({
               )}
             </div>
           </details>
-          <BuildJobStatus job={buildJob} isSubmitting={isBuildSubmitting} t={t} />
+          <BuildJobStatus
+            job={buildJob}
+            isSubmitting={isBuildSubmitting}
+            t={t}
+            onShowDetails={onShowBuildJobDetails}
+          />
           <InlineError id="build-error" error={errors.build} t={t} />
           {buildResult ? (
             <dl className="artifact-list">

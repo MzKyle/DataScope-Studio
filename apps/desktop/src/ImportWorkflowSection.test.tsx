@@ -57,7 +57,9 @@ describe("ImportWorkflowSection build feedback", () => {
     expect(screen.getByDisplayValue("run_001")).toBeEnabled();
     expect(screen.getByLabelText("Rerun artifact folder")).toBeEnabled();
     expect(screen.getByRole("button", { name: "Build .rrd + .rbl" })).toBeEnabled();
-    expect(screen.getByRole("status")).toHaveTextContent("Conversion failed");
+    expect(screen.getByRole("status")).toHaveTextContent("The task failed");
+    expect(screen.getByRole("status")).not.toHaveTextContent("Conversion failed");
+    expect(screen.getByRole("button", { name: "View details" })).toBeEnabled();
   });
 
   it("enables opening Rerun after a successful build", () => {
@@ -204,6 +206,7 @@ function baseProps(
     onCatalogServerUrlChange: vi.fn(),
     onChooseArtifactOutputFolder: vi.fn(),
     onBuildRecording: vi.fn(),
+    onShowBuildJobDetails: vi.fn(),
     onOpenInRerun: vi.fn(),
     ...overrides
   };

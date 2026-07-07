@@ -1,14 +1,19 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "./api";
-import { clearErrorAreaState, GlobalErrorToast, InlineError } from "./App";
+import { clearErrorAreaState, ErrorDialog, GlobalErrorToast, InlineError } from "./App";
 import { createTranslator } from "./i18n";
 
 const t = createTranslator("en");
 
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
+
 describe("error UI", () => {
-  it("shows artifact conflicts with the conflicting files", () => {
+  it("keeps artifact conflicts concise and moves raw paths into details", async () => {
     const error = new ApiError(
       "Output files already exist",
       409,
@@ -18,13 +23,44 @@ describe("error UI", () => {
         paths: ["/tmp/select.rrd", "/tmp/select.rbl"]
       }
     );
+    const onDetails = vi.fn();
 
-    render(<InlineError error={error} t={t} />);
+    render(<InlineError error={error} t={t} area="build" onDetails={onDetails} />);
 
     expect(screen.getByRole("alert")).toHaveTextContent("Output name already exists");
     expect(screen.getByRole("alert")).toHaveTextContent("select");
-    expect(screen.getByRole("alert")).toHaveTextContent("/tmp/select.rrd");
-    expect(screen.getByRole("alert")).toHaveTextContent("/tmp/select.rbl");
+    expect(screen.getByRole("alert")).toHaveTextContent("Use a different output name");
+    expect(screen.getByRole("alert")).not.toHaveTextContent("/tmp/select.rrd");
+    fireEvent.click(screen.getByRole("button", { name: "View details" }));
+    expect(onDetails).toHaveBeenCalledWith(error, "build");
+
+    cleanup();
+    Object.defineProperty(window.navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: vi.fn().mockResolvedValue(undefined) }
+    });
+    render(
+      <ErrorDialog
+        request={{ error, area: "build" }}
+        t={t}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole("dialog")).toHaveTextContent("Output name already exists");
+    expect(screen.getByRole("dialog")).toHaveTextContent("Use a different output name");
+    expect(
+      screen.getByText((_, node) =>
+        node?.tagName.toLowerCase() === "pre" &&
+        Boolean(node.textContent?.includes("/tmp/select.rrd"))
+      )
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Copy details" }));
+    await waitFor(() => {
+      expect(window.navigator.clipboard.writeText).toHaveBeenCalledWith(
+        expect.stringContaining("/tmp/select.rbl")
+      );
+    });
   });
 
   it("supports retrying and dismissing a global error", () => {

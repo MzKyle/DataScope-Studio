@@ -9,6 +9,7 @@ import { open as openDialog } from "@tauri-apps/plugin-dialog";
 
 import { api, ApiError, asApiError, type ApiStatus } from "./api";
 import {
+  ErrorDialog,
   GlobalErrorToast,
   clearErrorAreaState,
   defaultOutputName,
@@ -26,6 +27,7 @@ import {
   sourceFileDialogFilters,
   upsertProject,
   type AreaErrors,
+  type ErrorDialogRequest,
   type ErrorArea,
   type GlobalNotification
 } from "./app-support";
@@ -79,11 +81,12 @@ export {
   InlineError,
   MappingIssueCard,
   clearErrorAreaState,
+  ErrorDialog,
   defaultOutputName,
   sourceFileDialogFilters,
   sourceFileExtensions
 } from "./app-support";
-export type { AreaErrors, ErrorArea } from "./app-support";
+export type { AreaErrors, ErrorDialogRequest, ErrorArea } from "./app-support";
 
 const thresholdTemplates = new Set(["low_battery", "detection_failure"]);
 const TABLE_RENDER_LIMIT = 100;
@@ -213,6 +216,7 @@ function App() {
   const [busy, setBusy] = useState("");
   const [areaErrors, setAreaErrors] = useState<AreaErrors>({});
   const [globalNotification, setGlobalNotification] = useState<GlobalNotification | null>(null);
+  const [errorDialog, setErrorDialog] = useState<ErrorDialogRequest | null>(null);
   const [activeSection, setActiveSection] = useState("dashboard");
   const [dragActive, setDragActive] = useState(false);
   const [sourcePickerOpen, setSourcePickerOpen] = useState(false);
@@ -380,6 +384,46 @@ function App() {
     }));
   }
 
+  function shouldOpenErrorDialog(area: ErrorArea | "global", error: ApiError) {
+    if (area === "global") return true;
+    if (error.code === "artifact_name_conflict") return true;
+    if (error.code === "mapping_validation_failed") return false;
+    return [
+      "dashboard",
+      "import",
+      "build",
+      "diagnostics",
+      "batch",
+      "extensions",
+      "mappingTemplates",
+      "settings"
+    ].includes(area);
+  }
+
+  function openErrorDialog(
+    error: ApiError,
+    area: ErrorArea | "global",
+    retry?: () => void,
+    context: Record<string, unknown> = {}
+  ) {
+    setErrorDialog({ error, area, retry, context });
+  }
+
+  function buildJobError(job: Job) {
+    const details = {
+      ...(job.error?.details ?? {}),
+      job_id: job.id,
+      stage: job.stage,
+      status: job.status
+    };
+    return new ApiError(
+      job.error?.message || job.error_message || t("buildFailedHint"),
+      0,
+      job.error?.code || "job_failed",
+      details
+    );
+  }
+
   async function run<T>(
     label: string,
     task: () => Promise<T>,
@@ -405,6 +449,9 @@ function App() {
         setGlobalNotification({ error: apiError, retry: options.retry });
       } else {
         setAreaErrors((current) => ({ ...current, [area]: apiError }));
+      }
+      if (shouldOpenErrorDialog(area, apiError)) {
+        openErrorDialog(apiError, area, options.retry, { operation: label });
       }
       options.onError?.(apiError);
       return null;
@@ -792,6 +839,7 @@ function App() {
         status: apiError.status
       });
       setAreaErrors((current) => ({ ...current, build: apiError }));
+      openErrorDialog(apiError, "build", undefined, { output_name: outputName });
       if (apiError.code === "artifact_name_conflict") {
         window.requestAnimationFrame(() => {
           outputNameRef.current?.focus();
@@ -1720,6 +1768,7 @@ function App() {
               }}
               onChooseArtifactOutputFolder={() => void chooseArtifactFolder("build")}
               onBuildRecording={() => void buildRecording()}
+              onShowBuildJobDetails={(job) => openErrorDialog(buildJobError(job), "build")}
               onOpenInRerun={() => void openInRerun()}
             />
           )}
@@ -1941,6 +1990,7 @@ function App() {
           notification={globalNotification}
           t={t}
           onDismiss={() => setGlobalNotification(null)}
+          onDetails={(error) => openErrorDialog(error, "global", globalNotification.retry)}
           onRetry={() => {
             const retry = globalNotification.retry;
             setGlobalNotification(null);
@@ -1948,6 +1998,15 @@ function App() {
           }}
         />
       )}
+      <ErrorDialog
+        request={errorDialog}
+        t={t}
+        onClose={() => setErrorDialog(null)}
+        onRetry={(request) => {
+          setErrorDialog(null);
+          request.retry?.();
+        }}
+      />
     </main>
   );
 }
