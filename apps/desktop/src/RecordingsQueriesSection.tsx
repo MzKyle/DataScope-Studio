@@ -20,6 +20,7 @@ import {
 import { JobList } from "./JobList";
 import type { Language, TranslationKey } from "./i18n";
 import type {
+  CustomQueryFilters,
   Job,
   QueryResult,
   QueryTemplate,
@@ -38,6 +39,14 @@ type RecordingsQueriesSectionProps = {
   queryRecordingOptions: Recording[];
   thresholdTemplates: Set<string>;
   queryThreshold: string;
+  customQueryEntityPath: string;
+  customQueryKey: string;
+  customQueryText: string;
+  customQuerySemanticTypes: string;
+  customQueryOperator: NonNullable<CustomQueryFilters["operator"]>;
+  customQueryValue: string;
+  customQueryTimeStart: string;
+  customQueryTimeEnd: string;
   selectedProjectId: string;
   exportPath: string;
   queryResult: QueryResult | null;
@@ -58,6 +67,15 @@ type RecordingsQueriesSectionProps = {
   onQueryThresholdChange: (value: string) => void;
   onRunQuery: () => void;
   onExportQuery: () => void;
+  onCustomQueryEntityPathChange: (value: string) => void;
+  onCustomQueryKeyChange: (value: string) => void;
+  onCustomQueryTextChange: (value: string) => void;
+  onCustomQuerySemanticTypesChange: (value: string) => void;
+  onCustomQueryOperatorChange: (value: NonNullable<CustomQueryFilters["operator"]>) => void;
+  onCustomQueryValueChange: (value: string) => void;
+  onCustomQueryTimeStartChange: (value: string) => void;
+  onCustomQueryTimeEndChange: (value: string) => void;
+  onRunCustomQuery: () => void;
   onCompareRecordingIdsChange: (value: string) => void;
   onCompareMetricChange: (value: string) => void;
   onRunCompare: () => void;
@@ -75,6 +93,14 @@ export function RecordingsQueriesSection({
   queryRecordingOptions,
   thresholdTemplates,
   queryThreshold,
+  customQueryEntityPath,
+  customQueryKey,
+  customQueryText,
+  customQuerySemanticTypes,
+  customQueryOperator,
+  customQueryValue,
+  customQueryTimeStart,
+  customQueryTimeEnd,
   selectedProjectId,
   exportPath,
   queryResult,
@@ -95,6 +121,15 @@ export function RecordingsQueriesSection({
   onQueryThresholdChange,
   onRunQuery,
   onExportQuery,
+  onCustomQueryEntityPathChange,
+  onCustomQueryKeyChange,
+  onCustomQueryTextChange,
+  onCustomQuerySemanticTypesChange,
+  onCustomQueryOperatorChange,
+  onCustomQueryValueChange,
+  onCustomQueryTimeStartChange,
+  onCustomQueryTimeEndChange,
+  onRunCustomQuery,
   onCompareRecordingIdsChange,
   onCompareMetricChange,
   onRunCompare,
@@ -264,6 +299,81 @@ export function RecordingsQueriesSection({
       </div>
 
       <div className="two-column balanced">
+        <section className="card">
+          <CardHeader icon={<Search size={18} />} title={t("customQueryBuilder")} />
+          <div className="custom-query-grid">
+            <input
+              aria-label={t("entityPath")}
+              placeholder={t("entityPath")}
+              value={customQueryEntityPath}
+              onChange={(event) => onCustomQueryEntityPathChange(event.target.value)}
+            />
+            <input
+              aria-label={t("fieldKey")}
+              placeholder={t("fieldKey")}
+              value={customQueryKey}
+              onChange={(event) => onCustomQueryKeyChange(event.target.value)}
+            />
+            <input
+              aria-label={t("customQueryText")}
+              placeholder={t("customQueryText")}
+              value={customQueryText}
+              onChange={(event) => onCustomQueryTextChange(event.target.value)}
+            />
+            <input
+              aria-label={t("semanticTypes")}
+              placeholder="scalar,scalar_group,state"
+              value={customQuerySemanticTypes}
+              onChange={(event) => onCustomQuerySemanticTypesChange(event.target.value)}
+            />
+            <select
+              aria-label={t("operator")}
+              value={customQueryOperator}
+              onChange={(event) =>
+                onCustomQueryOperatorChange(
+                  event.target.value as NonNullable<CustomQueryFilters["operator"]>
+                )
+              }
+            >
+              <option value="any">{t("operatorAny")}</option>
+              <option value="contains">contains</option>
+              <option value="eq">=</option>
+              <option value="gt">&gt;</option>
+              <option value="gte">&gt;=</option>
+              <option value="lt">&lt;</option>
+              <option value="lte">&lt;=</option>
+            </select>
+            <input
+              aria-label={t("customQueryValue")}
+              placeholder={t("customQueryValue")}
+              value={customQueryValue}
+              onChange={(event) => onCustomQueryValueChange(event.target.value)}
+            />
+            <input
+              aria-label={t("timeStart")}
+              placeholder={t("timeStart")}
+              value={customQueryTimeStart}
+              onChange={(event) => onCustomQueryTimeStartChange(event.target.value)}
+            />
+            <input
+              aria-label={t("timeEnd")}
+              placeholder={t("timeEnd")}
+              value={customQueryTimeEnd}
+              onChange={(event) => onCustomQueryTimeEndChange(event.target.value)}
+            />
+          </div>
+          <div className="actions">
+            <button
+              className="button-primary"
+              onClick={onRunCustomQuery}
+              disabled={!selectedProjectId || isBusy}
+            >
+              <Search size={16} />
+              {t("runCustomQuery")}
+            </button>
+          </div>
+        </section>
+
         <section className="card">
           <CardHeader icon={<Search size={18} />} title={t("runCompare")} />
           <div className="query-controls">

@@ -19,6 +19,7 @@ import type {
   JobSettings,
   MappingTemplateItem,
   Plugin,
+  Recipe,
   TemplateRegistryItem
 } from "./types";
 import { DiagnosticLogPaths } from "./DiagnosticLogPaths";
@@ -53,6 +54,7 @@ type ExtensionsSectionsProps = {
   mappingTemplateJson: string;
   plugins: Plugin[];
   templateRegistry: TemplateRegistryItem[];
+  recipes: Recipe[];
   visiblePlugins: Plugin[];
   visibleTemplateRegistry: TemplateRegistryItem[];
   language: Language;
@@ -427,6 +429,35 @@ function TemplatesSection(props: ExtensionsSectionsProps) {
         )}
         {!props.plugins.length && !props.templateRegistry.length && (
           <EmptyState text={props.t("registryEmpty")} />
+        )}
+      </section>
+
+      <section className="card">
+        <CardHeader
+          icon={<ListChecks size={18} />}
+          title={props.t("recipeRegistry")}
+          subtitle={`${props.recipes.length} ${props.t("recipes")}`}
+        />
+        {props.recipes.length ? (
+          <div className="recipe-grid">
+            {props.recipes.map((recipe) => (
+              <article className="recipe-card" key={recipe.id}>
+                <div>
+                  <strong>{recipe.name}</strong>
+                  <span>{recipe.source_family} / {recipe.visual_template_id}</span>
+                </div>
+                <p>{recipe.description}</p>
+                <div className="chip-row">
+                  <span className="chip">{recipe.diagnostic_preset}</span>
+                  {recipe.recommended_queries.map((query) => (
+                    <span className="chip" key={query}>{query}</span>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <EmptyState text={props.t("recipeRegistryEmpty")} />
         )}
       </section>
     </section>

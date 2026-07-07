@@ -14,6 +14,7 @@ import type { ApiError } from "./api";
 import type { Language, TranslationKey } from "./i18n";
 import type {
   BuildResult,
+  DiagnosticReport,
   Job,
   Project,
   ProjectExportResult,
@@ -64,6 +65,7 @@ type DashboardSectionProps = {
   projectExport: ProjectExportResult | null;
   openedPackagePath: string;
   buildResult: BuildResult | null;
+  diagnosticReport: DiagnosticReport | null;
   language: Language;
   t: Translate;
   onToggleSourcePicker: () => void;
@@ -329,6 +331,31 @@ export function DashboardSection(props: DashboardSectionProps) {
           <EmptyState text={props.t("recordingsWillAppear")} />
         )}
       </section>
+
+      {props.diagnosticReport && (
+        <section className={`card health-card severity-${props.diagnosticReport.summary.severity}`}>
+          <CardHeader icon={<Activity size={18} />} title={props.t("dataHealthCard")} />
+          <div className="health-card-grid">
+            <div>
+              <span>{props.t("healthScore")}</span>
+              <strong>{props.diagnosticReport.summary.health_score}</strong>
+            </div>
+            <div>
+              <span>{props.t("severity")}</span>
+              <strong>{props.diagnosticReport.summary.severity}</strong>
+            </div>
+            <div>
+              <span>{props.t("findings")}</span>
+              <strong>{props.diagnosticReport.summary.finding_count}</strong>
+            </div>
+          </div>
+          <p className="path-line light">
+            {props.diagnosticReport.findings[0]
+              ? `${props.t("topFinding")}: ${props.diagnosticReport.findings[0].message}`
+              : props.t("noTopFinding")}
+          </p>
+        </section>
+      )}
     </section>
   );
 }

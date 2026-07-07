@@ -75,6 +75,7 @@ type ImportWorkflowSectionProps = {
   buildResult: BuildResult | null;
   buildJob: Job | null;
   isBuildSubmitting: boolean;
+  previewRows: Record<string, unknown>[];
   previewText: string;
   isBusy: boolean;
   language: Language;
@@ -145,6 +146,7 @@ export function ImportWorkflowSection({
   buildResult,
   buildJob,
   isBuildSubmitting,
+  previewRows,
   previewText,
   isBusy,
   language,
@@ -728,7 +730,10 @@ export function ImportWorkflowSection({
         <section className="card">
           <CardHeader icon={<FileSearch size={18} />} title={t("preview")} />
           {previewText ? (
-            <pre className="preview">{previewText}</pre>
+            <>
+              <PreviewVisuals schemaProfile={schemaProfile} rows={previewRows} t={t} />
+              <pre className="preview">{previewText}</pre>
+            </>
           ) : (
             <EmptyState text={t("previewEmpty")} />
           )}
@@ -736,4 +741,114 @@ export function ImportWorkflowSection({
       </div>
     </section>
   );
+}
+
+function PreviewVisuals({
+  schemaProfile,
+  rows,
+  t
+}: {
+  schemaProfile: SchemaProfile | null;
+  rows: Record<string, unknown>[];
+  t: Translate;
+}) {
+  const fields = schemaProfile?.fields ?? [];
+  const missingFields = fields
+    .filter((field) => typeof field.null_ratio === "number" && field.null_ratio > 0)
+    .slice(0, 5);
+  const numericSeries = firstNumericSeries(rows);
+  const stateCounts = firstStateCounts(rows, numericSeries?.field);
+  return (
+    <div className="preview-visuals">
+      <div className="preview-panel">
+        <strong>{t("missingValues")}</strong>
+        {missingFields.length ? (
+          <div className="mini-bars">
+            {missingFields.map((field) => (
+              <div className="mini-bar-row" key={field.name}>
+                <span>{field.name}</span>
+                <div>
+                  <i style={{ width: `${Math.min(100, field.null_ratio * 100)}%` }} />
+                </div>
+                <em>{Math.round(field.null_ratio * 100)}%</em>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <small>{t("noMissingPreview")}</small>
+        )}
+      </div>
+      <div className="preview-panel">
+        <strong>{t("numericTrend")}</strong>
+        {numericSeries ? (
+          <div className="sparkline" aria-label={numericSeries.field}>
+            {numericSeries.values.map((value, index) => (
+              <i
+                key={`${numericSeries.field}-${index}`}
+                style={{ height: `${scaledHeight(value, numericSeries.values)}%` }}
+              />
+            ))}
+          </div>
+        ) : (
+          <small>{t("noNumericPreview")}</small>
+        )}
+      </div>
+      <div className="preview-panel">
+        <strong>{t("stateFrequency")}</strong>
+        {stateCounts ? (
+          <div className="mini-bars">
+            {stateCounts.values.map(([value, count]) => (
+              <div className="mini-bar-row" key={value}>
+                <span>{value}</span>
+                <div>
+                  <i style={{ width: `${Math.max(8, (count / stateCounts.max) * 100)}%` }} />
+                </div>
+                <em>{count}</em>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <small>{t("noStatePreview")}</small>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function firstNumericSeries(rows: Record<string, unknown>[]) {
+  if (!rows.length) return null;
+  for (const field of Object.keys(rows[0])) {
+    const values = rows
+      .map((row) => row[field])
+      .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+    if (values.length >= 2) return { field, values };
+  }
+  return null;
+}
+
+function firstStateCounts(rows: Record<string, unknown>[], excludedField?: string) {
+  if (!rows.length) return null;
+  for (const field of Object.keys(rows[0])) {
+    if (field === excludedField) continue;
+    const values = rows
+      .map((row) => row[field])
+      .filter((value) => typeof value === "string" && value.length > 0)
+      .map(String);
+    const unique = Array.from(new Set(values));
+    if (values.length >= 2 && unique.length > 0 && unique.length <= 8) {
+      const counts = unique
+        .map((value) => [value, values.filter((item) => item === value).length] as [string, number])
+        .sort((left, right) => right[1] - left[1])
+        .slice(0, 5);
+      return { values: counts, max: Math.max(...counts.map(([, count]) => count)) };
+    }
+  }
+  return null;
+}
+
+function scaledHeight(value: number, values: number[]) {
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  if (max === min) return 60;
+  return 20 + ((value - min) / (max - min)) * 80;
 }

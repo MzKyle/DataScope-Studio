@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 
 from datascope_core.mapping import mapping_from_yaml_dict, mapping_to_yaml_dict
 from datascope_core.mapping_validation import MappingValidationError
+from datascope_core.recipes import list_builtin_recipes
 from datascope_core.rerun_artifacts import rerun_features, rerun_version
 from datascope_core.version import __version__
 from datascope_core.viewer import open_recording
@@ -121,6 +122,13 @@ class QueryRequest(BaseModel):
 class QueryExportRequest(QueryRequest):
     format: str = "csv"
     output_path: str | None = None
+
+
+class CustomQueryRequest(BaseModel):
+    recording_ids: list[str] | None = None
+    semantic_types: list[str] | None = None
+    filters: dict[str, Any] = Field(default_factory=dict)
+    limit: int = Field(default=1000, ge=1, le=10000)
 
 
 class PluginInstallRequest(BaseModel):
@@ -566,6 +574,18 @@ def create_app() -> FastAPI:
             )
         )
 
+    @app.post("/api/projects/{project_id}/query/custom")
+    def custom_query(project_id: str, payload: CustomQueryRequest) -> dict[str, Any]:
+        return _guard(
+            lambda: _workspace().custom_query(
+                project_id,
+                filters=payload.filters,
+                recording_ids=payload.recording_ids,
+                semantic_types=payload.semantic_types,
+                limit=payload.limit,
+            )
+        )
+
     @app.post("/api/projects/{project_id}/diagnostics")
     def diagnostics(project_id: str, payload: DiagnosticsRequest) -> dict[str, Any]:
         return _guard(
@@ -618,6 +638,10 @@ def create_app() -> FastAPI:
     @app.get("/api/templates")
     def list_templates() -> list[dict[str, Any]]:
         return _guard(lambda: _workspace().list_templates())
+
+    @app.get("/api/recipes")
+    def list_recipes() -> list[dict[str, Any]]:
+        return list_builtin_recipes()
 
     @app.post("/api/templates/install")
     def install_template(payload: TemplateInstallRequest) -> dict[str, Any]:

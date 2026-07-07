@@ -82,6 +82,40 @@ describe("apiErrorFromResponse", () => {
     fetchMock.mockRestore();
   });
 
+  it("posts custom query builder requests", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ columns: [], rows: [] }), { status: 200 })
+    );
+
+    await api.customQuery(
+      "project",
+      ["recording_1"],
+      ["scalar"],
+      { key: "battery", operator: "lt", value: "0.2" }
+    );
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toContain("/api/projects/project/query/custom");
+    expect(JSON.parse(String(init?.body))).toEqual({
+      recording_ids: ["recording_1"],
+      semantic_types: ["scalar"],
+      filters: { key: "battery", operator: "lt", value: "0.2" },
+      limit: 1000
+    });
+    fetchMock.mockRestore();
+  });
+
+  it("loads builtin recipes", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify([]), { status: 200 })
+    );
+
+    await api.recipes();
+
+    expect(String(fetchMock.mock.calls[0][0])).toContain("/api/recipes");
+    fetchMock.mockRestore();
+  });
+
   it("adds lightweight job list query parameters", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify([]), { status: 200 })

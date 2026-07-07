@@ -226,7 +226,7 @@ def diagnose(
     out: Path | None = typer.Option(None, "--out", help="Output file or export directory."),
     json_output: bool = typer.Option(False, "--json", help="Print JSON."),
 ) -> None:
-    """Run an offline robot diagnostics report."""
+    """Run an offline data health diagnostics report."""
     workspace = Workspace(os.environ.get("DATASCOPE_WORKSPACE"))
     project_row = _project_by_name_or_id(workspace, project)
     report = workspace.run_diagnostics(

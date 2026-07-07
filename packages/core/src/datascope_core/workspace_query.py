@@ -12,6 +12,7 @@ from datascope_core.query import (
     compare_recordings,
     export_query_result,
     iter_query_rows,
+    run_custom_query,
     run_query_template,
     run_query_template_stream,
 )
@@ -111,6 +112,25 @@ class WorkspaceQueryMixin:
             search_tokens=metric_keys,
         )
         return compare_recordings(rows, recording_ids, metric_keys, mode, limit)
+
+    def custom_query(
+        self,
+        project_id: str,
+        filters: dict[str, Any] | None = None,
+        recording_ids: list[str] | None = None,
+        semantic_types: list[str] | None = None,
+        limit: int = 1000,
+    ) -> dict[str, Any]:
+        self.get_project(project_id)
+        return run_custom_query(
+            self._iter_query_rows(
+                project_id,
+                recording_ids=recording_ids,
+                semantic_types=semantic_types,
+            ),
+            filters,
+            limit,
+        )
 
     def _index_recording(
         self,

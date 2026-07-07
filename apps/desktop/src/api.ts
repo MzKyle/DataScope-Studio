@@ -7,6 +7,7 @@ import type {
   DiagnosticExportResult,
   DiagnosticPreset,
   DiagnosticThresholds,
+  CustomQueryFilters,
   DiskEstimate,
   Job,
   JobSettings,
@@ -21,6 +22,7 @@ import type {
   QueryExportResult,
   QueryResult,
   QueryTemplate,
+  Recipe,
   Recording,
   Source,
   SchemaProfile,
@@ -427,6 +429,22 @@ export const api = {
         limit
       })
     }),
+  customQuery: (
+    projectId: string,
+    recordingIds: string[],
+    semanticTypes: string[],
+    filters: CustomQueryFilters,
+    limit = 1000
+  ) =>
+    request<QueryResult>(`/api/projects/${projectId}/query/custom`, {
+      method: "POST",
+      body: JSON.stringify({
+        recording_ids: recordingIds.length ? recordingIds : null,
+        semantic_types: semanticTypes.length ? semanticTypes : null,
+        filters,
+        limit
+      })
+    }),
   diagnostics: (
     projectId: string,
     recordingIds: string[],
@@ -472,6 +490,7 @@ export const api = {
       body: JSON.stringify({ path })
     }),
   templates: () => request<TemplateRegistryItem[]>("/api/templates"),
+  recipes: () => request<Recipe[]>("/api/recipes"),
   installTemplate: (path: string) =>
     request<TemplateRegistryItem>("/api/templates/install", {
       method: "POST",

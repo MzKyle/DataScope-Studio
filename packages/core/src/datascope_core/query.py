@@ -240,6 +240,23 @@ def compare_recordings(
     return {"columns": QUERY_COLUMNS, "rows": result[:limit]}
 
 
+def run_custom_query(
+    rows: Iterable[dict[str, Any]],
+    filters: dict[str, Any] | None,
+    limit: int = 1000,
+) -> dict[str, Any]:
+    filters = filters or {}
+    result: list[dict[str, Any]] = []
+    for row in rows:
+        value = _db_value(row)
+        if not _custom_row_matches(row, value, filters):
+            continue
+        result.append(_result_row(row, value))
+        if len(result) >= limit:
+            break
+    return {"columns": QUERY_COLUMNS, "rows": result}
+
+
 def export_query_result(result: dict[str, Any], path: str | Path, fmt: str) -> None:
     output_path = Path(path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -258,6 +275,61 @@ def export_query_result(result: dict[str, Any], path: str | Path, fmt: str) -> N
         pd.DataFrame(result["rows"], columns=result["columns"]).to_parquet(output_path, index=False)
         return
     raise ValueError(f"Unsupported export format: {fmt}")
+
+
+def _custom_row_matches(row: dict[str, Any], value: Any, filters: dict[str, Any]) -> bool:
+    time_start = _filter_float(filters.get("time_start"))
+    time_end = _filter_float(filters.get("time_end"))
+    row_time = row.get("time")
+    if time_start is not None and (row_time is None or float(row_time) < time_start):
+        return False
+    if time_end is not None and (row_time is None or float(row_time) > time_end):
+        return False
+    entity_path = str(filters.get("entity_path") or "").strip().lower()
+    if entity_path and entity_path not in str(row.get("entity_path") or "").lower():
+        return False
+    key = str(filters.get("key") or "").strip().lower()
+    if key and key not in str(row.get("key") or "").lower():
+        return False
+    text = str(filters.get("text") or "").strip().lower()
+    if text:
+        haystack = f"{row.get('entity_path')} {row.get('key')} {value}".lower()
+        if text not in haystack:
+            return False
+    operator = str(filters.get("operator") or "any")
+    expected = filters.get("value")
+    if operator == "any" or expected in (None, ""):
+        return True
+    if operator == "contains":
+        return str(expected).lower() in str(value).lower()
+    if operator == "eq":
+        return str(value) == str(expected)
+    actual = _filter_float(value)
+    target = _filter_float(expected)
+    if actual is None or target is None:
+        return False
+    if operator == "gt":
+        return actual > target
+    if operator == "gte":
+        return actual >= target
+    if operator == "lt":
+        return actual < target
+    if operator == "lte":
+        return actual <= target
+    raise ValueError(f"Unsupported custom query operator: {operator}")
+
+
+def _filter_float(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str) and value.strip():
+        try:
+            return float(value)
+        except ValueError:
+            return None
+    return None
 
 
 def _tabular_rows(

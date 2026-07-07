@@ -29,6 +29,19 @@ def test_api_status_includes_rerun_capabilities() -> None:
     )
 
 
+def test_api_lists_builtin_recipes() -> None:
+    response = TestClient(app).get("/api/recipes")
+
+    assert response.status_code == 200
+    ids = {item["id"] for item in response.json()}
+    assert {
+        "sensor_csv_health",
+        "robot_bag_health",
+        "cv_detection_review",
+        "point_cloud_review",
+    } <= ids
+
+
 def test_api_logs_file_open_errors(tmp_path: Path, monkeypatch, caplog) -> None:
     monkeypatch.setenv("DATASCOPE_WORKSPACE", str(tmp_path / "workspace"))
     client = TestClient(app)

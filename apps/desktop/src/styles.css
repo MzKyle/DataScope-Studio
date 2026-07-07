@@ -1299,6 +1299,38 @@ td {
   margin-bottom: var(--space-16);
 }
 
+.custom-query-grid {
+  display: grid;
+  gap: var(--space-12);
+  grid-template-columns: repeat(2, minmax(160px, 1fr));
+}
+
+.recipe-grid {
+  display: grid;
+  gap: var(--space-12);
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.recipe-card {
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-10);
+  display: grid;
+  gap: var(--space-10);
+  padding: var(--space-12);
+}
+
+.recipe-card div:first-child {
+  display: grid;
+  gap: 2px;
+}
+
+.recipe-card span,
+.recipe-card p {
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
 .diagnostics-thresholds label {
   display: grid;
   gap: var(--space-6);
@@ -1366,6 +1398,37 @@ td {
   letter-spacing: 0.12em;
 }
 
+.health-card {
+  display: grid;
+  gap: var(--space-12);
+}
+
+.health-card-grid {
+  display: grid;
+  gap: var(--space-12);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.health-card-grid div {
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-10);
+  display: grid;
+  gap: var(--space-6);
+  padding: var(--space-12);
+}
+
+.health-card-grid span {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.health-card-grid strong {
+  font-size: 18px;
+  line-height: 1.2;
+}
+
 .diagnostic-check-grid {
   display: grid;
   gap: var(--space-16);
@@ -1403,6 +1466,81 @@ td {
   overflow: auto;
   padding: var(--space-12);
   white-space: pre-wrap;
+}
+
+.preview-visuals {
+  display: grid;
+  gap: var(--space-12);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: var(--space-16);
+}
+
+.preview-panel {
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-10);
+  display: grid;
+  gap: var(--space-10);
+  min-width: 0;
+  padding: var(--space-12);
+}
+
+.preview-panel strong {
+  font-size: 13px;
+}
+
+.preview-panel small {
+  color: var(--color-text-muted);
+}
+
+.mini-bars {
+  display: grid;
+  gap: var(--space-8);
+}
+
+.mini-bar-row {
+  align-items: center;
+  display: grid;
+  gap: var(--space-8);
+  grid-template-columns: minmax(56px, 0.8fr) minmax(70px, 1fr) auto;
+}
+
+.mini-bar-row span,
+.mini-bar-row em {
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-style: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mini-bar-row div {
+  background: var(--color-border);
+  border-radius: var(--radius-pill);
+  height: 8px;
+  overflow: hidden;
+}
+
+.mini-bar-row i {
+  background: var(--color-primary);
+  display: block;
+  height: 100%;
+}
+
+.sparkline {
+  align-items: end;
+  display: grid;
+  gap: 3px;
+  grid-auto-flow: column;
+  min-height: 74px;
+}
+
+.sparkline i {
+  background: var(--color-primary);
+  border-radius: 3px 3px 0 0;
+  display: block;
+  min-height: 6px;
 }
 
 .severity-critical {

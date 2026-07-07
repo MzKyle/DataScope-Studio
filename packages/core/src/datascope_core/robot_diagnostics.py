@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from collections import Counter
+from statistics import median
 from typing import Any
 
 
@@ -21,6 +22,11 @@ DEFAULT_THRESHOLDS = {
     "detection_confidence": 0.5,
     "time_sync_warn_s": 0.1,
     "time_sync_critical_s": 1.0,
+    "missing_ratio_warn": 0.2,
+    "missing_ratio_critical": 0.5,
+    "time_parse_ratio_warn": 0.95,
+    "time_gap_factor_warn": 5.0,
+    "outlier_iqr_multiplier": 1.5,
 }
 
 CHECK_DEFINITIONS = {
@@ -52,6 +58,18 @@ CHECK_DEFINITIONS = {
         "name": "CV Detection",
         "recommendation": "Review frames with no predictions or low confidence detections.",
     },
+    "schema_quality": {
+        "name": "Schema Quality",
+        "recommendation": "Review missing fields, type stability, and whether the selected timeline is usable.",
+    },
+    "time_series_quality": {
+        "name": "Time Series Quality",
+        "recommendation": "Check timestamp parsing, ordering, duplicates, and sampling gaps before analysis.",
+    },
+    "data_quality": {
+        "name": "Data Quality",
+        "recommendation": "Review constant signals, near-empty values, and numeric outliers before trusting this run.",
+    },
 }
 
 
@@ -76,10 +94,14 @@ def build_diagnostic_report(
     error_rows: list[dict[str, Any]],
     battery_rows: list[dict[str, Any]],
     detection_rows: list[dict[str, Any]],
+    schema_profiles: list[dict[str, Any]] | None = None,
+    query_rows: list[dict[str, Any]] | None = None,
     thresholds: dict[str, Any] | None = None,
     limit: int = 1000,
 ) -> dict[str, Any]:
     resolved_thresholds = normalize_thresholds(thresholds)
+    schema_profiles = schema_profiles or []
+    query_rows = query_rows or []
     topic_values = [_row_value(row) for row in topic_rows]
     topic_values = [value for value in topic_values if isinstance(value, dict)]
     findings: list[dict[str, Any]] = []
@@ -91,9 +113,12 @@ def build_diagnostic_report(
     findings.extend(_log_findings(error_rows))
     findings.extend(_battery_findings(battery_rows, resolved_thresholds))
     findings.extend(_cv_detection_findings(detection_rows, resolved_thresholds))
+    findings.extend(_schema_quality_findings(schema_profiles, sources, resolved_thresholds))
+    findings.extend(_time_series_quality_findings(schema_profiles, query_rows, resolved_thresholds))
+    findings.extend(_data_quality_findings(schema_profiles, query_rows, resolved_thresholds))
 
     findings = [_with_finding_id(index, finding) for index, finding in enumerate(findings, start=1)]
-    checks = _build_checks(findings, topic_values, sources)
+    checks = _build_checks(findings, topic_values, sources, schema_profiles, query_rows)
     score = _health_score(findings)
     severity = _overall_severity(score, findings)
     summary = {
@@ -390,13 +415,295 @@ def _cv_detection_findings(
     return findings
 
 
+def _schema_quality_findings(
+    profiles: list[dict[str, Any]],
+    sources: list[dict[str, Any]],
+    thresholds: dict[str, float],
+) -> list[dict[str, Any]]:
+    findings = []
+    source_by_id = {str(source.get("id")): source for source in sources}
+    for profile in profiles:
+        source_id = profile.get("source_id")
+        source = source_by_id.get(str(source_id), {})
+        source_type = source.get("type") or profile.get("source_type")
+        fields = profile.get("fields") or []
+        timeline = profile.get("timeline") or {}
+        if not fields:
+            findings.append(
+                _finding(
+                    "schema_quality",
+                    "warning",
+                    "No fields were available in the schema profile.",
+                    source_id=source_id,
+                    evidence={"source_type": source_type, "sample_rows": profile.get("sample_rows")},
+                    recommendation="Re-inspect the source and confirm it contains readable fields.",
+                )
+            )
+        if source_type in {"csv", "jsonl", "text_table"} and not timeline.get("present"):
+            findings.append(
+                _finding(
+                    "schema_quality",
+                    "warning",
+                    "No usable timeline field was detected.",
+                    source_id=source_id,
+                    key=timeline.get("field"),
+                    evidence={"timeline": timeline, "source_type": source_type},
+                    recommendation="Select a timestamp field or explicitly use row sequence for exploratory visualization.",
+                )
+            )
+        if timeline.get("mixed_units"):
+            findings.append(
+                _finding(
+                    "schema_quality",
+                    "warning",
+                    "Timeline field appears to mix multiple time units.",
+                    source_id=source_id,
+                    key=timeline.get("field"),
+                    evidence={"timeline": timeline},
+                    recommendation="Normalize timestamps to one unit before using the run for comparison.",
+                )
+            )
+        for field in fields:
+            null_ratio = _float_or_none(field.get("null_ratio"))
+            if null_ratio is None:
+                continue
+            if null_ratio >= thresholds["missing_ratio_critical"]:
+                severity = "critical"
+            elif null_ratio >= thresholds["missing_ratio_warn"]:
+                severity = "warning"
+            else:
+                continue
+            findings.append(
+                _finding(
+                    "schema_quality",
+                    severity,
+                    f"Field {field.get('name')} has a high missing-value ratio.",
+                    source_id=source_id,
+                    key=field.get("name"),
+                    evidence={
+                        "null_ratio": null_ratio,
+                        "null_count": field.get("null_count"),
+                        "sample_rows": profile.get("sample_rows"),
+                        "threshold_warn": thresholds["missing_ratio_warn"],
+                        "threshold_critical": thresholds["missing_ratio_critical"],
+                    },
+                    recommendation="Review source collection, joins, or parsing options for this field.",
+                )
+            )
+    return findings
+
+
+def _time_series_quality_findings(
+    profiles: list[dict[str, Any]],
+    query_rows: list[dict[str, Any]],
+    thresholds: dict[str, float],
+) -> list[dict[str, Any]]:
+    findings = []
+    for profile in profiles:
+        source_id = profile.get("source_id")
+        timeline = profile.get("timeline") or {}
+        parse_ratio = _float_or_none(timeline.get("parse_ratio"))
+        if parse_ratio is not None and parse_ratio < thresholds["time_parse_ratio_warn"]:
+            findings.append(
+                _finding(
+                    "time_series_quality",
+                    "warning",
+                    "Timeline parse ratio is below the warning threshold.",
+                    source_id=source_id,
+                    key=timeline.get("field"),
+                    evidence={
+                        "parse_ratio": parse_ratio,
+                        "threshold": thresholds["time_parse_ratio_warn"],
+                        "timeline": timeline,
+                    },
+                    recommendation="Choose a cleaner timestamp field or correct the configured time unit.",
+                )
+            )
+        if timeline.get("monotonic") is False:
+            findings.append(
+                _finding(
+                    "time_series_quality",
+                    "warning",
+                    "Timeline values are not monotonic in the sampled profile.",
+                    source_id=source_id,
+                    key=timeline.get("field"),
+                    evidence={"timeline": timeline},
+                    recommendation="Sort by normalized time before conversion when temporal order matters.",
+                )
+            )
+    grouped: dict[tuple[str, str, str], list[float]] = {}
+    for row in query_rows:
+        timestamp = _float_or_none(row.get("time"))
+        if timestamp is None:
+            continue
+        grouped.setdefault(
+            (
+                str(row.get("recording_id") or ""),
+                str(row.get("source_id") or ""),
+                str(row.get("entity_path") or ""),
+            ),
+            [],
+        ).append(timestamp)
+    for (recording_id, source_id, entity_path), values in grouped.items():
+        if len(values) < 3:
+            continue
+        sorted_values = sorted(values)
+        duplicate_count = len(sorted_values) - len(set(sorted_values))
+        if duplicate_count:
+            findings.append(
+                _finding(
+                    "time_series_quality",
+                    "warning",
+                    "Duplicate timestamps were found in indexed rows.",
+                    recording_id=recording_id,
+                    source_id=source_id,
+                    entity_path=entity_path,
+                    key="time",
+                    evidence={"duplicate_count": duplicate_count, "sample_count": len(values)},
+                    recommendation="Check whether duplicate samples are expected for this stream.",
+                )
+            )
+        gaps = [
+            right - left
+            for left, right in zip(sorted_values, sorted_values[1:])
+            if right - left > 0
+        ]
+        if len(gaps) < 3:
+            continue
+        typical_gap = median(gaps)
+        max_gap = max(gaps)
+        if typical_gap > 0 and max_gap >= typical_gap * thresholds["time_gap_factor_warn"]:
+            findings.append(
+                _finding(
+                    "time_series_quality",
+                    "warning",
+                    "A large time gap was found in indexed rows.",
+                    recording_id=recording_id,
+                    source_id=source_id,
+                    entity_path=entity_path,
+                    key="time",
+                    evidence={
+                        "typical_gap_s": typical_gap,
+                        "max_gap_s": max_gap,
+                        "threshold_factor": thresholds["time_gap_factor_warn"],
+                    },
+                    recommendation="Inspect the source for dropped samples, pauses, or timestamp unit mistakes.",
+                )
+            )
+    return _dedupe_findings(findings)
+
+
+def _data_quality_findings(
+    profiles: list[dict[str, Any]],
+    query_rows: list[dict[str, Any]],
+    thresholds: dict[str, float],
+) -> list[dict[str, Any]]:
+    findings = []
+    for profile in profiles:
+        source_id = profile.get("source_id")
+        for field in profile.get("fields") or []:
+            non_null_count = _float_or_none(field.get("non_null_count"))
+            sample_rows = _float_or_none(profile.get("sample_rows"))
+            if sample_rows and non_null_count == 0:
+                findings.append(
+                    _finding(
+                        "data_quality",
+                        "warning",
+                        f"Field {field.get('name')} has no non-empty sampled values.",
+                        source_id=source_id,
+                        key=field.get("name"),
+                        evidence={
+                            "non_null_count": non_null_count,
+                            "sample_rows": sample_rows,
+                            "dtype": field.get("dtype"),
+                        },
+                        recommendation="Remove the field from mappings or fix source extraction.",
+                    )
+                )
+    grouped: dict[tuple[str, str, str, str], list[float]] = {}
+    state_grouped: dict[tuple[str, str, str, str], list[str]] = {}
+    for row in query_rows:
+        key = (
+            str(row.get("recording_id") or ""),
+            str(row.get("source_id") or ""),
+            str(row.get("entity_path") or ""),
+            str(row.get("key") or ""),
+        )
+        value = _row_value(row)
+        numeric = _float_or_none(value)
+        if numeric is not None:
+            grouped.setdefault(key, []).append(numeric)
+        elif row.get("semantic_type") == "state" and value is not None:
+            state_grouped.setdefault(key, []).append(str(value))
+    for (recording_id, source_id, entity_path, key), values in grouped.items():
+        if len(values) < 3:
+            continue
+        unique_count = len(set(values))
+        if unique_count == 1:
+            findings.append(
+                _finding(
+                    "data_quality",
+                    "info",
+                    f"Numeric field {key} is constant in indexed rows.",
+                    recording_id=recording_id,
+                    source_id=source_id,
+                    entity_path=entity_path,
+                    key=key,
+                    evidence={"value": values[0], "sample_count": len(values)},
+                    recommendation="Confirm this constant value is expected before using it as a signal.",
+                )
+            )
+            continue
+        outlier_count, lower, upper = _iqr_outliers(values, thresholds["outlier_iqr_multiplier"])
+        if outlier_count:
+            findings.append(
+                _finding(
+                    "data_quality",
+                    "warning",
+                    f"Numeric field {key} has values outside the IQR outlier bounds.",
+                    recording_id=recording_id,
+                    source_id=source_id,
+                    entity_path=entity_path,
+                    key=key,
+                    evidence={
+                        "outlier_count": outlier_count,
+                        "sample_count": len(values),
+                        "lower_bound": lower,
+                        "upper_bound": upper,
+                        "iqr_multiplier": thresholds["outlier_iqr_multiplier"],
+                    },
+                    recommendation="Inspect the outlier samples and verify units, calibration, or sensor spikes.",
+                )
+            )
+    for (recording_id, source_id, entity_path, key), values in state_grouped.items():
+        if len(values) >= 3 and len(set(values)) == 1:
+            findings.append(
+                _finding(
+                    "data_quality",
+                    "info",
+                    f"State field {key} never changes in indexed rows.",
+                    recording_id=recording_id,
+                    source_id=source_id,
+                    entity_path=entity_path,
+                    key=key,
+                    evidence={"value": values[0], "sample_count": len(values)},
+                    recommendation="Confirm that a single state for the full run is expected.",
+                )
+            )
+    return _dedupe_findings(findings)
+
+
 def _build_checks(
     findings: list[dict[str, Any]],
     topic_values: list[dict[str, Any]],
     sources: list[dict[str, Any]],
+    schema_profiles: list[dict[str, Any]] | None = None,
+    query_rows: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     role_counts = Counter(str(value.get("role") or "raw_topic") for value in topic_values)
     source_types = Counter(str(source.get("type") or "unknown") for source in sources)
+    schema_profiles = schema_profiles or []
+    query_rows = query_rows or []
     checks = []
     for check_id, definition in CHECK_DEFINITIONS.items():
         category_findings = [finding for finding in findings if finding["category"] == check_id]
@@ -413,6 +720,8 @@ def _build_checks(
                     "topic_count": len(topic_values),
                     "role_counts": {role: role_counts.get(role, 0) for role in ROBOTICS_ROLES},
                     "source_types": dict(source_types),
+                    "schema_profile_count": len(schema_profiles),
+                    "query_row_count": len(query_rows),
                 },
                 "recommendation": definition["recommendation"],
             }
@@ -522,3 +831,27 @@ def _dedupe_findings(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
         seen.add(key)
         result.append(finding)
     return result
+
+
+def _float_or_none(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    return None
+
+
+def _iqr_outliers(values: list[float], multiplier: float) -> tuple[int, float, float]:
+    sorted_values = sorted(values)
+    if len(sorted_values) < 4:
+        return 0, min(sorted_values), max(sorted_values)
+    lower_half = sorted_values[: len(sorted_values) // 2]
+    upper_half = sorted_values[(len(sorted_values) + 1) // 2 :]
+    q1 = median(lower_half)
+    q3 = median(upper_half)
+    iqr = q3 - q1
+    if iqr <= 0:
+        return 0, q1, q3
+    lower = q1 - multiplier * iqr
+    upper = q3 + multiplier * iqr
+    return sum(1 for value in sorted_values if value < lower or value > upper), lower, upper

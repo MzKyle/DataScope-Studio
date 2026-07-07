@@ -47,6 +47,7 @@ import type {
   BatchResult,
   BatchSummary,
   BuildResult,
+  CustomQueryFilters,
   DiagnosticExport,
   DiagnosticExportResult,
   DiagnosticPreset,
@@ -64,6 +65,7 @@ import type {
   ProjectExportResult,
   QueryResult,
   QueryTemplate,
+  Recipe,
   Recording,
   Source,
   SchemaProfile,
@@ -161,11 +163,21 @@ function App() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [plugins, setPlugins] = useState<Plugin[]>([]);
   const [templateRegistry, setTemplateRegistry] = useState<TemplateRegistryItem[]>([]);
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [queryTemplates, setQueryTemplates] = useState<QueryTemplate[]>([]);
   const [selectedQueryTemplate, setSelectedQueryTemplate] = useState("low_battery");
   const [selectedQueryRecording, setSelectedQueryRecording] = useState("");
   const [queryThreshold, setQueryThreshold] = useState("0.5");
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
+  const [customQueryEntityPath, setCustomQueryEntityPath] = useState("");
+  const [customQueryKey, setCustomQueryKey] = useState("");
+  const [customQueryText, setCustomQueryText] = useState("");
+  const [customQuerySemanticTypes, setCustomQuerySemanticTypes] = useState("scalar,scalar_group,state");
+  const [customQueryOperator, setCustomQueryOperator] =
+    useState<NonNullable<CustomQueryFilters["operator"]>>("any");
+  const [customQueryValue, setCustomQueryValue] = useState("");
+  const [customQueryTimeStart, setCustomQueryTimeStart] = useState("");
+  const [customQueryTimeEnd, setCustomQueryTimeEnd] = useState("");
   const [diagnosticReport, setDiagnosticReport] = useState<DiagnosticReport | null>(null);
   const [diagnosticPresets, setDiagnosticPresets] = useState<DiagnosticPreset[]>([]);
   const [diagnosticExports, setDiagnosticExports] = useState<DiagnosticExport[]>([]);
@@ -509,11 +521,12 @@ function App() {
     const result = await run(
       t("busyLoadingRegistry"),
       async () => {
-        const [templateRows, mappingTemplateRows] = await Promise.all([
+        const [templateRows, mappingTemplateRows, recipeRows] = await Promise.all([
           api.templates(),
-          api.mappingTemplates()
+          api.mappingTemplates(),
+          api.recipes()
         ]);
-        return { templateRows, mappingTemplateRows };
+        return { templateRows, mappingTemplateRows, recipeRows };
       },
       {
         retry: () => void refreshTemplateRegistry()
@@ -522,6 +535,7 @@ function App() {
     if (result) {
       setTemplateRegistry(result.templateRows);
       setMappingTemplates(result.mappingTemplateRows);
+      setRecipes(result.recipeRows);
       setSelectedMappingTemplateId((current) => current || result.mappingTemplateRows[0]?.id || "");
     }
     return result !== null;
@@ -531,12 +545,13 @@ function App() {
     const result = await run(
       t("busyLoadingRegistry"),
       async () => {
-        const [pluginRows, templateRows, mappingTemplateRows] = await Promise.all([
+        const [pluginRows, templateRows, mappingTemplateRows, recipeRows] = await Promise.all([
           api.plugins(),
           api.templates(),
-          api.mappingTemplates()
+          api.mappingTemplates(),
+          api.recipes()
         ]);
-        return { pluginRows, templateRows, mappingTemplateRows };
+        return { pluginRows, templateRows, mappingTemplateRows, recipeRows };
       },
       {
         retry: () => void refreshExtensionData()
@@ -546,6 +561,7 @@ function App() {
       setPlugins(result.pluginRows);
       setTemplateRegistry(result.templateRows);
       setMappingTemplates(result.mappingTemplateRows);
+      setRecipes(result.recipeRows);
       setSelectedMappingTemplateId((current) => current || result.mappingTemplateRows[0]?.id || "");
     }
     return result !== null;
@@ -1147,6 +1163,35 @@ function App() {
     if (result) setExportPath(result.path);
   }
 
+  async function runCustomQuery() {
+    if (!selectedProjectId) return;
+    const filters = {
+      entity_path: customQueryEntityPath.trim() || undefined,
+      key: customQueryKey.trim() || undefined,
+      text: customQueryText.trim() || undefined,
+      operator: customQueryOperator,
+      value: customQueryValue.trim() || undefined,
+      time_start: customQueryTimeStart.trim() || undefined,
+      time_end: customQueryTimeEnd.trim() || undefined
+    };
+    const semanticTypes = customQuerySemanticTypes
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+    const result = await run(
+      t("busyRunningQuery"),
+      () =>
+        api.customQuery(
+          selectedProjectId,
+          selectedQueryRecording ? [selectedQueryRecording] : [],
+          semanticTypes,
+          filters
+        ),
+      { area: "query" }
+    );
+    if (result) setQueryResult(result);
+  }
+
   async function runDiagnostics(
     recordingIds: string[],
     thresholds: DiagnosticThresholds,
@@ -1547,6 +1592,7 @@ function App() {
               projectExport={projectExport}
               openedPackagePath={openedPackagePath}
               buildResult={buildResult}
+              diagnosticReport={diagnosticReport}
               language={language}
               t={t}
               onToggleSourcePicker={() => setSourcePickerOpen((value) => !value)}
@@ -1604,6 +1650,7 @@ function App() {
               buildResult={buildResult}
               buildJob={buildJob}
               isBuildSubmitting={isBuildSubmitting}
+              previewRows={previewRows}
               previewText={previewText}
               isBusy={isBusy}
               language={language}
@@ -1688,6 +1735,14 @@ function App() {
               queryRecordingOptions={queryRecordingOptions}
               thresholdTemplates={thresholdTemplates}
               queryThreshold={queryThreshold}
+              customQueryEntityPath={customQueryEntityPath}
+              customQueryKey={customQueryKey}
+              customQueryText={customQueryText}
+              customQuerySemanticTypes={customQuerySemanticTypes}
+              customQueryOperator={customQueryOperator}
+              customQueryValue={customQueryValue}
+              customQueryTimeStart={customQueryTimeStart}
+              customQueryTimeEnd={customQueryTimeEnd}
               selectedProjectId={selectedProjectId}
               exportPath={exportPath}
               queryResult={queryResult}
@@ -1720,6 +1775,39 @@ function App() {
               }}
               onRunQuery={() => void runQuery()}
               onExportQuery={() => void exportQuery()}
+              onCustomQueryEntityPathChange={(value) => {
+                setCustomQueryEntityPath(value);
+                clearAreaError("query");
+              }}
+              onCustomQueryKeyChange={(value) => {
+                setCustomQueryKey(value);
+                clearAreaError("query");
+              }}
+              onCustomQueryTextChange={(value) => {
+                setCustomQueryText(value);
+                clearAreaError("query");
+              }}
+              onCustomQuerySemanticTypesChange={(value) => {
+                setCustomQuerySemanticTypes(value);
+                clearAreaError("query");
+              }}
+              onCustomQueryOperatorChange={(value) => {
+                setCustomQueryOperator(value);
+                clearAreaError("query");
+              }}
+              onCustomQueryValueChange={(value) => {
+                setCustomQueryValue(value);
+                clearAreaError("query");
+              }}
+              onCustomQueryTimeStartChange={(value) => {
+                setCustomQueryTimeStart(value);
+                clearAreaError("query");
+              }}
+              onCustomQueryTimeEndChange={(value) => {
+                setCustomQueryTimeEnd(value);
+                clearAreaError("query");
+              }}
+              onRunCustomQuery={() => void runCustomQuery()}
               onCompareRecordingIdsChange={(value) => {
                 setCompareRecordingIds(value);
                 clearAreaError("compare");
@@ -1774,6 +1862,7 @@ function App() {
             mappingTemplateJson={mappingTemplateJson}
             plugins={plugins}
             templateRegistry={templateRegistry}
+            recipes={recipes}
             visiblePlugins={visiblePlugins}
             visibleTemplateRegistry={visibleTemplateRegistry}
             language={language}

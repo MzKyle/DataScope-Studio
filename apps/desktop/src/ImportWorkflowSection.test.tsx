@@ -163,6 +163,7 @@ function baseProps(
     buildResult: null,
     buildJob: null,
     isBuildSubmitting: false,
+    previewRows: [],
     previewText: "",
     isBusy: false,
     language: "en",
