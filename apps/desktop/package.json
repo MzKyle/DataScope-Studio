@@ -10,6 +10,8 @@
     "build": "tsc && vite build",
     "test": "vitest run",
     "preview": "vite preview",
+    "verify:frontend": "bash scripts/verify-frontend.sh",
+    "accept:desktop": "bash scripts/manual-click-acceptance.sh",
     "runtime:build": "python ../../packaging/runtime/build_runtime.py --output src-tauri/resources/datascope-runtime",
     "runtime:build:dev": "python ../../packaging/runtime/build_runtime.py --output src-tauri/resources/datascope-runtime --use-current-python",
     "clean:local": "python ../../packaging/dev/clean_local_artifacts.py",

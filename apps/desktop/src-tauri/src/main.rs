@@ -620,6 +620,10 @@ fn smoke_test_requested() -> bool {
     env::args().any(|arg| arg == "--smoke-test")
 }
 
+fn frontend_smoke_test_requested() -> bool {
+    env::args().any(|arg| arg == "--frontend-smoke-test")
+}
+
 fn main() {
     let desktop_log_path = diagnostic_log::initialize();
     diagnostic_log::install_panic_hook();
@@ -635,6 +639,7 @@ fn main() {
     );
     configure_webkit_environment();
     let smoke_test = smoke_test_requested();
+    let frontend_smoke_test = frontend_smoke_test_requested();
 
     let result = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -650,13 +655,14 @@ fn main() {
                 );
                 error
             })?;
-            let smoke_backend_ok = api_ready(backend_state.port)
+            let frontend_smoke_backend_ok = api_ready(backend_state.port);
+            let strict_smoke_backend_ok = frontend_smoke_backend_ok
                 && backend_state.packaged_runtime
                 && backend_state.runtime_dir.is_some()
                 && cached_rerun_available(&backend_state);
             let smoke_state = app.state::<SmokeState>().inner().clone();
             app.manage(backend_state);
-            if smoke_test {
+            if smoke_test || frontend_smoke_test {
                 if let Some(window) = app.get_webview_window("main") {
                     let _ = window.hide();
                 }
@@ -664,7 +670,12 @@ fn main() {
                 std::thread::spawn(move || {
                     let frontend_ready =
                         wait_for_frontend_ready(&smoke_state, Duration::from_secs(10));
-                    handle.exit(if smoke_backend_ok && frontend_ready {
+                    let backend_ok = if smoke_test {
+                        strict_smoke_backend_ok
+                    } else {
+                        frontend_smoke_backend_ok
+                    };
+                    handle.exit(if backend_ok && frontend_ready {
                         0
                     } else {
                         1

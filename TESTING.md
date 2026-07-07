@@ -26,6 +26,30 @@
 - 前端生产构建：`cd apps/desktop && npm run build`。
 - Tauri shell 编译检查：`cd apps/desktop/src-tauri && cargo check --locked`。
 
+### 前端启动验收
+
+PR 快速门通过后，必须启动真实 Tauri 桌面壳做前端启动冒烟，避免只验证浏览器 DOM 或组件测试。
+
+```bash
+cd apps/desktop
+npm run verify:frontend
+```
+
+该命令会：
+
+- 构建桌面前端。
+- 使用临时 `DATASCOPE_WORKSPACE`。
+- 启动真实 Tauri 桌面壳和本地 API。
+- 等待前端在 Tauri runtime 内写入 `frontend.lifecycle / frontend initialized`。
+- 自动退出并清理临时 workspace。
+
+如果 Linux WebKit 图形环境不稳定，默认会使用安全图形模式。需要验证性能图形模式时：
+
+```bash
+cd apps/desktop
+DATASCOPE_SAFE_GRAPHICS=0 npm run verify:frontend
+```
+
 ### Release 严格门
 
 适用于发布前冻结、版本 tag 前验收和回归测试。
@@ -92,7 +116,23 @@ curl --noproxy 127.0.0.1 http://127.0.0.1:8000/api/status
 
 ## 3. 前端交互验收
 
-启动桌面开发版：
+推荐使用脚本执行真实桌面端人工点击验收，脚本会启动 Tauri 窗口、使用临时 workspace、引导逐项确认并把结果写入 Markdown 报告：
+
+```bash
+cd apps/desktop
+npm run accept:desktop
+```
+
+常用选项：
+
+```bash
+cd apps/desktop
+npm run accept:desktop -- --performance
+npm run accept:desktop -- --workspace /tmp/datascope-manual-workspace
+npm run accept:desktop -- --report /tmp/datascope-desktop-acceptance/report.md
+```
+
+脚本默认使用 Linux 安全图形模式。如果只需要普通启动桌面开发版：
 
 ```bash
 cd apps/desktop
@@ -144,12 +184,16 @@ npm run tauri:dev:safe
   - Desktop Vitest：`10` 个测试文件通过，`40` 个测试通过。
   - Desktop build：`tsc && vite build` 通过。
   - Tauri shell：`cargo check --locked` 通过。
+- 真实 Tauri 前端启动验收：通过。
+  - 命令：`cd apps/desktop && npm run verify:frontend`。
+  - 覆盖：`npm run build`、真实 Tauri 桌面壳启动、本地 API 启动、前端在 Tauri runtime 内初始化完成、自动退出。
+  - 结果：`DataScope Studio frontend smoke passed.`。
 - 后端 API 冒烟：通过。
   - 使用临时 workspace `/tmp/datascope-smoke-ZMRx49` 和端口 `18080`。
   - 覆盖 `/api/health`、`/api/status`、项目创建、`sample_sensor.csv` import workflow、Mapping 校验、Mapping 确认、Recording build job、job 轮询、recording 列表、`state_duration` 查询。
   - 结果：生成 `.rrd` 与 `.rbl` 产物，recording 数量 `1`，query template 数量 `6`，查询返回 `4` 行。
   - 注意：本机代理会影响 `127.0.0.1` HTTP 请求，脚本需设置 `trust_env=False` 或 `NO_PROXY=127.0.0.1,localhost`。
-- 前端自动冒烟：通过。
+- 浏览器前端自动冒烟：通过。
   - 先使用已构建的 `apps/desktop/dist` 在 `127.0.0.1:1420` 启动临时静态服务，再使用临时 API workspace `/tmp/datascope-ui-api-0d8L0J` 在 `127.0.0.1:8000` 启动后端。
   - 使用 Microsoft Edge headless 访问 `http://127.0.0.1:1420/`。
   - 结果：DOM 渲染出 DataScope Studio 顶栏、Dashboard、Import & Mapping、Recordings & Query、诊断、Recipes & Extensions、设置、工作区卡片和在线状态；未出现“工作区连接或刷新失败”或 `Failed to fetch`。
