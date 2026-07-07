@@ -621,6 +621,75 @@ export const SectionTitle = memo(function SectionTitle({
   );
 });
 
+export const SegmentedControl = memo(function SegmentedControl<T extends string>({
+  ariaLabel,
+  value,
+  options,
+  onChange
+}: {
+  ariaLabel: string;
+  value: T;
+  options: { value: T; label: string; count?: number }[];
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div className="segmented-control app-segmented-control" role="tablist" aria-label={ariaLabel}>
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          role="tab"
+          aria-selected={value === option.value}
+          className={value === option.value ? "is-selected" : ""}
+          onClick={() => onChange(option.value)}
+        >
+          <span>{option.label}</span>
+          {typeof option.count === "number" && <em>{option.count}</em>}
+        </button>
+      ))}
+    </div>
+  );
+});
+
+export const WorkflowSteps = memo(function WorkflowSteps({
+  steps
+}: {
+  steps: { label: string; state: "done" | "active" | "pending" }[];
+}) {
+  return (
+    <ol className="workflow-steps" aria-label="Workflow">
+      {steps.map((step, index) => (
+        <li className={`workflow-step is-${step.state}`} key={step.label}>
+          <span>
+            {step.state === "done" ? <CheckCircle2 size={14} /> : index + 1}
+          </span>
+          <strong>{step.label}</strong>
+        </li>
+      ))}
+    </ol>
+  );
+});
+
+export const SummaryTile = memo(function SummaryTile({
+  label,
+  value,
+  detail,
+  tone = "neutral"
+}: {
+  label: string;
+  value: string | number;
+  detail?: string;
+  tone?: "neutral" | "success" | "danger" | "primary";
+}) {
+  return (
+    <div className={`summary-tile ${tone}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+      {detail && <small>{detail}</small>}
+    </div>
+  );
+});
+
 export const StreamTable = memo(function StreamTable({
   streams,
   labels

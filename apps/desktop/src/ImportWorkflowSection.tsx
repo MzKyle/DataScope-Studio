@@ -1,4 +1,4 @@
-import type { RefObject } from "react";
+import { useState, type RefObject } from "react";
 import {
   Activity,
   CheckCircle2,
@@ -9,7 +9,8 @@ import {
   ListChecks,
   LoaderCircle,
   Play,
-  Save
+  Save,
+  SlidersHorizontal
 } from "lucide-react";
 
 import { BuildJobStatus, isActiveBuildJob } from "./BuildJobStatus";
@@ -20,6 +21,7 @@ import {
   MappingIssueCard,
   SectionTitle,
   StreamTable,
+  WorkflowSteps,
   formatBytes,
   type AreaErrors
 } from "./app-support";
@@ -179,12 +181,25 @@ export function ImportWorkflowSection({
   onBuildRecording,
   onOpenInRerun
 }: ImportWorkflowSectionProps) {
+  const [advancedBuildOpen, setAdvancedBuildOpen] = useState(false);
   const buildJobActive = isActiveBuildJob(buildJob);
   const buildControlsLocked = isBusy || isBuildSubmitting || buildJobActive;
   const sourceUsesMcapImporter = source?.type === "mcap" || source?.type === "ros2_db3";
   const buildPercent = Math.round(
     Math.min(1, Math.max(0, buildJob?.progress ?? 0)) * 100
   );
+  const workflowSteps: { label: string; state: "done" | "active" | "pending" }[] = [
+    { label: t("stepSource"), state: source ? "done" : "active" },
+    { label: t("stepSchema"), state: source ? "done" : "pending" },
+    {
+      label: t("stepMapping"),
+      state: mappingConfirmed ? "done" : mapping ? "active" : "pending"
+    },
+    {
+      label: t("stepArtifacts"),
+      state: buildResult ? "done" : mappingConfirmed ? "active" : "pending"
+    }
+  ];
 
   return (
     <section className="section-stack" id="import">
@@ -209,44 +224,12 @@ export function ImportWorkflowSection({
         }
       />
 
-      <section className="card mapping-template-toolbar">
-        <CardHeader
-          icon={<ListChecks size={18} />}
-          title={t("mappingTemplates")}
-          subtitle={t("mappingTemplatesSubtitle")}
-        />
-        <div className="inline-actions">
-          <select
-            value={selectedMappingTemplateId}
-            onChange={(event) => onSelectedMappingTemplateChange(event.target.value)}
-          >
-            <option value="">{t("automaticMapping")}</option>
-            {mappingTemplates.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name} ({item.source_family})
-              </option>
-            ))}
-          </select>
-          <button
-            onClick={onApplyMappingTemplate}
-            disabled={!source || !selectedMappingTemplateId || isBusy}
-          >
-            {t("applyMappingTemplate")}
-          </button>
-          <input
-            value={mappingTemplateName}
-            onChange={(event) => onMappingTemplateNameChange(event.target.value)}
-            placeholder={t("mappingTemplateName")}
-          />
-          <button
-            onClick={onCreateMappingTemplate}
-            disabled={!mapping || !mappingTemplateName.trim() || isBusy}
-          >
-            <Save size={16} />
-            {t("saveAsMappingTemplate")}
-          </button>
+      <section className="card workflow-card">
+        <WorkflowSteps steps={workflowSteps} />
+        <div className="workflow-card-copy">
+          <strong>{t("importWorkflowPrimary")}</strong>
+          <span>{t("importWorkflowPrimaryHint")}</span>
         </div>
-        <InlineError error={errors.mappingToolbar} t={t} />
       </section>
 
       <div className="two-column">
@@ -291,6 +274,46 @@ export function ImportWorkflowSection({
 
         <section className="card">
           <CardHeader icon={<Save size={18} />} title={t("mappingEditor")} />
+          <div className="mapping-template-toolbar inline-panel">
+            <div className="inline-panel-title">
+              <strong>{t("mappingTemplates")}</strong>
+              <span>{t("mappingTemplatesSubtitle")}</span>
+            </div>
+            <div className="inline-actions">
+              <select
+                aria-label={t("mappingTemplates")}
+                value={selectedMappingTemplateId}
+                onChange={(event) => onSelectedMappingTemplateChange(event.target.value)}
+              >
+                <option value="">{t("automaticMapping")}</option>
+                {mappingTemplates.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name} ({item.source_family})
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={onApplyMappingTemplate}
+                disabled={!source || !selectedMappingTemplateId || isBusy}
+              >
+                {t("applyMappingTemplate")}
+              </button>
+              <input
+                aria-label={t("mappingTemplateName")}
+                value={mappingTemplateName}
+                onChange={(event) => onMappingTemplateNameChange(event.target.value)}
+                placeholder={t("mappingTemplateName")}
+              />
+              <button
+                onClick={onCreateMappingTemplate}
+                disabled={!mapping || !mappingTemplateName.trim() || isBusy}
+              >
+                <Save size={16} />
+                {t("saveAsMappingTemplate")}
+              </button>
+            </div>
+            <InlineError error={errors.mappingToolbar} t={t} />
+          </div>
           {mapping ? (
             <>
               <div className="mapping-meta">
@@ -589,87 +612,97 @@ export function ImportWorkflowSection({
             </button>
           </div>
           <p className="field-hint">{t("artifactOutputPathHint")}</p>
-          <div className="advanced-build-options">
-            {sourceUsesMcapImporter && (
+          <details
+            className="advanced-build-details"
+            open={advancedBuildOpen}
+            onToggle={(event) => setAdvancedBuildOpen(event.currentTarget.open)}
+          >
+            <summary>
+              <SlidersHorizontal size={16} />
+              <span>{t("advancedBuildOptions")}</span>
+            </summary>
+            <div className="advanced-build-options">
+              {sourceUsesMcapImporter && (
+                <label>
+                  <span>{t("mcapDecoders")}</span>
+                  <input
+                    placeholder={t("mcapDecodersPlaceholder")}
+                    value={mcapDecoders}
+                    onChange={(event) => onMcapDecodersChange(event.target.value)}
+                    disabled={buildControlsLocked || !rerun033Available}
+                  />
+                </label>
+              )}
               <label>
-                <span>{t("mcapDecoders")}</span>
+                <span>{t("rrdOptimizeProfile")}</span>
+                <select
+                  value={rrdOptimizeProfile}
+                  onChange={(event) => onRrdOptimizeProfileChange(event.target.value)}
+                  disabled={buildControlsLocked || !rerun033Available}
+                >
+                  <option value="none">{t("none")}</option>
+                  <option value="live">live</option>
+                  <option value="object-store">object-store</option>
+                </select>
+              </label>
+              <label>
+                <span>{t("artifactValidation")}</span>
+                <select
+                  value={artifactValidation}
+                  onChange={(event) => onArtifactValidationChange(event.target.value)}
+                  disabled={buildControlsLocked || !rerun033Available}
+                >
+                  <option value="basic">basic</option>
+                  <option value="verify">verify</option>
+                  <option value="strict">strict</option>
+                </select>
+              </label>
+              <label className="checkbox-line">
                 <input
-                  placeholder={t("mcapDecodersPlaceholder")}
-                  value={mcapDecoders}
-                  onChange={(event) => onMcapDecodersChange(event.target.value)}
+                  type="checkbox"
+                  checked={catalogEnabled}
+                  onChange={(event) => onCatalogEnabledChange(event.target.checked)}
                   disabled={buildControlsLocked || !rerun033Available}
                 />
+                <span>{t("catalogRegistration")}</span>
               </label>
-            )}
-            <label>
-              <span>{t("rrdOptimizeProfile")}</span>
-              <select
-                value={rrdOptimizeProfile}
-                onChange={(event) => onRrdOptimizeProfileChange(event.target.value)}
-                disabled={buildControlsLocked || !rerun033Available}
-              >
-                <option value="none">{t("none")}</option>
-                <option value="live">live</option>
-                <option value="object-store">object-store</option>
-              </select>
-            </label>
-            <label>
-              <span>{t("artifactValidation")}</span>
-              <select
-                value={artifactValidation}
-                onChange={(event) => onArtifactValidationChange(event.target.value)}
-                disabled={buildControlsLocked || !rerun033Available}
-              >
-                <option value="basic">basic</option>
-                <option value="verify">verify</option>
-                <option value="strict">strict</option>
-              </select>
-            </label>
-            <label className="checkbox-line">
-              <input
-                type="checkbox"
-                checked={catalogEnabled}
-                onChange={(event) => onCatalogEnabledChange(event.target.checked)}
-                disabled={buildControlsLocked || !rerun033Available}
-              />
-              <span>{t("catalogRegistration")}</span>
-            </label>
-            {catalogEnabled && (
-              <>
-                <label>
-                  <span>{t("catalogDataset")}</span>
-                  <input
-                    value={catalogDataset}
-                    onChange={(event) => onCatalogDatasetChange(event.target.value)}
-                    disabled={buildControlsLocked || !rerun033Available}
-                  />
-                </label>
-                <label className="checkbox-line">
-                  <input
-                    type="checkbox"
-                    checked={catalogManagedLocal}
-                    onChange={(event) => onCatalogManagedLocalChange(event.target.checked)}
-                    disabled={buildControlsLocked || !rerun033Available}
-                  />
-                  <span>{t("managedLocalCatalog")}</span>
-                </label>
-                {!catalogManagedLocal && (
+              {catalogEnabled && (
+                <>
                   <label>
-                    <span>{t("catalogServerUrl")}</span>
+                    <span>{t("catalogDataset")}</span>
                     <input
-                      value={catalogServerUrl}
-                      onChange={(event) => onCatalogServerUrlChange(event.target.value)}
+                      value={catalogDataset}
+                      onChange={(event) => onCatalogDatasetChange(event.target.value)}
                       disabled={buildControlsLocked || !rerun033Available}
-                      placeholder="rerun+http://127.0.0.1:51234"
                     />
                   </label>
-                )}
-              </>
-            )}
-            {!rerun033Available && (
-              <p className="field-hint">{t("rerun033Unavailable")}</p>
-            )}
-          </div>
+                  <label className="checkbox-line">
+                    <input
+                      type="checkbox"
+                      checked={catalogManagedLocal}
+                      onChange={(event) => onCatalogManagedLocalChange(event.target.checked)}
+                      disabled={buildControlsLocked || !rerun033Available}
+                    />
+                    <span>{t("managedLocalCatalog")}</span>
+                  </label>
+                  {!catalogManagedLocal && (
+                    <label>
+                      <span>{t("catalogServerUrl")}</span>
+                      <input
+                        value={catalogServerUrl}
+                        onChange={(event) => onCatalogServerUrlChange(event.target.value)}
+                        disabled={buildControlsLocked || !rerun033Available}
+                        placeholder="rerun+http://127.0.0.1:51234"
+                      />
+                    </label>
+                  )}
+                </>
+              )}
+              {!rerun033Available && (
+                <p className="field-hint">{t("rerun033Unavailable")}</p>
+              )}
+            </div>
+          </details>
           <BuildJobStatus job={buildJob} isSubmitting={isBuildSubmitting} t={t} />
           <InlineError id="build-error" error={errors.build} t={t} />
           {buildResult ? (

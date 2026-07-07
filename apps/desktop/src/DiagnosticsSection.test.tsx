@@ -24,7 +24,10 @@ describe("DiagnosticsSection", () => {
     );
 
     expect(screen.getByText("Run Diagnostics")).toBeInTheDocument();
-    expect(screen.getByText(/Run diagnostics to see health score/)).toBeInTheDocument();
+    expect(screen.getByText("No health report yet")).toBeInTheDocument();
+    expect(
+      screen.getByText("Run diagnostics to see health score, top findings, and export actions.")
+    ).toBeInTheDocument();
   });
 
   it("renders summary checks and findings", () => {

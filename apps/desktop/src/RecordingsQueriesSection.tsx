@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Activity,
   Download,
@@ -12,6 +13,7 @@ import {
   EmptyState,
   InlineError,
   ResultTable,
+  SegmentedControl,
   SectionTitle,
   formatBytes,
   renderLimitText,
@@ -28,6 +30,7 @@ import type {
 } from "./types";
 
 type Translate = (key: TranslationKey) => string;
+type RecordingsPanel = "recordings" | "query" | "custom" | "compare" | "jobs";
 
 type RecordingsQueriesSectionProps = {
   recordings: Recording[];
@@ -136,6 +139,15 @@ export function RecordingsQueriesSection({
   onCancelJob,
   onRetryJob
 }: RecordingsQueriesSectionProps) {
+  const [activePanel, setActivePanel] = useState<RecordingsPanel>("recordings");
+  const panelOptions: { value: RecordingsPanel; label: string; count?: number }[] = [
+    { value: "recordings" as const, label: t("tabRecordings"), count: recordings.length },
+    { value: "query" as const, label: t("tabQuery"), count: queryResult?.rows.length ?? 0 },
+    { value: "custom" as const, label: t("tabCustomQuery") },
+    { value: "compare" as const, label: t("tabCompare"), count: compareResult?.rows.length ?? 0 },
+    { value: "jobs" as const, label: t("tabJobs"), count: jobs.length }
+  ];
+
   return (
     <section className="section-stack" id="recordings">
       <SectionTitle
@@ -143,7 +155,15 @@ export function RecordingsQueriesSection({
         title={t("recordingsQueries")}
         subtitle={t("recordingsQueriesSubtitle")}
       />
-      <div className="two-column">
+
+      <SegmentedControl
+        ariaLabel={t("recordingsQuerySections")}
+        value={activePanel}
+        options={panelOptions}
+        onChange={(value) => setActivePanel(value as RecordingsPanel)}
+      />
+
+      {activePanel === "recordings" && (
         <section className="card">
           <CardHeader icon={<ListChecks size={18} />} title={t("recordingBrowser")} />
           {recordings.length ? (
@@ -210,17 +230,19 @@ export function RecordingsQueriesSection({
                           </td>
                           <td data-label={t("tags")}>{recording.tags.join(", ") || "-"}</td>
                           <td data-label={t("action")}>
-                            <button
-                              onClick={() => onOpenRecording(recording)}
-                              disabled={isBusy || !artifactReady}
-                            >
-                              <ExternalLink size={16} />
-                              {t("openInRerun")}
-                            </button>
-                            <button onClick={() => onAddTag(recording.id)} disabled={isBusy}>
-                              <Tags size={16} />
-                              {t("addTag")}
-                            </button>
+                            <div className="table-actions">
+                              <button
+                                onClick={() => onOpenRecording(recording)}
+                                disabled={isBusy || !artifactReady}
+                              >
+                                <ExternalLink size={16} />
+                                {t("openInRerun")}
+                              </button>
+                              <button onClick={() => onAddTag(recording.id)} disabled={isBusy}>
+                                <Tags size={16} />
+                                {t("addTag")}
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -238,7 +260,9 @@ export function RecordingsQueriesSection({
             <EmptyState text={t("recordingBrowserEmpty")} />
           )}
         </section>
+      )}
 
+      {activePanel === "query" && (
         <section className="card">
           <CardHeader icon={<Search size={18} />} title={t("queryConsole")} />
           <div className="query-controls">
@@ -296,9 +320,9 @@ export function RecordingsQueriesSection({
           {exportPath && <p className="path-line light">{t("exported")}: {exportPath}</p>}
           <ResultTable result={queryResult} emptyText={t("queryEmpty")} />
         </section>
-      </div>
+      )}
 
-      <div className="two-column balanced">
+      {activePanel === "custom" && (
         <section className="card">
           <CardHeader icon={<Search size={18} />} title={t("customQueryBuilder")} />
           <div className="custom-query-grid">
@@ -372,8 +396,12 @@ export function RecordingsQueriesSection({
               {t("runCustomQuery")}
             </button>
           </div>
+          <InlineError error={errors.query} t={t} />
+          <ResultTable result={queryResult} emptyText={t("queryEmpty")} />
         </section>
+      )}
 
+      {activePanel === "compare" && (
         <section className="card">
           <CardHeader icon={<Search size={18} />} title={t("runCompare")} />
           <div className="query-controls">
@@ -399,7 +427,9 @@ export function RecordingsQueriesSection({
           <InlineError error={errors.compare} t={t} />
           <ResultTable result={compareResult} emptyText={t("compareEmpty")} />
         </section>
+      )}
 
+      {activePanel === "jobs" && (
         <section className="card">
           <CardHeader icon={<Activity size={18} />} title={t("jobs")} />
           {jobs.length ? (
@@ -414,7 +444,7 @@ export function RecordingsQueriesSection({
             <EmptyState text={t("jobsEmpty")} />
           )}
         </section>
-      </div>
+      )}
     </section>
   );
 }

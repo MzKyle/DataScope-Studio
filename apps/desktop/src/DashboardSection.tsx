@@ -5,6 +5,7 @@ import {
   ExternalLink,
   FileSearch,
   FolderOpen,
+  Gauge,
   ListChecks,
   Upload,
   Zap
@@ -24,8 +25,8 @@ import {
   CardHeader,
   EmptyState,
   InlineError,
-  Metric,
   ProjectVisual,
+  SummaryTile,
   StatusBadge,
   formatDateTime,
   normalizeSourcePathInput
@@ -87,6 +88,18 @@ type DashboardSectionProps = {
 
 export function DashboardSection(props: DashboardSectionProps) {
   const recentRecordings = props.recordings.slice(0, 4);
+  const latestJobStatus = props.latestJob
+    ? `${props.latestJob.type} / ${props.latestJob.status}`
+    : props.t("localArtifacts");
+  const healthLabel = props.diagnosticReport
+    ? props.diagnosticReport.summary.severity
+    : props.t("notRun");
+  const nextAction = !props.selectedProject
+    ? props.t("nextCreateProject")
+    : props.recordings.length
+      ? props.t("nextReviewRecording")
+      : props.t("nextImportSource");
+
   return (
     <section className="dashboard" id="dashboard">
       <div className="hero-card project-summary-card">
@@ -99,6 +112,25 @@ export function DashboardSection(props: DashboardSectionProps) {
                 ? props.t("projectReadyDescription")
                 : props.t("projectEmptyDescription")}
             </p>
+          </div>
+          <div className="hero-actions">
+            <button
+              className="button-primary"
+              type="button"
+              onClick={props.onImport}
+              disabled={props.isBusy || !props.sourcePath.trim()}
+            >
+              <FileSearch size={16} />
+              {props.t("inspectSource")}
+            </button>
+            <button
+              type="button"
+              onClick={props.onOpenLatest}
+              disabled={(!props.buildResult && !props.latestRecording) || props.isBusy}
+            >
+              <ExternalLink size={16} />
+              {props.t("openInRerun")}
+            </button>
           </div>
           <div className="project-meta-list">
             <span className="project-meta-item">
@@ -113,22 +145,32 @@ export function DashboardSection(props: DashboardSectionProps) {
             </span>
             <span className="project-meta-item">
               <Activity size={14} />
-              {props.latestJob
-                ? `${props.latestJob.type} / ${props.latestJob.status}`
-                : props.t("localArtifacts")}
+              {latestJobStatus}
             </span>
           </div>
-          <div className="hero-metrics compact-metrics">
-            <Metric label={props.t("runs")} value={props.recordings.length} />
-            <Metric label={props.t("streams")} value={props.streamCount} />
-            <Metric label={props.t("jobs")} value={props.jobCount} />
+          <div className="summary-strip">
+            <SummaryTile label={props.t("runs")} value={props.recordings.length} />
+            <SummaryTile label={props.t("streams")} value={props.streamCount} />
+            <SummaryTile label={props.t("jobs")} value={props.jobCount} />
+            <SummaryTile
+              label={props.t("health")}
+              value={healthLabel}
+              tone={props.diagnosticReport?.summary.severity === "critical" ? "danger" : "neutral"}
+            />
           </div>
         </div>
-        <ProjectVisual
-          recordings={props.recordings.length}
-          streams={props.streamCount}
-          jobs={props.jobCount}
-        />
+        <div className="next-action-panel">
+          <div>
+            <span className="eyebrow">{props.t("nextStep")}</span>
+            <strong>{nextAction}</strong>
+            <p>{props.t("dashboardNextStepHint")}</p>
+          </div>
+          <ProjectVisual
+            recordings={props.recordings.length}
+            streams={props.streamCount}
+            jobs={props.jobCount}
+          />
+        </div>
       </div>
 
       <section className="card import-card">
@@ -245,8 +287,8 @@ export function DashboardSection(props: DashboardSectionProps) {
       <section className="card quick-actions-card">
         <CardHeader
           icon={<Zap size={18} />}
-          title={props.t("quickActions")}
-          subtitle={props.t("quickActionsSubtitle")}
+          title={props.t("workspaceActions")}
+          subtitle={props.t("workspaceActionsSubtitle")}
         />
         <div className="quick-actions">
           <button onClick={props.onRefresh} disabled={!props.selectedProject || props.isBusy}>
@@ -334,7 +376,7 @@ export function DashboardSection(props: DashboardSectionProps) {
 
       {props.diagnosticReport && (
         <section className={`card health-card severity-${props.diagnosticReport.summary.severity}`}>
-          <CardHeader icon={<Activity size={18} />} title={props.t("dataHealthCard")} />
+          <CardHeader icon={<Gauge size={18} />} title={props.t("dataHealthCard")} />
           <div className="health-card-grid">
             <div>
               <span>{props.t("healthScore")}</span>

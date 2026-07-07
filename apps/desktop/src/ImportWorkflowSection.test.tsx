@@ -11,6 +11,16 @@ afterEach(() => cleanup());
 const t = createTranslator("en");
 
 describe("ImportWorkflowSection build feedback", () => {
+  it("shows the guided import workflow and advanced build entry", () => {
+    renderSection();
+
+    expect(screen.getByText("Source")).toBeInTheDocument();
+    expect(screen.getByText("Schema")).toBeInTheDocument();
+    expect(screen.getByText("Mapping")).toBeInTheDocument();
+    expect(screen.getByText("Artifacts")).toBeInTheDocument();
+    expect(screen.getByText("Advanced build options")).toBeInTheDocument();
+  });
+
   it("locks only build controls and shows progress while a build job is active", () => {
     renderSection({
       buildJob: makeJob({
