@@ -113,7 +113,7 @@ export function DashboardSection(props: DashboardSectionProps) {
                 : props.t("projectEmptyDescription")}
             </p>
           </div>
-          <div className="hero-actions">
+          <div className="hero-actions responsive-actions">
             <button
               className="button-primary"
               type="button"
@@ -179,7 +179,7 @@ export function DashboardSection(props: DashboardSectionProps) {
           title={props.t("importData")}
           subtitle={props.t("importDataSubtitle")}
         />
-        <div className="source-picker-toolbar">
+        <div className="source-picker-toolbar responsive-actions">
           <div className="source-picker-wrap">
             <button
               className="button-primary source-picker-button"

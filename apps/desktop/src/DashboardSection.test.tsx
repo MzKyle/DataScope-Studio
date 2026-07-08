@@ -16,6 +16,10 @@ describe("DashboardSection", () => {
 
     expect(screen.getByText("Select or create a project")).toBeInTheDocument();
     expect(screen.getByText("Create or select a project")).toBeInTheDocument();
+    expect(screen.getByText("Import Data")).toBeInTheDocument();
+    expect(screen.getByText("Recent Runs")).toBeInTheDocument();
+    expect(screen.getByText("No latest run")).toBeInTheDocument();
+    expect(screen.getByText("Recordings created from imports will appear here.")).toBeInTheDocument();
     screen
       .getAllByRole("button", { name: "Open in Rerun" })
       .forEach((button) => expect(button).toBeDisabled());
@@ -48,6 +52,23 @@ describe("DashboardSection", () => {
         .getAllByRole("button", { name: "Open in Rerun" })
         .some((button) => !button.hasAttribute("disabled"))
     ).toBe(true);
+  });
+
+  it("renders project summary, import entry, and recent runs for an active project", () => {
+    renderSection({
+      selectedProject: project,
+      latestRecording: recording,
+      recordings: [recording],
+      sourcePath: "/tmp/run.csv",
+      streamCount: 4,
+      jobCount: 2
+    });
+
+    expect(screen.getByText("Robot Run")).toBeInTheDocument();
+    expect(screen.getByText("Latest Run: run")).toBeInTheDocument();
+    expect(screen.getByText("Import Data")).toBeInTheDocument();
+    expect(screen.getByText("Recent Runs")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Import & Auto Map" })[0]).toBeEnabled();
   });
 });
 
