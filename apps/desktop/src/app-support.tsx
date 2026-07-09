@@ -1,8 +1,9 @@
-import { memo, type ReactNode } from "react";
+import { memo, useState, type ReactNode } from "react";
 import {
   AlertCircle,
   CheckCircle2,
   Command,
+  Copy,
   RefreshCcw,
   X
 } from "lucide-react";
@@ -43,6 +44,19 @@ export type GlobalNotification = {
 };
 
 export type AreaErrors = Partial<Record<ErrorArea, ApiError>>;
+export type ErrorPresentation = {
+  title: string;
+  summary: string;
+  guidance: string;
+  details: string;
+  tone: "danger" | "warning" | "neutral";
+};
+export type ErrorDialogRequest = {
+  error: ApiError;
+  area: ErrorArea | "global";
+  retry?: () => void;
+  context?: Record<string, unknown>;
+};
 type Translate = (key: TranslationKey) => string;
 
 const DEFAULT_EXPORT_DIR_KEY = "datascope.defaultExportDir";
@@ -267,37 +281,99 @@ export function derivedMappingFields(semanticType: string) {
   return { archetype: archetypes[semanticType] ?? "AnyValues", view };
 }
 
+export function createErrorPresentation(
+  error: ApiError,
+  area: ErrorArea | "global",
+  t: Translate,
+  context: Record<string, unknown> = {}
+): ErrorPresentation {
+  const paths = Array.isArray(error.details.paths) ? error.details.paths : [];
+  const outputName =
+    typeof error.details.output_name === "string" ? error.details.output_name : "";
+  let title = t("operationFailed");
+  let summary = compactErrorMessage(error.message);
+  let guidance = t("errorGuidanceTryAgain");
+  let tone: ErrorPresentation["tone"] = "danger";
+
+  if (error.code === "artifact_name_conflict") {
+    title = t("artifactNameConflict");
+    summary = outputName
+      ? `${t("artifactNameConflictHint")} (${outputName})`
+      : t("artifactNameConflictHint");
+    guidance = t("errorGuidanceRenameOutput");
+  } else if (error.code === "mapping_validation_failed") {
+    title = t("mappingInvalid");
+    summary = t("errorMappingDialogSummary");
+    guidance = t("errorGuidanceReviewMapping");
+    tone = "warning";
+  } else if (error.code === "client_validation") {
+    summary = compactErrorMessage(error.message);
+    guidance = t("errorGuidanceFixInput");
+    tone = "warning";
+  } else if (area === "global" || ["backend_unavailable", "request_failed"].includes(error.code)) {
+    title = t("workspaceError");
+    guidance = t("errorGuidanceCheckBackend");
+  } else if (area === "build") {
+    title = t("buildFailed");
+    summary = t("buildFailedHint");
+    guidance = t("errorGuidanceReviewBuild");
+  } else if (area === "import") {
+    title = t("importFailed");
+    guidance = t("errorGuidanceReviewSource");
+  }
+
+  const details = JSON.stringify(
+    {
+      area,
+      code: error.code,
+      status: error.status,
+      message: error.message,
+      details: error.details,
+      paths,
+      context
+    },
+    null,
+    2
+  );
+  return { title, summary, guidance, details, tone };
+}
+
+function compactErrorMessage(message: string) {
+  const normalized = message.trim().replace(/\s+/g, " ");
+  if (normalized.length <= 180) return normalized;
+  return `${normalized.slice(0, 177)}...`;
+}
+
 export function InlineError({
   id,
   error,
-  t
+  t,
+  area,
+  onDetails
 }: {
   id?: string;
   error?: ApiError;
   t: Translate;
+  area?: ErrorArea | "global";
+  onDetails?: (error: ApiError, area: ErrorArea | "global") => void;
 }) {
   if (!error) return null;
-  const isArtifactConflict = error.code === "artifact_name_conflict";
-  const paths = Array.isArray(error.details.paths) ? error.details.paths : [];
-  const outputName =
-    typeof error.details.output_name === "string" ? error.details.output_name : "";
+  const presentation = createErrorPresentation(error, area ?? "global", t);
   return (
     <div className="inline-error" id={id} role="alert">
       <AlertCircle size={17} aria-hidden="true" />
       <div>
-        <strong>{isArtifactConflict ? t("artifactNameConflict") : t("operationFailed")}</strong>
-        <p>
-          {isArtifactConflict ? t("artifactNameConflictHint") : error.message}
-          {isArtifactConflict && outputName ? ` (${outputName})` : ""}
-        </p>
-        {paths.length > 0 && (
-          <div className="inline-error-paths">
-            <span>{t("conflictingFiles")}</span>
-            {paths.map((path) => <code key={path}>{path}</code>)}
-          </div>
-        )}
-        {!isArtifactConflict && error.code && (
-          <span className="inline-error-code">{t("errorCode")}: {error.code}</span>
+        <strong>{presentation.title}</strong>
+        <p>{presentation.summary}</p>
+        <span className="inline-error-code">{presentation.guidance}</span>
+        {onDetails && (
+          <button
+            className="inline-link-button"
+            type="button"
+            onClick={() => onDetails(error, area ?? "global")}
+          >
+            {t("viewDetails")}
+          </button>
         )}
       </div>
     </div>
@@ -308,26 +384,37 @@ export function GlobalErrorToast({
   notification,
   t,
   onDismiss,
-  onRetry
+  onRetry,
+  onDetails
 }: {
   notification: GlobalNotification;
   t: Translate;
   onDismiss: () => void;
   onRetry: () => void;
+  onDetails?: (error: ApiError) => void;
 }) {
+  const presentation = createErrorPresentation(notification.error, "global", t);
   return (
     <aside className="error-toast" role="alert" aria-live="assertive">
       <AlertCircle size={19} aria-hidden="true" />
       <div className="error-toast-content">
-        <strong>{t("workspaceError")}</strong>
-        <p>{notification.error.message}</p>
-        <span>{t("errorCode")}: {notification.error.code}</span>
-        {notification.retry && (
-          <button type="button" onClick={onRetry}>
-            <RefreshCcw size={14} />
-            {t("retry")}
-          </button>
-        )}
+        <strong>{presentation.title}</strong>
+        <p>{presentation.summary}</p>
+        <span>{presentation.guidance}</span>
+        <div className="toast-actions">
+          {notification.retry && (
+            <button type="button" onClick={onRetry}>
+              <RefreshCcw size={14} />
+              {t("retry")}
+            </button>
+          )}
+          {onDetails && (
+            <button type="button" onClick={() => onDetails(notification.error)}>
+              <AlertCircle size={14} />
+              {t("viewDetails")}
+            </button>
+          )}
+        </div>
       </div>
       <button
         className="error-toast-close"
@@ -339,6 +426,85 @@ export function GlobalErrorToast({
         <X size={16} />
       </button>
     </aside>
+  );
+}
+
+export function ErrorDialog({
+  request,
+  t,
+  onClose,
+  onRetry
+}: {
+  request: ErrorDialogRequest | null;
+  t: Translate;
+  onClose: () => void;
+  onRetry?: (request: ErrorDialogRequest) => void;
+}) {
+  const [copied, setCopied] = useState(false);
+  if (!request) return null;
+  const presentation = createErrorPresentation(request.error, request.area, t, request.context);
+
+  async function copyDetails() {
+    await window.navigator.clipboard?.writeText(presentation.details);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1400);
+  }
+
+  return (
+    <div className="dialog-backdrop" role="presentation" onMouseDown={onClose}>
+      <section
+        className={`error-dialog is-${presentation.tone}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="error-dialog-title"
+        aria-describedby="error-dialog-summary"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header className="error-dialog-header">
+          <div className="error-dialog-icon" aria-hidden="true">
+            <AlertCircle size={20} />
+          </div>
+          <div>
+            <h2 id="error-dialog-title">{presentation.title}</h2>
+            <p id="error-dialog-summary">{presentation.summary}</p>
+          </div>
+          <button
+            className="error-toast-close"
+            type="button"
+            onClick={onClose}
+            title={t("close")}
+            aria-label={t("close")}
+          >
+            <X size={16} />
+          </button>
+        </header>
+        <div className="error-dialog-guidance">
+          <strong>{t("recommendedAction")}</strong>
+          <span>{presentation.guidance}</span>
+        </div>
+        <details className="error-dialog-details">
+          <summary>{t("viewDetails")}</summary>
+          <pre>{presentation.details}</pre>
+        </details>
+        <footer className="error-dialog-actions">
+          <button type="button" onClick={() => void copyDetails()}>
+            <Copy size={15} />
+            {copied ? t("copied") : t("copyDetails")}
+          </button>
+          {request.retry && (
+            <button
+              className="button-primary"
+              type="button"
+              onClick={() => onRetry?.(request)}
+            >
+            <RefreshCcw size={14} />
+            {t("retry")}
+          </button>
+          )}
+          <button type="button" onClick={onClose}>{t("close")}</button>
+        </footer>
+      </section>
+    </div>
   );
 }
 
@@ -511,19 +677,27 @@ function mappingSuggestionLabel(suggestion: MappingSuggestion, language: Languag
 
 export const NavButton = memo(function NavButton({
   active,
+  badge,
   icon,
   label,
   onClick
 }: {
   active: boolean;
+  badge?: number | string;
   icon: ReactNode;
   label: string;
   onClick: () => void;
 }) {
   return (
-    <button className={`nav-item ${active ? "is-active" : ""}`} onClick={onClick}>
+    <button
+      aria-current={active ? "page" : undefined}
+      className={`nav-item ${active ? "is-active" : ""}`}
+      onClick={onClick}
+      type="button"
+    >
       {icon}
-      <span>{label}</span>
+      <span className="nav-label">{label}</span>
+      {badge !== undefined && badge !== "" && <em className="nav-badge">{badge}</em>}
     </button>
   );
 });
@@ -617,6 +791,75 @@ export const SectionTitle = memo(function SectionTitle({
     <div className="section-title">
       <div><span className="eyebrow">{eyebrow}</span><h2>{title}</h2><p>{subtitle}</p></div>
       {action}
+    </div>
+  );
+});
+
+export const SegmentedControl = memo(function SegmentedControl<T extends string>({
+  ariaLabel,
+  value,
+  options,
+  onChange
+}: {
+  ariaLabel: string;
+  value: T;
+  options: { value: T; label: string; count?: number }[];
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div className="segmented-control app-segmented-control" role="tablist" aria-label={ariaLabel}>
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          role="tab"
+          aria-selected={value === option.value}
+          className={value === option.value ? "is-selected" : ""}
+          onClick={() => onChange(option.value)}
+        >
+          <span>{option.label}</span>
+          {typeof option.count === "number" && <em>{option.count}</em>}
+        </button>
+      ))}
+    </div>
+  );
+});
+
+export const WorkflowSteps = memo(function WorkflowSteps({
+  steps
+}: {
+  steps: { label: string; state: "done" | "active" | "pending" }[];
+}) {
+  return (
+    <ol className="workflow-steps" aria-label="Workflow">
+      {steps.map((step, index) => (
+        <li className={`workflow-step is-${step.state}`} key={step.label}>
+          <span>
+            {step.state === "done" ? <CheckCircle2 size={14} /> : index + 1}
+          </span>
+          <strong>{step.label}</strong>
+        </li>
+      ))}
+    </ol>
+  );
+});
+
+export const SummaryTile = memo(function SummaryTile({
+  label,
+  value,
+  detail,
+  tone = "neutral"
+}: {
+  label: string;
+  value: string | number;
+  detail?: string;
+  tone?: "neutral" | "success" | "danger" | "primary";
+}) {
+  return (
+    <div className={`summary-tile ${tone}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+      {detail && <small>{detail}</small>}
     </div>
   );
 });

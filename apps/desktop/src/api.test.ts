@@ -81,4 +81,139 @@ describe("apiErrorFromResponse", () => {
     });
     fetchMock.mockRestore();
   });
+
+  it("posts custom query builder requests", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ columns: [], rows: [] }), { status: 200 })
+    );
+
+    await api.customQuery(
+      "project",
+      ["recording_1"],
+      ["scalar"],
+      { key: "battery", operator: "lt", value: "0.2" }
+    );
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toContain("/api/projects/project/query/custom");
+    expect(JSON.parse(String(init?.body))).toEqual({
+      recording_ids: ["recording_1"],
+      semantic_types: ["scalar"],
+      filters: { key: "battery", operator: "lt", value: "0.2" },
+      limit: 1000
+    });
+    fetchMock.mockRestore();
+  });
+
+  it("loads builtin recipes", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify([]), { status: 200 })
+    );
+
+    await api.recipes();
+
+    expect(String(fetchMock.mock.calls[0][0])).toContain("/api/recipes");
+    fetchMock.mockRestore();
+  });
+
+  it("adds lightweight job list query parameters", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify([]), { status: 200 })
+    );
+
+    await api.jobs("project", { limit: 50, activeOnly: true });
+
+    expect(String(fetchMock.mock.calls[0][0])).toContain(
+      "/api/projects/project/jobs?active_only=true&limit=50"
+    );
+    fetchMock.mockRestore();
+  });
+
+  it("posts source import workflow requests in one API round trip", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          source: {},
+          streams: [],
+          template_matches: [],
+          template_id: "sensor_monitor",
+          mapping: { mapping: {} },
+          saved_mapping: { id: "mapping_1", path: "/tmp/mapping.yaml" },
+          preview: { columns: [], rows: [] },
+          schema_profile: {},
+          validation: {}
+        }),
+        { status: 200 }
+      )
+    );
+
+    await api.importWorkflow("project", "/tmp/source.csv", "copy", {
+      csv: { header_mode: "header", column_names: ["timestamp", "value"] }
+    });
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toContain("/api/projects/project/sources/import-workflow");
+    expect(init?.method).toBe("POST");
+    expect(JSON.parse(String(init?.body))).toEqual({
+      path: "/tmp/source.csv",
+      storage_mode: "copy",
+      import_options: {
+        csv: { header_mode: "header", column_names: ["timestamp", "value"] }
+      },
+      template_id: null
+    });
+    fetchMock.mockRestore();
+  });
+
+  it("posts advanced build options", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: "job_1",
+          project_id: "project",
+          type: "conversion",
+          status: "pending",
+          progress: 0,
+          payload: {},
+          result: null,
+          attempt: 1,
+          created_at: "2026-06-23T00:00:00Z",
+          updated_at: "2026-06-23T00:00:00Z"
+        }),
+        { status: 202 }
+      )
+    );
+
+    await api.build("project", "source", "mapping", "run", "robotics_debug", "/tmp/out", {
+      mcap_decoders: ["ros2msg", "foxglove"],
+      rrd_optimize_profile: "object-store",
+      artifact_validation: "strict",
+      catalog_registration: {
+        enabled: true,
+        dataset_name: "robot_runs",
+        server_url: null,
+        managed_local: true
+      }
+    });
+
+    const [, init] = fetchMock.mock.calls[0];
+    expect(JSON.parse(String(init?.body))).toEqual({
+      project_id: "project",
+      source_id: "source",
+      mapping_id: "mapping",
+      template_id: "robotics_debug",
+      output_name: "run",
+      output_dir: "/tmp/out",
+      mcap_decoders: ["ros2msg", "foxglove"],
+      rrd_optimize_profile: "object-store",
+      artifact_validation: "strict",
+      catalog_registration: {
+        enabled: true,
+        dataset_name: "robot_runs",
+        server_url: null,
+        managed_local: true
+      }
+    });
+    fetchMock.mockRestore();
+  });
 });

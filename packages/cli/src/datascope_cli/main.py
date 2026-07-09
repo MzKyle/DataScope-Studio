@@ -100,6 +100,31 @@ def import_source(
         "--output-dir",
         help="Optional folder that receives both the .rrd and .rbl files.",
     ),
+    mcap_decoder: list[str] | None = typer.Option(
+        None,
+        "--mcap-decoder",
+        help="Rerun MCAP decoder to use. Repeat to select multiple decoders.",
+    ),
+    rrd_optimize_profile: str = typer.Option(
+        "none",
+        "--rrd-optimize-profile",
+        help="none, live, or object-store.",
+    ),
+    artifact_validation: str = typer.Option(
+        "basic",
+        "--artifact-validation",
+        help="basic, verify, or strict.",
+    ),
+    catalog_dataset: str | None = typer.Option(
+        None,
+        "--catalog-dataset",
+        help="Register the generated .rrd with this Rerun Catalog dataset.",
+    ),
+    catalog_url: str | None = typer.Option(
+        None,
+        "--catalog-url",
+        help="Rerun Catalog server URL. Required when --catalog-dataset is set.",
+    ),
     storage_mode: str = typer.Option(
         "copy",
         "--storage-mode",
@@ -113,6 +138,8 @@ def import_source(
     json_output: bool = typer.Option(False, "--json", help="Print JSON."),
 ) -> None:
     """Import a source into a project and build .rrd/.rbl artifacts."""
+    if catalog_dataset and not catalog_url:
+        raise typer.BadParameter("--catalog-url is required when --catalog-dataset is set.")
     workspace = Workspace(os.environ.get("DATASCOPE_WORKSPACE"))
     existing = next((item for item in workspace.list_projects() if item["name"] == project), None)
     project_row = existing or workspace.create_project(project)
@@ -131,6 +158,15 @@ def import_source(
         output_name=out,
         template_id=template,
         output_dir=str(output_dir) if output_dir else None,
+        mcap_decoders=mcap_decoder,
+        rrd_optimize_profile=rrd_optimize_profile,
+        artifact_validation=artifact_validation,
+        catalog_registration={
+            "enabled": bool(catalog_dataset),
+            "dataset_name": catalog_dataset or "",
+            "server_url": catalog_url,
+            "managed_local": False,
+        },
     )
     result = _run_job(workspace, job, no_wait=no_wait, quiet=json_output)
 
@@ -190,7 +226,7 @@ def diagnose(
     out: Path | None = typer.Option(None, "--out", help="Output file or export directory."),
     json_output: bool = typer.Option(False, "--json", help="Print JSON."),
 ) -> None:
-    """Run an offline robot diagnostics report."""
+    """Run an offline data health diagnostics report."""
     workspace = Workspace(os.environ.get("DATASCOPE_WORKSPACE"))
     project_row = _project_by_name_or_id(workspace, project)
     report = workspace.run_diagnostics(

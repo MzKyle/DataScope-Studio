@@ -6,6 +6,13 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from datascope_core.rerun_artifacts import (
+    normalize_artifact_validation,
+    normalize_catalog_registration,
+    normalize_mcap_decoders,
+    normalize_rrd_optimize_profile,
+    require_supported_artifact_options,
+)
 from datascope_core.workspace_utils import (
     build_artifact_paths,
     job_from_row,
@@ -33,8 +40,22 @@ class WorkspaceJobsMixin:
         output_name: str | None = None,
         template_id: str = "sensor_monitor",
         output_dir: str | None = None,
+        mcap_decoders: list[str] | None = None,
+        rrd_optimize_profile: str = "none",
+        artifact_validation: str = "basic",
+        catalog_registration: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         self.get_project(project_id)
+        mcap_decoders = normalize_mcap_decoders(mcap_decoders)
+        rrd_optimize_profile = normalize_rrd_optimize_profile(rrd_optimize_profile)
+        artifact_validation = normalize_artifact_validation(artifact_validation)
+        catalog_registration = normalize_catalog_registration(catalog_registration)
+        require_supported_artifact_options(
+            mcap_decoders=mcap_decoders,
+            rrd_optimize_profile=rrd_optimize_profile,
+            artifact_validation=artifact_validation,
+            catalog_registration=catalog_registration,
+        )
         source = self.get_source(source_id)
         self._assert_source_available(source)
         self._ensure_disk(self.estimate_build(project_id, source_id, output_dir=output_dir))
@@ -50,6 +71,10 @@ class WorkspaceJobsMixin:
                 "output_name": output_name,
                 "template_id": template_id,
                 "output_dir": output_dir,
+                "mcap_decoders": mcap_decoders,
+                "rrd_optimize_profile": rrd_optimize_profile,
+                "artifact_validation": artifact_validation,
+                "catalog_registration": catalog_registration,
             },
             resource_type="source",
             resource_id=source_id,
@@ -162,12 +187,30 @@ class WorkspaceJobsMixin:
             raise KeyError(f"Job not found: {job_id}")
         return job_from_row(row)
 
-    def list_jobs(self, project_id: str) -> list[dict[str, Any]]:
+    def list_jobs(
+        self,
+        project_id: str,
+        *,
+        active_only: bool = False,
+        limit: int | None = None,
+    ) -> list[dict[str, Any]]:
         self.get_project(project_id)
+        conditions = ["project_id = ?"]
+        values: list[Any] = [project_id]
+        if active_only:
+            conditions.append("status in ('pending', 'running', 'cancel_requested')")
+        row_limit = None if limit is None else max(1, min(int(limit), 1000))
+        if row_limit is not None:
+            values.append(row_limit)
         with self._connect() as conn:
             rows = conn.execute(
-                "select * from jobs where project_id = ? order by created_at desc",
-                (project_id,),
+                f"""
+                select * from jobs
+                where {' and '.join(conditions)}
+                order by created_at desc
+                {'' if row_limit is None else 'limit ?'}
+                """,
+                values,
             ).fetchall()
         return [job_from_row(row) for row in rows]
 
@@ -242,6 +285,10 @@ class WorkspaceJobsMixin:
                     output_name=payload.get("output_name"),
                     template_id=payload.get("template_id", "sensor_monitor"),
                     output_dir=payload.get("output_dir"),
+                    mcap_decoders=payload.get("mcap_decoders"),
+                    rrd_optimize_profile=payload.get("rrd_optimize_profile", "none"),
+                    artifact_validation=payload.get("artifact_validation", "basic"),
+                    catalog_registration=payload.get("catalog_registration"),
                     _job_id=job_id,
                     _cache_dir=cache_dir,
                     _background_job=True,

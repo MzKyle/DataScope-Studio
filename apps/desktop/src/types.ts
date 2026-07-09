@@ -195,6 +195,15 @@ export type BuildResult = {
   artifact_info?: RerunArtifactInfo;
 };
 
+export type CatalogRegistrationInfo = {
+  enabled: boolean;
+  dataset_name: string;
+  server_url?: string | null;
+  managed_local: boolean;
+  status: string;
+  recording_uri?: string;
+};
+
 export type RerunArtifactInfo = {
   recording_size_bytes: number;
   blueprint_size_bytes: number;
@@ -204,6 +213,12 @@ export type RerunArtifactInfo = {
   source_type: string;
   converter: string;
   rerun_version: string;
+  mcap_decoders?: string[] | null;
+  rrd_optimize_profile?: string;
+  rrd_optimize?: Record<string, unknown>;
+  artifact_validation?: string;
+  artifact_checks?: Record<string, unknown>;
+  catalog_registration?: CatalogRegistrationInfo;
 };
 
 export type RerunArtifactStatus = {
@@ -303,6 +318,16 @@ export type QueryExportResult = {
   rows: number;
 };
 
+export type CustomQueryFilters = {
+  entity_path?: string;
+  key?: string;
+  text?: string;
+  operator?: "any" | "eq" | "contains" | "gt" | "gte" | "lt" | "lte";
+  value?: string | number;
+  time_start?: string | number;
+  time_end?: string | number;
+};
+
 export type DiagnosticSeverity = "ok" | "warning" | "critical" | "info";
 
 export type DiagnosticThresholds = {
@@ -310,13 +335,18 @@ export type DiagnosticThresholds = {
   detection_confidence?: number;
   time_sync_warn_s?: number;
   time_sync_critical_s?: number;
+  missing_ratio_warn?: number;
+  missing_ratio_critical?: number;
+  time_parse_ratio_warn?: number;
+  time_gap_factor_warn?: number;
+  outlier_iqr_multiplier?: number;
 };
 
 export type DiagnosticPreset = {
   id: string;
   name: string;
   description: string;
-  thresholds: Required<DiagnosticThresholds>;
+  thresholds: DiagnosticThresholds;
 };
 
 export type DiagnosticSummary = {
@@ -354,7 +384,7 @@ export type DiagnosticFinding = {
 
 export type DiagnosticReport = {
   project_id: string;
-  thresholds: Required<DiagnosticThresholds>;
+  thresholds: DiagnosticThresholds;
   summary: DiagnosticSummary;
   checks: DiagnosticCheck[];
   findings: DiagnosticFinding[];
@@ -366,7 +396,7 @@ export type DiagnosticExportResult = {
   path: string;
   format: "json" | "csv" | "html";
   recording_ids: string[];
-  thresholds: Required<DiagnosticThresholds>;
+  thresholds: DiagnosticThresholds;
   summary: DiagnosticSummary;
 };
 
@@ -374,7 +404,7 @@ export type DiagnosticExport = {
   id: string;
   project_id: string;
   recording_ids: string[];
-  thresholds: Required<DiagnosticThresholds>;
+  thresholds: DiagnosticThresholds;
   summary: DiagnosticSummary;
   path: string;
   format: "json" | "csv" | "html";
@@ -403,6 +433,18 @@ export type TemplateRegistryItem = {
   enabled: boolean;
   installed_at: string;
   updated_at: string;
+};
+
+export type Recipe = {
+  id: string;
+  name: string;
+  version: string;
+  source_family: string;
+  visual_template_id: string;
+  mapping_template_id?: string | null;
+  diagnostic_preset: string;
+  recommended_queries: string[];
+  description: string;
 };
 
 export type BatchItem = {

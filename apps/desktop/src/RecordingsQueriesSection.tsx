@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Activity,
   Download,
@@ -18,8 +19,10 @@ import {
   type AreaErrors
 } from "./app-support";
 import { JobList } from "./JobList";
+import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 import type { Language, TranslationKey } from "./i18n";
 import type {
+  CustomQueryFilters,
   Job,
   QueryResult,
   QueryTemplate,
@@ -27,6 +30,7 @@ import type {
 } from "./types";
 
 type Translate = (key: TranslationKey) => string;
+type RecordingsPanel = "recordings" | "query" | "custom" | "compare" | "jobs";
 
 type RecordingsQueriesSectionProps = {
   recordings: Recording[];
@@ -38,6 +42,14 @@ type RecordingsQueriesSectionProps = {
   queryRecordingOptions: Recording[];
   thresholdTemplates: Set<string>;
   queryThreshold: string;
+  customQueryEntityPath: string;
+  customQueryKey: string;
+  customQueryText: string;
+  customQuerySemanticTypes: string;
+  customQueryOperator: NonNullable<CustomQueryFilters["operator"]>;
+  customQueryValue: string;
+  customQueryTimeStart: string;
+  customQueryTimeEnd: string;
   selectedProjectId: string;
   exportPath: string;
   queryResult: QueryResult | null;
@@ -47,6 +59,7 @@ type RecordingsQueriesSectionProps = {
   jobs: Job[];
   visibleJobs: Job[];
   isBusy: boolean;
+  openingRecordingIds: Set<string>;
   language: Language;
   errors: AreaErrors;
   t: Translate;
@@ -58,6 +71,15 @@ type RecordingsQueriesSectionProps = {
   onQueryThresholdChange: (value: string) => void;
   onRunQuery: () => void;
   onExportQuery: () => void;
+  onCustomQueryEntityPathChange: (value: string) => void;
+  onCustomQueryKeyChange: (value: string) => void;
+  onCustomQueryTextChange: (value: string) => void;
+  onCustomQuerySemanticTypesChange: (value: string) => void;
+  onCustomQueryOperatorChange: (value: NonNullable<CustomQueryFilters["operator"]>) => void;
+  onCustomQueryValueChange: (value: string) => void;
+  onCustomQueryTimeStartChange: (value: string) => void;
+  onCustomQueryTimeEndChange: (value: string) => void;
+  onRunCustomQuery: () => void;
   onCompareRecordingIdsChange: (value: string) => void;
   onCompareMetricChange: (value: string) => void;
   onRunCompare: () => void;
@@ -75,6 +97,14 @@ export function RecordingsQueriesSection({
   queryRecordingOptions,
   thresholdTemplates,
   queryThreshold,
+  customQueryEntityPath,
+  customQueryKey,
+  customQueryText,
+  customQuerySemanticTypes,
+  customQueryOperator,
+  customQueryValue,
+  customQueryTimeStart,
+  customQueryTimeEnd,
   selectedProjectId,
   exportPath,
   queryResult,
@@ -84,6 +114,7 @@ export function RecordingsQueriesSection({
   jobs,
   visibleJobs,
   isBusy,
+  openingRecordingIds,
   language,
   errors,
   t,
@@ -95,12 +126,30 @@ export function RecordingsQueriesSection({
   onQueryThresholdChange,
   onRunQuery,
   onExportQuery,
+  onCustomQueryEntityPathChange,
+  onCustomQueryKeyChange,
+  onCustomQueryTextChange,
+  onCustomQuerySemanticTypesChange,
+  onCustomQueryOperatorChange,
+  onCustomQueryValueChange,
+  onCustomQueryTimeStartChange,
+  onCustomQueryTimeEndChange,
+  onRunCustomQuery,
   onCompareRecordingIdsChange,
   onCompareMetricChange,
   onRunCompare,
   onCancelJob,
   onRetryJob
 }: RecordingsQueriesSectionProps) {
+  const [activePanel, setActivePanel] = useState<RecordingsPanel>("recordings");
+  const panelOptions: { value: RecordingsPanel; label: string; count?: number }[] = [
+    { value: "recordings" as const, label: t("tabRecordings"), count: recordings.length },
+    { value: "query" as const, label: t("tabQuery"), count: queryResult?.rows.length ?? 0 },
+    { value: "custom" as const, label: t("tabCustomQuery") },
+    { value: "compare" as const, label: t("tabCompare"), count: compareResult?.rows.length ?? 0 },
+    { value: "jobs" as const, label: t("tabJobs"), count: jobs.length }
+  ];
+
   return (
     <section className="section-stack" id="recordings">
       <SectionTitle
@@ -108,7 +157,29 @@ export function RecordingsQueriesSection({
         title={t("recordingsQueries")}
         subtitle={t("recordingsQueriesSubtitle")}
       />
-      <div className="two-column">
+
+      <Tabs
+        aria-label={t("recordingsQuerySections")}
+        value={activePanel}
+        onValueChange={(value) => setActivePanel(value as RecordingsPanel)}
+      >
+        <TabsList>
+          {panelOptions.map((option) => (
+            <TabsTrigger
+              key={option.value}
+              value={option.value}
+              onClick={() => setActivePanel(option.value)}
+            >
+              {option.label}
+              {typeof option.count === "number" && (
+                <span className="tab-count">{option.count}</span>
+              )}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+
+      {activePanel === "recordings" && (
         <section className="card">
           <CardHeader icon={<ListChecks size={18} />} title={t("recordingBrowser")} />
           {recordings.length ? (
@@ -138,6 +209,7 @@ export function RecordingsQueriesSection({
                       const artifact = recording.params.rerun_artifact;
                       const artifactStatus = recording.artifact_status;
                       const artifactReady = !artifactStatus || artifactStatus.status === "ready";
+                      const openingRecording = openingRecordingIds.has(recording.id);
                       const recordingSize =
                         artifact?.recording_size_bytes ?? artifactStatus?.recording_size_bytes;
                       const blueprintSize =
@@ -175,17 +247,19 @@ export function RecordingsQueriesSection({
                           </td>
                           <td data-label={t("tags")}>{recording.tags.join(", ") || "-"}</td>
                           <td data-label={t("action")}>
-                            <button
-                              onClick={() => onOpenRecording(recording)}
-                              disabled={isBusy || !artifactReady}
-                            >
-                              <ExternalLink size={16} />
-                              {t("openInRerun")}
-                            </button>
-                            <button onClick={() => onAddTag(recording.id)} disabled={isBusy}>
-                              <Tags size={16} />
-                              {t("addTag")}
-                            </button>
+                            <div className="table-actions">
+                              <button
+                                onClick={() => onOpenRecording(recording)}
+                                disabled={openingRecording || !artifactReady}
+                              >
+                                <ExternalLink size={16} />
+                                {t("openInRerun")}
+                              </button>
+                              <button onClick={() => onAddTag(recording.id)} disabled={isBusy}>
+                                <Tags size={16} />
+                                {t("addTag")}
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -203,7 +277,9 @@ export function RecordingsQueriesSection({
             <EmptyState text={t("recordingBrowserEmpty")} />
           )}
         </section>
+      )}
 
+      {activePanel === "query" && (
         <section className="card">
           <CardHeader icon={<Search size={18} />} title={t("queryConsole")} />
           <div className="query-controls">
@@ -261,9 +337,88 @@ export function RecordingsQueriesSection({
           {exportPath && <p className="path-line light">{t("exported")}: {exportPath}</p>}
           <ResultTable result={queryResult} emptyText={t("queryEmpty")} />
         </section>
-      </div>
+      )}
 
-      <div className="two-column balanced">
+      {activePanel === "custom" && (
+        <section className="card">
+          <CardHeader icon={<Search size={18} />} title={t("customQueryBuilder")} />
+          <div className="custom-query-grid">
+            <input
+              aria-label={t("entityPath")}
+              placeholder={t("entityPath")}
+              value={customQueryEntityPath}
+              onChange={(event) => onCustomQueryEntityPathChange(event.target.value)}
+            />
+            <input
+              aria-label={t("fieldKey")}
+              placeholder={t("fieldKey")}
+              value={customQueryKey}
+              onChange={(event) => onCustomQueryKeyChange(event.target.value)}
+            />
+            <input
+              aria-label={t("customQueryText")}
+              placeholder={t("customQueryText")}
+              value={customQueryText}
+              onChange={(event) => onCustomQueryTextChange(event.target.value)}
+            />
+            <input
+              aria-label={t("semanticTypes")}
+              placeholder="scalar,scalar_group,state"
+              value={customQuerySemanticTypes}
+              onChange={(event) => onCustomQuerySemanticTypesChange(event.target.value)}
+            />
+            <select
+              aria-label={t("operator")}
+              value={customQueryOperator}
+              onChange={(event) =>
+                onCustomQueryOperatorChange(
+                  event.target.value as NonNullable<CustomQueryFilters["operator"]>
+                )
+              }
+            >
+              <option value="any">{t("operatorAny")}</option>
+              <option value="contains">contains</option>
+              <option value="eq">=</option>
+              <option value="gt">&gt;</option>
+              <option value="gte">&gt;=</option>
+              <option value="lt">&lt;</option>
+              <option value="lte">&lt;=</option>
+            </select>
+            <input
+              aria-label={t("customQueryValue")}
+              placeholder={t("customQueryValue")}
+              value={customQueryValue}
+              onChange={(event) => onCustomQueryValueChange(event.target.value)}
+            />
+            <input
+              aria-label={t("timeStart")}
+              placeholder={t("timeStart")}
+              value={customQueryTimeStart}
+              onChange={(event) => onCustomQueryTimeStartChange(event.target.value)}
+            />
+            <input
+              aria-label={t("timeEnd")}
+              placeholder={t("timeEnd")}
+              value={customQueryTimeEnd}
+              onChange={(event) => onCustomQueryTimeEndChange(event.target.value)}
+            />
+          </div>
+          <div className="actions">
+            <button
+              className="button-primary"
+              onClick={onRunCustomQuery}
+              disabled={!selectedProjectId || isBusy}
+            >
+              <Search size={16} />
+              {t("runCustomQuery")}
+            </button>
+          </div>
+          <InlineError error={errors.query} t={t} />
+          <ResultTable result={queryResult} emptyText={t("queryEmpty")} />
+        </section>
+      )}
+
+      {activePanel === "compare" && (
         <section className="card">
           <CardHeader icon={<Search size={18} />} title={t("runCompare")} />
           <div className="query-controls">
@@ -289,7 +444,9 @@ export function RecordingsQueriesSection({
           <InlineError error={errors.compare} t={t} />
           <ResultTable result={compareResult} emptyText={t("compareEmpty")} />
         </section>
+      )}
 
+      {activePanel === "jobs" && (
         <section className="card">
           <CardHeader icon={<Activity size={18} />} title={t("jobs")} />
           {jobs.length ? (
@@ -304,7 +461,7 @@ export function RecordingsQueriesSection({
             <EmptyState text={t("jobsEmpty")} />
           )}
         </section>
-      </div>
+      )}
     </section>
   );
 }

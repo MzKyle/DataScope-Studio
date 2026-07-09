@@ -32,5 +32,10 @@ def open_recording(recording_path: str, blueprint_path: str | None = None) -> di
             )
         args.append(str(blueprint))
     args = [*rerun_command(), *args]
-    process = subprocess.Popen(args, env=rerun_subprocess_env())
+    process = subprocess.Popen(
+        args,
+        env=rerun_subprocess_env(),
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
     return {"status": "started", "pid": process.pid}

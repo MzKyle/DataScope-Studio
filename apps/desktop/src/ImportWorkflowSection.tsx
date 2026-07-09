@@ -1,4 +1,4 @@
-import type { RefObject } from "react";
+import { useState, type RefObject } from "react";
 import {
   Activity,
   CheckCircle2,
@@ -9,7 +9,8 @@ import {
   ListChecks,
   LoaderCircle,
   Play,
-  Save
+  Save,
+  SlidersHorizontal
 } from "lucide-react";
 
 import { BuildJobStatus, isActiveBuildJob } from "./BuildJobStatus";
@@ -20,6 +21,7 @@ import {
   MappingIssueCard,
   SectionTitle,
   StreamTable,
+  WorkflowSteps,
   formatBytes,
   type AreaErrors
 } from "./app-support";
@@ -64,9 +66,18 @@ type ImportWorkflowSectionProps = {
   outputNameRef: RefObject<HTMLInputElement | null>;
   outputName: string;
   artifactOutputDir: string;
+  mcapDecoders: string;
+  rrdOptimizeProfile: string;
+  artifactValidation: string;
+  catalogEnabled: boolean;
+  catalogDataset: string;
+  catalogManagedLocal: boolean;
+  catalogServerUrl: string;
+  rerun033Available: boolean;
   buildResult: BuildResult | null;
   buildJob: Job | null;
   isBuildSubmitting: boolean;
+  previewRows: Record<string, unknown>[];
   previewText: string;
   isBusy: boolean;
   language: Language;
@@ -92,8 +103,16 @@ type ImportWorkflowSectionProps = {
   onRunMappingDiff: () => void;
   onOutputNameChange: (name: string) => void;
   onArtifactOutputDirChange: (path: string) => void;
+  onMcapDecodersChange: (value: string) => void;
+  onRrdOptimizeProfileChange: (value: string) => void;
+  onArtifactValidationChange: (value: string) => void;
+  onCatalogEnabledChange: (value: boolean) => void;
+  onCatalogDatasetChange: (value: string) => void;
+  onCatalogManagedLocalChange: (value: boolean) => void;
+  onCatalogServerUrlChange: (value: string) => void;
   onChooseArtifactOutputFolder: () => void;
   onBuildRecording: () => void;
+  onShowBuildJobDetails: (job: Job) => void;
   onOpenInRerun: () => void;
 };
 
@@ -119,9 +138,18 @@ export function ImportWorkflowSection({
   outputNameRef,
   outputName,
   artifactOutputDir,
+  mcapDecoders,
+  rrdOptimizeProfile,
+  artifactValidation,
+  catalogEnabled,
+  catalogDataset,
+  catalogManagedLocal,
+  catalogServerUrl,
+  rerun033Available,
   buildResult,
   buildJob,
   isBuildSubmitting,
+  previewRows,
   previewText,
   isBusy,
   language,
@@ -143,15 +171,37 @@ export function ImportWorkflowSection({
   onRunMappingDiff,
   onOutputNameChange,
   onArtifactOutputDirChange,
+  onMcapDecodersChange,
+  onRrdOptimizeProfileChange,
+  onArtifactValidationChange,
+  onCatalogEnabledChange,
+  onCatalogDatasetChange,
+  onCatalogManagedLocalChange,
+  onCatalogServerUrlChange,
   onChooseArtifactOutputFolder,
   onBuildRecording,
+  onShowBuildJobDetails,
   onOpenInRerun
 }: ImportWorkflowSectionProps) {
+  const [advancedBuildOpen, setAdvancedBuildOpen] = useState(false);
   const buildJobActive = isActiveBuildJob(buildJob);
   const buildControlsLocked = isBusy || isBuildSubmitting || buildJobActive;
+  const sourceUsesMcapImporter = source?.type === "mcap" || source?.type === "ros2_db3";
   const buildPercent = Math.round(
     Math.min(1, Math.max(0, buildJob?.progress ?? 0)) * 100
   );
+  const workflowSteps: { label: string; state: "done" | "active" | "pending" }[] = [
+    { label: t("stepSource"), state: source ? "done" : "active" },
+    { label: t("stepSchema"), state: source ? "done" : "pending" },
+    {
+      label: t("stepMapping"),
+      state: mappingConfirmed ? "done" : mapping ? "active" : "pending"
+    },
+    {
+      label: t("stepArtifacts"),
+      state: buildResult ? "done" : mappingConfirmed ? "active" : "pending"
+    }
+  ];
 
   return (
     <section className="section-stack" id="import">
@@ -176,44 +226,12 @@ export function ImportWorkflowSection({
         }
       />
 
-      <section className="card mapping-template-toolbar">
-        <CardHeader
-          icon={<ListChecks size={18} />}
-          title={t("mappingTemplates")}
-          subtitle={t("mappingTemplatesSubtitle")}
-        />
-        <div className="inline-actions">
-          <select
-            value={selectedMappingTemplateId}
-            onChange={(event) => onSelectedMappingTemplateChange(event.target.value)}
-          >
-            <option value="">{t("automaticMapping")}</option>
-            {mappingTemplates.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name} ({item.source_family})
-              </option>
-            ))}
-          </select>
-          <button
-            onClick={onApplyMappingTemplate}
-            disabled={!source || !selectedMappingTemplateId || isBusy}
-          >
-            {t("applyMappingTemplate")}
-          </button>
-          <input
-            value={mappingTemplateName}
-            onChange={(event) => onMappingTemplateNameChange(event.target.value)}
-            placeholder={t("mappingTemplateName")}
-          />
-          <button
-            onClick={onCreateMappingTemplate}
-            disabled={!mapping || !mappingTemplateName.trim() || isBusy}
-          >
-            <Save size={16} />
-            {t("saveAsMappingTemplate")}
-          </button>
+      <section className="card workflow-card">
+        <WorkflowSteps steps={workflowSteps} />
+        <div className="workflow-card-copy">
+          <strong>{t("importWorkflowPrimary")}</strong>
+          <span>{t("importWorkflowPrimaryHint")}</span>
         </div>
-        <InlineError error={errors.mappingToolbar} t={t} />
       </section>
 
       <div className="two-column">
@@ -258,6 +276,46 @@ export function ImportWorkflowSection({
 
         <section className="card">
           <CardHeader icon={<Save size={18} />} title={t("mappingEditor")} />
+          <div className="mapping-template-toolbar inline-panel">
+            <div className="inline-panel-title">
+              <strong>{t("mappingTemplates")}</strong>
+              <span>{t("mappingTemplatesSubtitle")}</span>
+            </div>
+            <div className="inline-actions">
+              <select
+                aria-label={t("mappingTemplates")}
+                value={selectedMappingTemplateId}
+                onChange={(event) => onSelectedMappingTemplateChange(event.target.value)}
+              >
+                <option value="">{t("automaticMapping")}</option>
+                {mappingTemplates.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name} ({item.source_family})
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={onApplyMappingTemplate}
+                disabled={!source || !selectedMappingTemplateId || isBusy}
+              >
+                {t("applyMappingTemplate")}
+              </button>
+              <input
+                aria-label={t("mappingTemplateName")}
+                value={mappingTemplateName}
+                onChange={(event) => onMappingTemplateNameChange(event.target.value)}
+                placeholder={t("mappingTemplateName")}
+              />
+              <button
+                onClick={onCreateMappingTemplate}
+                disabled={!mapping || !mappingTemplateName.trim() || isBusy}
+              >
+                <Save size={16} />
+                {t("saveAsMappingTemplate")}
+              </button>
+            </div>
+            <InlineError error={errors.mappingToolbar} t={t} />
+          </div>
           {mapping ? (
             <>
               <div className="mapping-meta">
@@ -556,7 +614,103 @@ export function ImportWorkflowSection({
             </button>
           </div>
           <p className="field-hint">{t("artifactOutputPathHint")}</p>
-          <BuildJobStatus job={buildJob} isSubmitting={isBuildSubmitting} t={t} />
+          <details
+            className="advanced-build-details"
+            open={advancedBuildOpen}
+            onToggle={(event) => setAdvancedBuildOpen(event.currentTarget.open)}
+          >
+            <summary>
+              <SlidersHorizontal size={16} />
+              <span>{t("advancedBuildOptions")}</span>
+            </summary>
+            <div className="advanced-build-options">
+              {sourceUsesMcapImporter && (
+                <label>
+                  <span>{t("mcapDecoders")}</span>
+                  <input
+                    placeholder={t("mcapDecodersPlaceholder")}
+                    value={mcapDecoders}
+                    onChange={(event) => onMcapDecodersChange(event.target.value)}
+                    disabled={buildControlsLocked || !rerun033Available}
+                  />
+                </label>
+              )}
+              <label>
+                <span>{t("rrdOptimizeProfile")}</span>
+                <select
+                  value={rrdOptimizeProfile}
+                  onChange={(event) => onRrdOptimizeProfileChange(event.target.value)}
+                  disabled={buildControlsLocked || !rerun033Available}
+                >
+                  <option value="none">{t("none")}</option>
+                  <option value="live">live</option>
+                  <option value="object-store">object-store</option>
+                </select>
+              </label>
+              <label>
+                <span>{t("artifactValidation")}</span>
+                <select
+                  value={artifactValidation}
+                  onChange={(event) => onArtifactValidationChange(event.target.value)}
+                  disabled={buildControlsLocked || !rerun033Available}
+                >
+                  <option value="basic">basic</option>
+                  <option value="verify">verify</option>
+                  <option value="strict">strict</option>
+                </select>
+              </label>
+              <label className="checkbox-line">
+                <input
+                  type="checkbox"
+                  checked={catalogEnabled}
+                  onChange={(event) => onCatalogEnabledChange(event.target.checked)}
+                  disabled={buildControlsLocked || !rerun033Available}
+                />
+                <span>{t("catalogRegistration")}</span>
+              </label>
+              {catalogEnabled && (
+                <>
+                  <label>
+                    <span>{t("catalogDataset")}</span>
+                    <input
+                      value={catalogDataset}
+                      onChange={(event) => onCatalogDatasetChange(event.target.value)}
+                      disabled={buildControlsLocked || !rerun033Available}
+                    />
+                  </label>
+                  <label className="checkbox-line">
+                    <input
+                      type="checkbox"
+                      checked={catalogManagedLocal}
+                      onChange={(event) => onCatalogManagedLocalChange(event.target.checked)}
+                      disabled={buildControlsLocked || !rerun033Available}
+                    />
+                    <span>{t("managedLocalCatalog")}</span>
+                  </label>
+                  {!catalogManagedLocal && (
+                    <label>
+                      <span>{t("catalogServerUrl")}</span>
+                      <input
+                        value={catalogServerUrl}
+                        onChange={(event) => onCatalogServerUrlChange(event.target.value)}
+                        disabled={buildControlsLocked || !rerun033Available}
+                        placeholder="rerun+http://127.0.0.1:51234"
+                      />
+                    </label>
+                  )}
+                </>
+              )}
+              {!rerun033Available && (
+                <p className="field-hint">{t("rerun033Unavailable")}</p>
+              )}
+            </div>
+          </details>
+          <BuildJobStatus
+            job={buildJob}
+            isSubmitting={isBuildSubmitting}
+            t={t}
+            onShowDetails={onShowBuildJobDetails}
+          />
           <InlineError id="build-error" error={errors.build} t={t} />
           {buildResult ? (
             <dl className="artifact-list">
@@ -585,6 +739,20 @@ export function ImportWorkflowSection({
                     <dt>{t("converter")}</dt>
                     <dd>{buildResult.artifact_info.converter}</dd>
                   </div>
+                  <div>
+                    <dt>{t("artifactValidation")}</dt>
+                    <dd>{buildResult.artifact_info.artifact_validation ?? "basic"}</dd>
+                  </div>
+                  <div>
+                    <dt>{t("rrdOptimizeProfile")}</dt>
+                    <dd>{buildResult.artifact_info.rrd_optimize_profile ?? "none"}</dd>
+                  </div>
+                  {buildResult.artifact_info.catalog_registration?.enabled ? (
+                    <div>
+                      <dt>{t("catalogRegistration")}</dt>
+                      <dd>{buildResult.artifact_info.catalog_registration.status}</dd>
+                    </div>
+                  ) : null}
                 </>
               ) : null}
               <div>
@@ -602,7 +770,10 @@ export function ImportWorkflowSection({
         <section className="card">
           <CardHeader icon={<FileSearch size={18} />} title={t("preview")} />
           {previewText ? (
-            <pre className="preview">{previewText}</pre>
+            <>
+              <PreviewVisuals schemaProfile={schemaProfile} rows={previewRows} t={t} />
+              <pre className="preview">{previewText}</pre>
+            </>
           ) : (
             <EmptyState text={t("previewEmpty")} />
           )}
@@ -610,4 +781,114 @@ export function ImportWorkflowSection({
       </div>
     </section>
   );
+}
+
+function PreviewVisuals({
+  schemaProfile,
+  rows,
+  t
+}: {
+  schemaProfile: SchemaProfile | null;
+  rows: Record<string, unknown>[];
+  t: Translate;
+}) {
+  const fields = schemaProfile?.fields ?? [];
+  const missingFields = fields
+    .filter((field) => typeof field.null_ratio === "number" && field.null_ratio > 0)
+    .slice(0, 5);
+  const numericSeries = firstNumericSeries(rows);
+  const stateCounts = firstStateCounts(rows, numericSeries?.field);
+  return (
+    <div className="preview-visuals">
+      <div className="preview-panel">
+        <strong>{t("missingValues")}</strong>
+        {missingFields.length ? (
+          <div className="mini-bars">
+            {missingFields.map((field) => (
+              <div className="mini-bar-row" key={field.name}>
+                <span>{field.name}</span>
+                <div>
+                  <i style={{ width: `${Math.min(100, field.null_ratio * 100)}%` }} />
+                </div>
+                <em>{Math.round(field.null_ratio * 100)}%</em>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <small>{t("noMissingPreview")}</small>
+        )}
+      </div>
+      <div className="preview-panel">
+        <strong>{t("numericTrend")}</strong>
+        {numericSeries ? (
+          <div className="sparkline" aria-label={numericSeries.field}>
+            {numericSeries.values.map((value, index) => (
+              <i
+                key={`${numericSeries.field}-${index}`}
+                style={{ height: `${scaledHeight(value, numericSeries.values)}%` }}
+              />
+            ))}
+          </div>
+        ) : (
+          <small>{t("noNumericPreview")}</small>
+        )}
+      </div>
+      <div className="preview-panel">
+        <strong>{t("stateFrequency")}</strong>
+        {stateCounts ? (
+          <div className="mini-bars">
+            {stateCounts.values.map(([value, count]) => (
+              <div className="mini-bar-row" key={value}>
+                <span>{value}</span>
+                <div>
+                  <i style={{ width: `${Math.max(8, (count / stateCounts.max) * 100)}%` }} />
+                </div>
+                <em>{count}</em>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <small>{t("noStatePreview")}</small>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function firstNumericSeries(rows: Record<string, unknown>[]) {
+  if (!rows.length) return null;
+  for (const field of Object.keys(rows[0])) {
+    const values = rows
+      .map((row) => row[field])
+      .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+    if (values.length >= 2) return { field, values };
+  }
+  return null;
+}
+
+function firstStateCounts(rows: Record<string, unknown>[], excludedField?: string) {
+  if (!rows.length) return null;
+  for (const field of Object.keys(rows[0])) {
+    if (field === excludedField) continue;
+    const values = rows
+      .map((row) => row[field])
+      .filter((value) => typeof value === "string" && value.length > 0)
+      .map(String);
+    const unique = Array.from(new Set(values));
+    if (values.length >= 2 && unique.length > 0 && unique.length <= 8) {
+      const counts = unique
+        .map((value) => [value, values.filter((item) => item === value).length] as [string, number])
+        .sort((left, right) => right[1] - left[1])
+        .slice(0, 5);
+      return { values: counts, max: Math.max(...counts.map(([, count]) => count)) };
+    }
+  }
+  return null;
+}
+
+function scaledHeight(value: number, values: number[]) {
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  if (max === min) return 60;
+  return 20 + ((value - min) / (max - min)) * 80;
 }

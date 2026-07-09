@@ -62,6 +62,30 @@ def test_cli_import_json_includes_artifact_info(tmp_path: Path, monkeypatch) -> 
     artifact_info = payload["job"]["result"]["artifact_info"]
     assert artifact_info["converter"] == "rerun_python_sdk"
     assert artifact_info["recording_size_bytes"] > 0
+    assert artifact_info["artifact_validation"] == "basic"
+    assert artifact_info["rrd_optimize_profile"] == "none"
+
+
+def test_cli_catalog_registration_requires_catalog_url(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("DATASCOPE_WORKSPACE", str(tmp_path / "workspace"))
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "import",
+            str(FIXTURES / "sample_sensor.csv"),
+            "--project",
+            "CLI Catalog",
+            "--catalog-dataset",
+            "robot_runs",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "--catalog-url is required" in result.output
 
 
 def test_cli_import_defaults_artifact_names_to_source_name(tmp_path: Path, monkeypatch) -> None:

@@ -14,6 +14,7 @@ import {
   EmptyState,
   InlineError,
   SectionTitle,
+  SummaryTile,
   type AreaErrors
 } from "./app-support";
 import type { TranslationKey } from "./i18n";
@@ -51,7 +52,12 @@ const defaultThresholds = {
   battery_low: "0.2",
   detection_confidence: "0.5",
   time_sync_warn_s: "0.1",
-  time_sync_critical_s: "1.0"
+  time_sync_critical_s: "1.0",
+  missing_ratio_warn: "0.2",
+  missing_ratio_critical: "0.5",
+  time_parse_ratio_warn: "0.95",
+  time_gap_factor_warn: "5.0",
+  outlier_iqr_multiplier: "1.5"
 };
 
 export function DiagnosticsSection({
@@ -75,6 +81,7 @@ export function DiagnosticsSection({
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [locatorFilter, setLocatorFilter] = useState("");
   const [expandedFindingId, setExpandedFindingId] = useState("");
+  const [thresholdsOpen, setThresholdsOpen] = useState(false);
   const effectiveRecordingCount = selectedRecordingIds.length || recordings.length;
   const reportJson = useMemo(
     () => (report ? JSON.stringify(report, null, 2) : ""),
@@ -102,15 +109,44 @@ export function DiagnosticsSection({
         .some((value) => String(value).toLowerCase().includes(locator));
     });
   }, [categoryFilter, locatorFilter, report, severityFilter]);
+  const topFinding = useMemo(
+    () =>
+      report?.findings.find((finding) => finding.severity === "critical") ??
+      report?.findings.find((finding) => finding.severity === "warning") ??
+      report?.findings[0] ??
+      null,
+    [report]
+  );
 
   useEffect(() => {
     const preset = presets.find((item) => item.id === selectedPreset);
     if (!preset) return;
     setThresholds({
-      battery_low: String(preset.thresholds.battery_low),
-      detection_confidence: String(preset.thresholds.detection_confidence),
-      time_sync_warn_s: String(preset.thresholds.time_sync_warn_s),
-      time_sync_critical_s: String(preset.thresholds.time_sync_critical_s)
+      battery_low: String(preset.thresholds.battery_low ?? defaultThresholds.battery_low),
+      detection_confidence: String(
+        preset.thresholds.detection_confidence ?? defaultThresholds.detection_confidence
+      ),
+      time_sync_warn_s: String(
+        preset.thresholds.time_sync_warn_s ?? defaultThresholds.time_sync_warn_s
+      ),
+      time_sync_critical_s: String(
+        preset.thresholds.time_sync_critical_s ?? defaultThresholds.time_sync_critical_s
+      ),
+      missing_ratio_warn: String(
+        preset.thresholds.missing_ratio_warn ?? defaultThresholds.missing_ratio_warn
+      ),
+      missing_ratio_critical: String(
+        preset.thresholds.missing_ratio_critical ?? defaultThresholds.missing_ratio_critical
+      ),
+      time_parse_ratio_warn: String(
+        preset.thresholds.time_parse_ratio_warn ?? defaultThresholds.time_parse_ratio_warn
+      ),
+      time_gap_factor_warn: String(
+        preset.thresholds.time_gap_factor_warn ?? defaultThresholds.time_gap_factor_warn
+      ),
+      outlier_iqr_multiplier: String(
+        preset.thresholds.outlier_iqr_multiplier ?? defaultThresholds.outlier_iqr_multiplier
+      )
     });
   }, [presets, selectedPreset]);
 
@@ -139,7 +175,12 @@ export function DiagnosticsSection({
       battery_low: Number(thresholds.battery_low),
       detection_confidence: Number(thresholds.detection_confidence),
       time_sync_warn_s: Number(thresholds.time_sync_warn_s),
-      time_sync_critical_s: Number(thresholds.time_sync_critical_s)
+      time_sync_critical_s: Number(thresholds.time_sync_critical_s),
+      missing_ratio_warn: Number(thresholds.missing_ratio_warn),
+      missing_ratio_critical: Number(thresholds.missing_ratio_critical),
+      time_parse_ratio_warn: Number(thresholds.time_parse_ratio_warn),
+      time_gap_factor_warn: Number(thresholds.time_gap_factor_warn),
+      outlier_iqr_multiplier: Number(thresholds.outlier_iqr_multiplier)
     };
   }
 
@@ -167,6 +208,30 @@ export function DiagnosticsSection({
         subtitle={t("diagnosticsSubtitle")}
       />
 
+      <section className={`card diagnostics-hero severity-${report?.summary.severity ?? "neutral"}`}>
+        <div className="diagnostics-hero-score">
+          <Gauge size={22} />
+          <div>
+            <span>{t("healthScore")}</span>
+            <strong>{report ? report.summary.health_score : "--"}</strong>
+          </div>
+        </div>
+        <div className="diagnostics-hero-main">
+          <span className="eyebrow">{t("dataHealthCard")}</span>
+          <h3>{report ? report.summary.severity : t("diagnosticsEmptyTitle")}</h3>
+          <p>
+            {topFinding
+              ? `${topFinding.severity} / ${topFinding.category}: ${topFinding.message}`
+              : t("diagnosticsHeroHint")}
+          </p>
+        </div>
+        <div className="summary-strip compact">
+          <SummaryTile label={t("recordings")} value={report?.summary.recording_count ?? effectiveRecordingCount} />
+          <SummaryTile label={t("topics")} value={report?.summary.topic_count ?? "-"} />
+          <SummaryTile label={t("findings")} value={report?.summary.finding_count ?? 0} />
+        </div>
+      </section>
+
       <div className="two-column">
         <section className="card">
           <CardHeader
@@ -184,9 +249,14 @@ export function DiagnosticsSection({
                 ? presets
                 : [{ id: "balanced", name: "Balanced", description: "", thresholds: {
                     battery_low: 0.2,
-                    detection_confidence: 0.5,
-                    time_sync_warn_s: 0.1,
-                    time_sync_critical_s: 1.0
+                  detection_confidence: 0.5,
+                  time_sync_warn_s: 0.1,
+                  time_sync_critical_s: 1.0,
+                  missing_ratio_warn: 0.2,
+                  missing_ratio_critical: 0.5,
+                  time_parse_ratio_warn: 0.95,
+                  time_gap_factor_warn: 5.0,
+                  outlier_iqr_multiplier: 1.5
                   } }]
               ).map((preset) => (
                 <option key={preset.id} value={preset.id}>
@@ -195,53 +265,123 @@ export function DiagnosticsSection({
               ))}
             </select>
           </label>
-          <div className="diagnostics-thresholds">
-            <label>
-              <span>{t("batteryLowThreshold")}</span>
-              <input
-                value={thresholds.battery_low}
-                onChange={(event) =>
-                  setThresholds((current) => ({ ...current, battery_low: event.target.value }))
-                }
-              />
-            </label>
-            <label>
-              <span>{t("detectionConfidenceThreshold")}</span>
-              <input
-                value={thresholds.detection_confidence}
-                onChange={(event) =>
-                  setThresholds((current) => ({
-                    ...current,
-                    detection_confidence: event.target.value
-                  }))
-                }
-              />
-            </label>
-            <label>
-              <span>{t("timeSyncWarnThreshold")}</span>
-              <input
-                value={thresholds.time_sync_warn_s}
-                onChange={(event) =>
-                  setThresholds((current) => ({
-                    ...current,
-                    time_sync_warn_s: event.target.value
-                  }))
-                }
-              />
-            </label>
-            <label>
-              <span>{t("timeSyncCriticalThreshold")}</span>
-              <input
-                value={thresholds.time_sync_critical_s}
-                onChange={(event) =>
-                  setThresholds((current) => ({
-                    ...current,
-                    time_sync_critical_s: event.target.value
-                  }))
-                }
-              />
-            </label>
-          </div>
+          <details
+            className="advanced-build-details diagnostics-threshold-details"
+            open={thresholdsOpen}
+            onToggle={(event) => setThresholdsOpen(event.currentTarget.open)}
+          >
+            <summary>
+              <Gauge size={16} />
+              <span>{t("advancedThresholds")}</span>
+            </summary>
+            <div className="diagnostics-thresholds">
+              <label>
+                <span>{t("batteryLowThreshold")}</span>
+                <input
+                  value={thresholds.battery_low}
+                  onChange={(event) =>
+                    setThresholds((current) => ({ ...current, battery_low: event.target.value }))
+                  }
+                />
+              </label>
+              <label>
+                <span>{t("detectionConfidenceThreshold")}</span>
+                <input
+                  value={thresholds.detection_confidence}
+                  onChange={(event) =>
+                    setThresholds((current) => ({
+                      ...current,
+                      detection_confidence: event.target.value
+                    }))
+                  }
+                />
+              </label>
+              <label>
+                <span>{t("timeSyncWarnThreshold")}</span>
+                <input
+                  value={thresholds.time_sync_warn_s}
+                  onChange={(event) =>
+                    setThresholds((current) => ({
+                      ...current,
+                      time_sync_warn_s: event.target.value
+                    }))
+                  }
+                />
+              </label>
+              <label>
+                <span>{t("timeSyncCriticalThreshold")}</span>
+                <input
+                  value={thresholds.time_sync_critical_s}
+                  onChange={(event) =>
+                    setThresholds((current) => ({
+                      ...current,
+                      time_sync_critical_s: event.target.value
+                    }))
+                  }
+                />
+              </label>
+              <label>
+                <span>{t("missingRatioWarnThreshold")}</span>
+                <input
+                  value={thresholds.missing_ratio_warn}
+                  onChange={(event) =>
+                    setThresholds((current) => ({
+                      ...current,
+                      missing_ratio_warn: event.target.value
+                    }))
+                  }
+                />
+              </label>
+              <label>
+                <span>{t("missingRatioCriticalThreshold")}</span>
+                <input
+                  value={thresholds.missing_ratio_critical}
+                  onChange={(event) =>
+                    setThresholds((current) => ({
+                      ...current,
+                      missing_ratio_critical: event.target.value
+                    }))
+                  }
+                />
+              </label>
+              <label>
+                <span>{t("timeParseRatioWarnThreshold")}</span>
+                <input
+                  value={thresholds.time_parse_ratio_warn}
+                  onChange={(event) =>
+                    setThresholds((current) => ({
+                      ...current,
+                      time_parse_ratio_warn: event.target.value
+                    }))
+                  }
+                />
+              </label>
+              <label>
+                <span>{t("timeGapFactorWarnThreshold")}</span>
+                <input
+                  value={thresholds.time_gap_factor_warn}
+                  onChange={(event) =>
+                    setThresholds((current) => ({
+                      ...current,
+                      time_gap_factor_warn: event.target.value
+                    }))
+                  }
+                />
+              </label>
+              <label>
+                <span>{t("outlierIqrMultiplierThreshold")}</span>
+                <input
+                  value={thresholds.outlier_iqr_multiplier}
+                  onChange={(event) =>
+                    setThresholds((current) => ({
+                      ...current,
+                      outlier_iqr_multiplier: event.target.value
+                    }))
+                  }
+                />
+              </label>
+            </div>
+          </details>
           <div className="actions">
             <button
               className="button-primary"
@@ -316,32 +456,6 @@ export function DiagnosticsSection({
 
       {report ? (
         <>
-          <section className={`card diagnostics-summary severity-${report.summary.severity}`}>
-            <CardHeader icon={<Gauge size={18} />} title={t("diagnosticsSummary")} />
-            <div className="diagnostics-score">
-              <strong>{report.summary.health_score}</strong>
-              <span>{report.summary.severity.toUpperCase()}</span>
-            </div>
-            <dl className="meta-grid">
-              <div>
-                <dt>{t("recordings")}</dt>
-                <dd>{report.summary.recording_count}</dd>
-              </div>
-              <div>
-                <dt>{t("source")}</dt>
-                <dd>{report.summary.source_count}</dd>
-              </div>
-              <div>
-                <dt>{t("topics")}</dt>
-                <dd>{report.summary.topic_count}</dd>
-              </div>
-              <div>
-                <dt>{t("findings")}</dt>
-                <dd>{report.summary.finding_count}</dd>
-              </div>
-            </dl>
-          </section>
-
           <section className="diagnostic-check-grid">
             {report.checks.map((check) => (
               <article key={check.id} className={`card diagnostic-check severity-${check.severity}`}>

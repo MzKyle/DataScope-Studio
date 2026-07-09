@@ -50,6 +50,13 @@ def test_csv_recording_catalog_low_battery_and_export(tmp_path: Path) -> None:
     assert "failed" in recording["tags"]
     assert recordings[0]["params"]["firmware"] == "v1.2"
     assert len(query["rows"]) == 2
+    custom = workspace.custom_query(
+        project["id"],
+        recording_ids=[result["recording_id"]],
+        semantic_types=["scalar", "scalar_group"],
+        filters={"key": "battery", "operator": "lt", "value": 0.93},
+    )
+    assert len(custom["rows"]) == 2
     assert Path(export["path"]).exists()
 
 
@@ -152,6 +159,17 @@ def test_api_recording_patch_query_and_export(tmp_path: Path, monkeypatch) -> No
     )
     assert export_response.status_code == 200
     assert Path(export_response.json()["path"]).exists()
+
+    custom_response = client.post(
+        f"/api/projects/{project['id']}/query/custom",
+        json={
+            "recording_ids": [result["recording_id"]],
+            "semantic_types": ["scalar", "scalar_group"],
+            "filters": {"key": "battery", "operator": "lt", "value": 0.93},
+        },
+    )
+    assert custom_response.status_code == 200
+    assert len(custom_response.json()["rows"]) == 2
 
 
 def test_cli_recordings_tag_query_and_export(tmp_path: Path, monkeypatch) -> None:

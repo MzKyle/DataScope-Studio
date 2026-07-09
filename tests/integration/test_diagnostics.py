@@ -199,6 +199,57 @@ def test_api_diagnostics_after_async_build(tmp_path: Path, monkeypatch) -> None:
     assert "health_score" in diagnostics.json()["summary"]
 
 
+def test_tabular_diagnostics_report_data_health_findings(tmp_path: Path) -> None:
+    csv_path = tmp_path / "quality.csv"
+    csv_path.write_text(
+        "timestamp,temperature,voltage,state,message\n"
+        "0.0,20.0,12.0,IDLE,boot\n"
+        "0.1,,12.1,IDLE,ok\n"
+        "0.1,,12.2,IDLE,duplicate time\n"
+        "0.2,,12.3,IDLE,ok\n"
+        "8.0,,55.0,IDLE,spike\n"
+        "8.1,,12.4,IDLE,ok\n",
+        encoding="utf-8",
+    )
+    workspace = Workspace(tmp_path / "workspace")
+    project = workspace.create_project("Tabular Diagnostics")
+    source = workspace.add_source(project["id"], str(csv_path))
+    workspace.inspect_source(source["id"])
+    spec = workspace.suggest_mapping(source["id"], template_id="sensor_monitor")
+    mapping = workspace.save_mapping(project["id"], source["id"], spec)
+    result = workspace.build_recording(
+        project["id"],
+        source["id"],
+        mapping_id=mapping["id"],
+        output_name="quality_run",
+        template_id="sensor_monitor",
+    )
+
+    report = workspace.run_diagnostics(
+        project["id"],
+        [result["recording_id"]],
+        thresholds={
+            "missing_ratio_warn": 0.2,
+            "missing_ratio_critical": 0.5,
+            "time_gap_factor_warn": 5.0,
+        },
+    )
+    categories = {finding["category"] for finding in report["findings"]}
+    export = workspace.export_diagnostics(
+        project["id"],
+        [result["recording_id"]],
+        thresholds={"missing_ratio_warn": 0.2},
+        fmt="json",
+    )
+
+    assert report["summary"]["recording_count"] == 1
+    assert report["summary"]["topic_count"] == 0
+    assert {"schema_quality", "time_series_quality", "data_quality"} <= categories
+    assert any(check["id"] == "schema_quality" for check in report["checks"])
+    assert Path(export["path"]).is_file()
+    assert "schema_quality" in Path(export["path"]).read_text(encoding="utf-8")
+
+
 def _make_mcap_fixture(tmp_path: Path) -> Path:
     path = tmp_path / "diagnostic_robot.mcap"
     with path.open("wb") as stream:

@@ -4,7 +4,7 @@ import csv
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator, Mapping
 from typing import Any
 
 import pandas as pd
@@ -62,6 +62,12 @@ QUERY_TEMPLATES = [
 
 
 QUERY_COLUMNS = ["recording_id", "time", "entity_path", "key", "value"]
+STREAMABLE_QUERY_TEMPLATES = {
+    "find_errors",
+    "low_battery",
+    "detection_failure",
+    "topic_summary",
+}
 
 
 @dataclass(slots=True)
@@ -151,6 +157,27 @@ def run_query_template(
     return {"columns": QUERY_COLUMNS, "rows": result[:limit]}
 
 
+def run_query_template_stream(
+    rows: Iterable[dict[str, Any]],
+    template_id: str,
+    params: dict[str, Any] | None,
+    limit: int,
+) -> dict[str, Any]:
+    if template_id not in STREAMABLE_QUERY_TEMPLATES:
+        return run_query_template(list(rows), template_id, None, params, limit)
+
+    params = params or {}
+    result: list[dict[str, Any]] = []
+    for row in rows:
+        selected = _stream_query_row(row, template_id, params)
+        if selected is None:
+            continue
+        result.append(selected)
+        if len(result) >= limit:
+            break
+    return {"columns": QUERY_COLUMNS, "rows": result}
+
+
 def compare_recordings(
     rows: list[dict[str, Any]],
     recording_ids: list[str],
@@ -213,6 +240,23 @@ def compare_recordings(
     return {"columns": QUERY_COLUMNS, "rows": result[:limit]}
 
 
+def run_custom_query(
+    rows: Iterable[dict[str, Any]],
+    filters: dict[str, Any] | None,
+    limit: int = 1000,
+) -> dict[str, Any]:
+    filters = filters or {}
+    result: list[dict[str, Any]] = []
+    for row in rows:
+        value = _db_value(row)
+        if not _custom_row_matches(row, value, filters):
+            continue
+        result.append(_result_row(row, value))
+        if len(result) >= limit:
+            break
+    return {"columns": QUERY_COLUMNS, "rows": result}
+
+
 def export_query_result(result: dict[str, Any], path: str | Path, fmt: str) -> None:
     output_path = Path(path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -233,6 +277,61 @@ def export_query_result(result: dict[str, Any], path: str | Path, fmt: str) -> N
     raise ValueError(f"Unsupported export format: {fmt}")
 
 
+def _custom_row_matches(row: dict[str, Any], value: Any, filters: dict[str, Any]) -> bool:
+    time_start = _filter_float(filters.get("time_start"))
+    time_end = _filter_float(filters.get("time_end"))
+    row_time = row.get("time")
+    if time_start is not None and (row_time is None or float(row_time) < time_start):
+        return False
+    if time_end is not None and (row_time is None or float(row_time) > time_end):
+        return False
+    entity_path = str(filters.get("entity_path") or "").strip().lower()
+    if entity_path and entity_path not in str(row.get("entity_path") or "").lower():
+        return False
+    key = str(filters.get("key") or "").strip().lower()
+    if key and key not in str(row.get("key") or "").lower():
+        return False
+    text = str(filters.get("text") or "").strip().lower()
+    if text:
+        haystack = f"{row.get('entity_path')} {row.get('key')} {value}".lower()
+        if text not in haystack:
+            return False
+    operator = str(filters.get("operator") or "any")
+    expected = filters.get("value")
+    if operator == "any" or expected in (None, ""):
+        return True
+    if operator == "contains":
+        return str(expected).lower() in str(value).lower()
+    if operator == "eq":
+        return str(value) == str(expected)
+    actual = _filter_float(value)
+    target = _filter_float(expected)
+    if actual is None or target is None:
+        return False
+    if operator == "gt":
+        return actual > target
+    if operator == "gte":
+        return actual >= target
+    if operator == "lt":
+        return actual < target
+    if operator == "lte":
+        return actual <= target
+    raise ValueError(f"Unsupported custom query operator: {operator}")
+
+
+def _filter_float(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str) and value.strip():
+        try:
+            return float(value)
+        except ValueError:
+            return None
+    return None
+
+
 def _tabular_rows(
     recording_id: str,
     source: SourceInfo,
@@ -245,7 +344,7 @@ def _tabular_rows(
         time_unit=spec.effective_timeline_unit or spec.timeline_unit,
         timeline_sort=spec.timeline_sort,
     )
-    for row_index, row in frame.iterrows():
+    for row in _frame_records(frame):
         timestamp = _row_time(
             row,
             spec.primary_timeline,
@@ -383,7 +482,7 @@ def _append_field_values(
     timestamp: float | None,
     entity_path: str,
     semantic_type: str,
-    row: pd.Series,
+    row: Mapping[str, Any],
     fields: list[str],
 ) -> None:
     for field in fields:
@@ -397,7 +496,7 @@ def _field_values(
     timestamp: float | None,
     entity_path: str,
     semantic_type: str,
-    row: pd.Series,
+    row: Mapping[str, Any],
     fields: list[str],
 ) -> Iterator[QueryRow]:
     for field in fields:
@@ -436,7 +535,13 @@ def _iter_jsonl_batches(path: str, batch_size: int) -> Iterator[list[dict[str, A
         yield batch
 
 
-def _row_time(row: pd.Series, time_key: str, time_unit: str) -> float | None:
+def _frame_records(frame: pd.DataFrame) -> Iterator[dict[str, Any]]:
+    columns = list(frame.columns)
+    for values in frame.itertuples(index=False, name=None):
+        yield dict(zip(columns, values))
+
+
+def _row_time(row: Mapping[str, Any], time_key: str, time_unit: str) -> float | None:
     if time_key in row and pd.notna(row[time_key]):
         return time_seconds_or_none(row[time_key], unit=time_unit)
     return None
@@ -479,6 +584,41 @@ def _find_errors(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if any(needle in text for needle in needles):
             result.append(_result_row(row))
     return result
+
+
+def _stream_query_row(
+    row: dict[str, Any],
+    template_id: str,
+    params: dict[str, Any],
+) -> dict[str, Any] | None:
+    if template_id == "find_errors":
+        if row["semantic_type"] not in {"text_log", "state"}:
+            return None
+        text = str(_db_value(row)).lower()
+        if any(needle in text for needle in ("error", "warn", "fault")):
+            return _result_row(row)
+        return None
+    if template_id == "low_battery":
+        key_text = f"{row['key']} {row['entity_path']}".lower()
+        if "battery" not in key_text:
+            return None
+        value = _db_value(row)
+        if isinstance(value, (int, float)) and value < float(params.get("threshold", 0.2)):
+            return _result_row(row)
+        return None
+    if template_id == "detection_failure":
+        if "/camera/pred" not in row["entity_path"]:
+            return None
+        value = _db_value(row)
+        threshold = float(params.get("threshold", 0.5))
+        if row["key"] == "pred_box_count" and value == 0:
+            return _result_row(row, {"reason": "no_prediction", "value": value})
+        if row["key"] in {"score_min", "score_mean"} and isinstance(value, (int, float)) and value < threshold:
+            return _result_row(row, {"reason": "low_score", "value": value})
+        return None
+    if template_id == "topic_summary" and row["key"] == "topic_summary":
+        return _result_row(row)
+    return None
 
 
 def _low_battery(rows: list[dict[str, Any]], threshold: float) -> list[dict[str, Any]]:

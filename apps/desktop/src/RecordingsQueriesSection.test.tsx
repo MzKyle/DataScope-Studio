@@ -1,4 +1,5 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import type { ComponentProps } from "react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { RecordingsQueriesSection } from "./RecordingsQueriesSection";
@@ -10,47 +11,27 @@ afterEach(() => cleanup());
 const t = createTranslator("en");
 
 describe("RecordingsQueriesSection", () => {
+  it("switches between recording, query, compare, and jobs panels", () => {
+    const recording = makeRecording();
+
+    renderSection({ recordings: [recording], visibleRecordings: [recording] });
+
+    expect(screen.getByText("Recording Browser")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Query").closest("button")!);
+    expect(screen.getByText("Query Console")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Run Query" })).toBeEnabled();
+
+    fireEvent.click(screen.getByText("Compare").closest("button")!);
+    expect(screen.getByText("Run Compare")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Jobs").closest("button")!);
+    expect(screen.getByText("Conversion and query jobs will appear here.")).toBeInTheDocument();
+  });
+
   it("shows persisted Rerun artifact metadata in the recording list", () => {
     const recording = makeRecording();
 
-    render(
-      <RecordingsQueriesSection
-        recordings={[recording]}
-        visibleRecordings={[recording]}
-        tagInput=""
-        queryTemplates={[]}
-        selectedQueryTemplate="low_battery"
-        selectedQueryRecording=""
-        queryRecordingOptions={[recording]}
-        thresholdTemplates={new Set()}
-        queryThreshold="0.2"
-        selectedProjectId="project"
-        exportPath=""
-        queryResult={null}
-        compareRecordingIds=""
-        compareMetric=""
-        compareResult={null}
-        jobs={[]}
-        visibleJobs={[]}
-        isBusy={false}
-        language="en"
-        errors={{}}
-        t={t}
-        onTagInputChange={vi.fn()}
-        onOpenRecording={vi.fn()}
-        onAddTag={vi.fn()}
-        onQueryTemplateChange={vi.fn()}
-        onQueryRecordingChange={vi.fn()}
-        onQueryThresholdChange={vi.fn()}
-        onRunQuery={vi.fn()}
-        onExportQuery={vi.fn()}
-        onCompareRecordingIdsChange={vi.fn()}
-        onCompareMetricChange={vi.fn()}
-        onRunCompare={vi.fn()}
-        onCancelJob={vi.fn()}
-        onRetryJob={vi.fn()}
-      />
-    );
+    renderSection({ recordings: [recording], visibleRecordings: [recording] });
 
     expect(screen.getByText("Ready")).toBeInTheDocument();
     expect(screen.getByText("2.0 KiB / 512 B")).toBeInTheDocument();
@@ -68,49 +49,102 @@ describe("RecordingsQueriesSection", () => {
       }
     });
 
-    render(
-      <RecordingsQueriesSection
-        recordings={[recording]}
-        visibleRecordings={[recording]}
-        tagInput=""
-        queryTemplates={[]}
-        selectedQueryTemplate="low_battery"
-        selectedQueryRecording=""
-        queryRecordingOptions={[recording]}
-        thresholdTemplates={new Set()}
-        queryThreshold="0.2"
-        selectedProjectId="project"
-        exportPath=""
-        queryResult={null}
-        compareRecordingIds=""
-        compareMetric=""
-        compareResult={null}
-        jobs={[]}
-        visibleJobs={[]}
-        isBusy={false}
-        language="en"
-        errors={{}}
-        t={t}
-        onTagInputChange={vi.fn()}
-        onOpenRecording={vi.fn()}
-        onAddTag={vi.fn()}
-        onQueryTemplateChange={vi.fn()}
-        onQueryRecordingChange={vi.fn()}
-        onQueryThresholdChange={vi.fn()}
-        onRunQuery={vi.fn()}
-        onExportQuery={vi.fn()}
-        onCompareRecordingIdsChange={vi.fn()}
-        onCompareMetricChange={vi.fn()}
-        onRunCompare={vi.fn()}
-        onCancelJob={vi.fn()}
-        onRetryJob={vi.fn()}
-      />
-    );
+    renderSection({ recordings: [recording], visibleRecordings: [recording] });
 
     expect(screen.getByText("Artifact Missing")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open in Rerun" })).toBeDisabled();
   });
+
+  it("keeps ready recording open actions enabled during background busy work", () => {
+    const recording = makeRecording();
+
+    renderSection({
+      recordings: [recording],
+      visibleRecordings: [recording],
+      isBusy: true
+    });
+
+    expect(screen.getByRole("button", { name: "Open in Rerun" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Add Tag" })).toBeDisabled();
+  });
+
+  it("disables only the recording currently opening", () => {
+    const opening = makeRecording({ id: "recording_opening", run_name: "opening" });
+    const idle = makeRecording({ id: "recording_idle", run_name: "idle" });
+
+    renderSection({
+      recordings: [opening, idle],
+      visibleRecordings: [opening, idle],
+      openingRecordingIds: new Set([opening.id])
+    });
+
+    const openButtons = screen.getAllByRole("button", { name: "Open in Rerun" });
+    expect(openButtons[0]).toBeDisabled();
+    expect(openButtons[1]).toBeEnabled();
+  });
 });
+
+function renderSection(
+  overrides: Partial<ComponentProps<typeof RecordingsQueriesSection>> = {}
+) {
+  return render(
+    <RecordingsQueriesSection
+      recordings={[]}
+      visibleRecordings={[]}
+      tagInput=""
+      queryTemplates={[]}
+      selectedQueryTemplate="low_battery"
+      selectedQueryRecording=""
+      queryRecordingOptions={overrides.recordings ?? []}
+      thresholdTemplates={new Set()}
+      queryThreshold="0.2"
+      customQueryEntityPath=""
+      customQueryKey=""
+      customQueryText=""
+      customQuerySemanticTypes="scalar"
+      customQueryOperator="any"
+      customQueryValue=""
+      customQueryTimeStart=""
+      customQueryTimeEnd=""
+      selectedProjectId="project"
+      exportPath=""
+      queryResult={null}
+      compareRecordingIds=""
+      compareMetric=""
+      compareResult={null}
+      jobs={[]}
+      visibleJobs={[]}
+      isBusy={false}
+      openingRecordingIds={new Set()}
+      language="en"
+      errors={{}}
+      t={t}
+      onTagInputChange={vi.fn()}
+      onOpenRecording={vi.fn()}
+      onAddTag={vi.fn()}
+      onQueryTemplateChange={vi.fn()}
+      onQueryRecordingChange={vi.fn()}
+      onQueryThresholdChange={vi.fn()}
+      onRunQuery={vi.fn()}
+      onExportQuery={vi.fn()}
+      onCustomQueryEntityPathChange={vi.fn()}
+      onCustomQueryKeyChange={vi.fn()}
+      onCustomQueryTextChange={vi.fn()}
+      onCustomQuerySemanticTypesChange={vi.fn()}
+      onCustomQueryOperatorChange={vi.fn()}
+      onCustomQueryValueChange={vi.fn()}
+      onCustomQueryTimeStartChange={vi.fn()}
+      onCustomQueryTimeEndChange={vi.fn()}
+      onRunCustomQuery={vi.fn()}
+      onCompareRecordingIdsChange={vi.fn()}
+      onCompareMetricChange={vi.fn()}
+      onRunCompare={vi.fn()}
+      onCancelJob={vi.fn()}
+      onRetryJob={vi.fn()}
+      {...overrides}
+    />
+  );
+}
 
 function makeRecording(overrides: Partial<Recording> = {}): Recording {
   return {

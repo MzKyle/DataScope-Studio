@@ -1,5 +1,5 @@
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { BuildJobStatus, buildStageLabel } from "./BuildJobStatus";
 import { createTranslator } from "./i18n";
@@ -46,6 +46,7 @@ describe("BuildJobStatus", () => {
     );
     expect(screen.getByRole("status")).toHaveTextContent("Build complete");
 
+    const onShowDetails = vi.fn();
     rerender(
       <BuildJobStatus
         job={makeJob({
@@ -56,14 +57,19 @@ describe("BuildJobStatus", () => {
         })}
         isSubmitting={false}
         t={t}
+        onShowDetails={onShowDetails}
       />
     );
     expect(screen.getByRole("status")).toHaveTextContent("Build failed");
-    expect(screen.getByRole("status")).toHaveTextContent("Invalid point cloud");
+    expect(screen.getByRole("status")).toHaveTextContent("The task failed");
+    expect(screen.getByRole("status")).not.toHaveTextContent("Invalid point cloud");
+    fireEvent.click(screen.getByRole("button", { name: "View details" }));
+    expect(onShowDetails).toHaveBeenCalledOnce();
   });
 
   it("localizes known stages and preserves unknown adapter stages", () => {
     expect(buildStageLabel("blueprint", t)).toBe("Generating Blueprint");
+    expect(buildStageLabel("rrd_optimize", t)).toBe("Optimizing RRD");
     expect(buildStageLabel("custom_adapter_stage", t)).toBe("custom_adapter_stage");
     expect(buildStageLabel("converting", createTranslator("zh"))).toBe("正在转换数据");
   });

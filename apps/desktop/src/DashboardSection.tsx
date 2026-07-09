@@ -5,6 +5,7 @@ import {
   ExternalLink,
   FileSearch,
   FolderOpen,
+  Gauge,
   ListChecks,
   Upload,
   Zap
@@ -14,6 +15,7 @@ import type { ApiError } from "./api";
 import type { Language, TranslationKey } from "./i18n";
 import type {
   BuildResult,
+  DiagnosticReport,
   Job,
   Project,
   ProjectExportResult,
@@ -23,8 +25,8 @@ import {
   CardHeader,
   EmptyState,
   InlineError,
-  Metric,
   ProjectVisual,
+  SummaryTile,
   StatusBadge,
   formatDateTime,
   normalizeSourcePathInput
@@ -59,11 +61,14 @@ type DashboardSectionProps = {
   csvHeaderMode: "auto" | "header" | "no_header";
   csvColumnNames: string;
   isBusy: boolean;
+  isLatestRecordingOpening: boolean;
+  openingRecordingIds: Set<string>;
   importError?: ApiError;
   dashboardError?: ApiError;
   projectExport: ProjectExportResult | null;
   openedPackagePath: string;
   buildResult: BuildResult | null;
+  diagnosticReport: DiagnosticReport | null;
   language: Language;
   t: Translate;
   onToggleSourcePicker: () => void;
@@ -85,6 +90,18 @@ type DashboardSectionProps = {
 
 export function DashboardSection(props: DashboardSectionProps) {
   const recentRecordings = props.recordings.slice(0, 4);
+  const latestJobStatus = props.latestJob
+    ? `${props.latestJob.type} / ${props.latestJob.status}`
+    : props.t("localArtifacts");
+  const healthLabel = props.diagnosticReport
+    ? props.diagnosticReport.summary.severity
+    : props.t("notRun");
+  const nextAction = !props.selectedProject
+    ? props.t("nextCreateProject")
+    : props.recordings.length
+      ? props.t("nextReviewRecording")
+      : props.t("nextImportSource");
+
   return (
     <section className="dashboard" id="dashboard">
       <div className="hero-card project-summary-card">
@@ -97,6 +114,25 @@ export function DashboardSection(props: DashboardSectionProps) {
                 ? props.t("projectReadyDescription")
                 : props.t("projectEmptyDescription")}
             </p>
+          </div>
+          <div className="hero-actions responsive-actions">
+            <button
+              className="button-primary"
+              type="button"
+              onClick={props.onImport}
+              disabled={props.isBusy || !props.sourcePath.trim()}
+            >
+              <FileSearch size={16} />
+              {props.t("inspectSource")}
+            </button>
+            <button
+              type="button"
+              onClick={props.onOpenLatest}
+              disabled={(!props.buildResult && !props.latestRecording) || props.isLatestRecordingOpening}
+            >
+              <ExternalLink size={16} />
+              {props.t("openInRerun")}
+            </button>
           </div>
           <div className="project-meta-list">
             <span className="project-meta-item">
@@ -111,22 +147,32 @@ export function DashboardSection(props: DashboardSectionProps) {
             </span>
             <span className="project-meta-item">
               <Activity size={14} />
-              {props.latestJob
-                ? `${props.latestJob.type} / ${props.latestJob.status}`
-                : props.t("localArtifacts")}
+              {latestJobStatus}
             </span>
           </div>
-          <div className="hero-metrics compact-metrics">
-            <Metric label={props.t("runs")} value={props.recordings.length} />
-            <Metric label={props.t("streams")} value={props.streamCount} />
-            <Metric label={props.t("jobs")} value={props.jobCount} />
+          <div className="summary-strip">
+            <SummaryTile label={props.t("runs")} value={props.recordings.length} />
+            <SummaryTile label={props.t("streams")} value={props.streamCount} />
+            <SummaryTile label={props.t("jobs")} value={props.jobCount} />
+            <SummaryTile
+              label={props.t("health")}
+              value={healthLabel}
+              tone={props.diagnosticReport?.summary.severity === "critical" ? "danger" : "neutral"}
+            />
           </div>
         </div>
-        <ProjectVisual
-          recordings={props.recordings.length}
-          streams={props.streamCount}
-          jobs={props.jobCount}
-        />
+        <div className="next-action-panel">
+          <div>
+            <span className="eyebrow">{props.t("nextStep")}</span>
+            <strong>{nextAction}</strong>
+            <p>{props.t("dashboardNextStepHint")}</p>
+          </div>
+          <ProjectVisual
+            recordings={props.recordings.length}
+            streams={props.streamCount}
+            jobs={props.jobCount}
+          />
+        </div>
       </div>
 
       <section className="card import-card">
@@ -135,7 +181,7 @@ export function DashboardSection(props: DashboardSectionProps) {
           title={props.t("importData")}
           subtitle={props.t("importDataSubtitle")}
         />
-        <div className="source-picker-toolbar">
+        <div className="source-picker-toolbar responsive-actions">
           <div className="source-picker-wrap">
             <button
               className="button-primary source-picker-button"
@@ -243,8 +289,8 @@ export function DashboardSection(props: DashboardSectionProps) {
       <section className="card quick-actions-card">
         <CardHeader
           icon={<Zap size={18} />}
-          title={props.t("quickActions")}
-          subtitle={props.t("quickActionsSubtitle")}
+          title={props.t("workspaceActions")}
+          subtitle={props.t("workspaceActionsSubtitle")}
         />
         <div className="quick-actions">
           <button onClick={props.onRefresh} disabled={!props.selectedProject || props.isBusy}>
@@ -261,7 +307,7 @@ export function DashboardSection(props: DashboardSectionProps) {
           </button>
           <button
             onClick={props.onOpenLatest}
-            disabled={(!props.buildResult && !props.latestRecording) || props.isBusy}
+            disabled={(!props.buildResult && !props.latestRecording) || props.isLatestRecordingOpening}
           >
             <ExternalLink size={16} />
             {props.t("openInRerun")}
@@ -316,7 +362,7 @@ export function DashboardSection(props: DashboardSectionProps) {
                   <button
                     className="mini-button"
                     onClick={() => props.onOpenRecording(recording)}
-                    disabled={props.isBusy}
+                    disabled={props.openingRecordingIds.has(recording.id)}
                     title={props.t("openInRerun")}
                   >
                     <ExternalLink size={15} />
@@ -329,6 +375,31 @@ export function DashboardSection(props: DashboardSectionProps) {
           <EmptyState text={props.t("recordingsWillAppear")} />
         )}
       </section>
+
+      {props.diagnosticReport && (
+        <section className={`card health-card severity-${props.diagnosticReport.summary.severity}`}>
+          <CardHeader icon={<Gauge size={18} />} title={props.t("dataHealthCard")} />
+          <div className="health-card-grid">
+            <div>
+              <span>{props.t("healthScore")}</span>
+              <strong>{props.diagnosticReport.summary.health_score}</strong>
+            </div>
+            <div>
+              <span>{props.t("severity")}</span>
+              <strong>{props.diagnosticReport.summary.severity}</strong>
+            </div>
+            <div>
+              <span>{props.t("findings")}</span>
+              <strong>{props.diagnosticReport.summary.finding_count}</strong>
+            </div>
+          </div>
+          <p className="path-line light">
+            {props.diagnosticReport.findings[0]
+              ? `${props.t("topFinding")}: ${props.diagnosticReport.findings[0].message}`
+              : props.t("noTopFinding")}
+          </p>
+        </section>
+      )}
     </section>
   );
 }

@@ -12,7 +12,14 @@ use std::sync::{
 };
 use std::time::{Duration, Instant};
 
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::WindowEvent;
 use tauri::{AppHandle, Manager};
+
+const MAIN_WINDOW_LABEL: &str = "main";
+const TRAY_SHOW_WINDOW_ID: &str = "tray_show_window";
+const TRAY_QUIT_ID: &str = "tray_quit";
 
 #[derive(serde::Deserialize)]
 struct ApiRequest {
@@ -34,9 +41,22 @@ struct ApiStatus {
     packaged_runtime: bool,
     runtime_dir: Option<String>,
     rerun_available: bool,
+    rerun_version: Option<String>,
+    rerun_features: RerunFeatures,
     log_dir: String,
     desktop_log_path: String,
     backend_log_path: String,
+}
+
+#[derive(serde::Serialize)]
+struct RerunFeatures {
+    rerun_033: bool,
+    mcap_decoders: bool,
+    rrd_optimize: bool,
+    artifact_verify: bool,
+    headless_screenshot: bool,
+    catalog: bool,
+    legacy_intel_mac: bool,
 }
 
 #[derive(serde::Deserialize)]
@@ -51,7 +71,8 @@ struct BackendState {
     port: u16,
     packaged_runtime: bool,
     runtime_dir: Option<PathBuf>,
-    rerun_available: bool,
+    rerun_python: Option<PathBuf>,
+    rerun_available: Mutex<Option<bool>>,
     log_dir: PathBuf,
     desktop_log_path: PathBuf,
     backend_log_path: PathBuf,
@@ -61,6 +82,12 @@ struct BackendState {
 #[derive(Clone, Default)]
 struct SmokeState {
     frontend_ready: Arc<AtomicBool>,
+}
+
+#[derive(Clone, Default)]
+struct TrayState {
+    available: Arc<AtomicBool>,
+    exiting: Arc<AtomicBool>,
 }
 
 impl Drop for BackendState {
@@ -123,6 +150,9 @@ async fn api_request(
 
 #[tauri::command]
 async fn api_status(state: tauri::State<'_, BackendState>) -> Result<ApiStatus, String> {
+    let rerun_available = cached_rerun_available(&state);
+    let rerun_version = runtime_rerun_version(state.rerun_python.as_deref());
+    let rerun_features = rerun_features(rerun_version.as_deref());
     Ok(ApiStatus {
         status: if api_ready(state.port) {
             "online".to_string()
@@ -135,7 +165,9 @@ async fn api_status(state: tauri::State<'_, BackendState>) -> Result<ApiStatus, 
             .runtime_dir
             .as_ref()
             .map(|path| path.to_string_lossy().to_string()),
-        rerun_available: state.rerun_available,
+        rerun_available,
+        rerun_version,
+        rerun_features,
         log_dir: state.log_dir.to_string_lossy().to_string(),
         desktop_log_path: state.desktop_log_path.to_string_lossy().to_string(),
         backend_log_path: state.backend_log_path.to_string_lossy().to_string(),
@@ -232,7 +264,8 @@ fn start_backend(app: &AppHandle) -> Result<BackendState, String> {
             port,
             packaged_runtime: false,
             runtime_dir: None,
-            rerun_available: false,
+            rerun_python: None,
+            rerun_available: Mutex::new(Some(false)),
             log_dir,
             desktop_log_path,
             backend_log_path,
@@ -348,21 +381,21 @@ fn start_backend(app: &AppHandle) -> Result<BackendState, String> {
         ));
     }
 
-    let rerun_available = runtime_python_has_module(&python, "rerun_cli");
     let _ = diagnostic_log::write(
         "info",
         "desktop.backend",
         "local API is ready",
         Some(serde_json::json!({
             "port": port,
-            "rerun_available": rerun_available,
+            "rerun_available": "deferred",
         })),
     );
     Ok(BackendState {
         port,
         packaged_runtime,
         runtime_dir,
-        rerun_available,
+        rerun_python: Some(python),
+        rerun_available: Mutex::new(None),
         log_dir,
         desktop_log_path,
         backend_log_path: log_path,
@@ -490,6 +523,76 @@ fn runtime_python_has_module(python: &Path, module: &str) -> bool {
     status.map(|status| status.success()).unwrap_or(false)
 }
 
+fn cached_rerun_available(state: &BackendState) -> bool {
+    if let Ok(cache) = state.rerun_available.lock() {
+        if let Some(value) = *cache {
+            return value;
+        }
+    }
+
+    let Some(python) = state.rerun_python.clone() else {
+        if let Ok(mut cache) = state.rerun_available.lock() {
+            *cache = Some(false);
+        }
+        return false;
+    };
+
+    let available = runtime_python_has_module(&python, "rerun_cli");
+    if let Ok(mut cache) = state.rerun_available.lock() {
+        *cache = Some(available);
+    }
+    available
+}
+
+fn runtime_rerun_version(python: Option<&Path>) -> Option<String> {
+    let python = python?;
+    let output = Command::new(python)
+        .args([
+            "-c",
+            "from importlib.metadata import version, PackageNotFoundError\ntry:\n print(version('rerun-sdk'))\nexcept PackageNotFoundError:\n print('unknown')",
+        ])
+        .env("PYTHONNOUSERSITE", "1")
+        .env_remove("PYTHONHOME")
+        .env_remove("PYTHONPATH")
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let value = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if value.is_empty() || value == "unknown" {
+        None
+    } else {
+        Some(value)
+    }
+}
+
+fn rerun_features(version: Option<&str>) -> RerunFeatures {
+    let legacy_intel_mac = cfg!(all(target_os = "macos", target_arch = "x86_64"));
+    let supports_033 = version_at_least(version.unwrap_or("0.0.0"), (0, 33, 0));
+    let enabled = supports_033 && !legacy_intel_mac;
+    RerunFeatures {
+        rerun_033: enabled,
+        mcap_decoders: enabled,
+        rrd_optimize: enabled,
+        artifact_verify: enabled,
+        headless_screenshot: enabled,
+        catalog: enabled,
+        legacy_intel_mac,
+    }
+}
+
+fn version_at_least(version: &str, minimum: (u32, u32, u32)) -> bool {
+    let mut parts = [0_u32, 0, 0];
+    for (index, piece) in version.split('.').take(3).enumerate() {
+        let digits: String = piece.chars().take_while(|ch| ch.is_ascii_digit()).collect();
+        if let Ok(value) = digits.parse::<u32>() {
+            parts[index] = value;
+        }
+    }
+    (parts[0], parts[1], parts[2]) >= minimum
+}
+
 fn external_backend_enabled() -> bool {
     matches!(
         env::var("DATASCOPE_DEV_BACKEND").as_deref(),
@@ -530,6 +633,83 @@ fn smoke_test_requested() -> bool {
     env::args().any(|arg| arg == "--smoke-test")
 }
 
+fn frontend_smoke_test_requested() -> bool {
+    env::args().any(|arg| arg == "--frontend-smoke-test")
+}
+
+fn show_main_window(app: &AppHandle) -> Result<(), String> {
+    let window = app
+        .get_webview_window(MAIN_WINDOW_LABEL)
+        .ok_or_else(|| "main window is unavailable".to_string())?;
+    window
+        .show()
+        .map_err(|error| format!("could not show main window: {error}"))?;
+    window
+        .unminimize()
+        .map_err(|error| format!("could not unminimize main window: {error}"))?;
+    window
+        .set_focus()
+        .map_err(|error| format!("could not focus main window: {error}"))?;
+    Ok(())
+}
+
+fn initialize_tray(app: &AppHandle, tray_state: TrayState) -> Result<(), String> {
+    let icon = app
+        .default_window_icon()
+        .cloned()
+        .ok_or_else(|| "missing default window icon".to_string())?;
+    let show_item = MenuItem::with_id(app, TRAY_SHOW_WINDOW_ID, "显示窗口", true, None::<&str>)
+        .map_err(|error| format!("could not create tray show menu item: {error}"))?;
+    let separator = PredefinedMenuItem::separator(app)
+        .map_err(|error| format!("could not create tray separator: {error}"))?;
+    let quit_item = MenuItem::with_id(app, TRAY_QUIT_ID, "退出", true, None::<&str>)
+        .map_err(|error| format!("could not create tray quit menu item: {error}"))?;
+    let menu = Menu::with_items(app, &[&show_item, &separator, &quit_item])
+        .map_err(|error| format!("could not create tray menu: {error}"))?;
+    let menu_state = tray_state.clone();
+
+    TrayIconBuilder::with_id("main")
+        .icon(icon)
+        .tooltip("DataScope Studio")
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .on_menu_event(move |app, event| {
+            if event.id() == TRAY_SHOW_WINDOW_ID {
+                if let Err(error) = show_main_window(app) {
+                    let _ = diagnostic_log::write(
+                        "error",
+                        "desktop.tray",
+                        "could not show main window from tray menu",
+                        Some(serde_json::json!({"error": error})),
+                    );
+                }
+            } else if event.id() == TRAY_QUIT_ID {
+                menu_state.exiting.store(true, Ordering::SeqCst);
+                app.exit(0);
+            }
+        })
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } = event
+            {
+                if let Err(error) = show_main_window(tray.app_handle()) {
+                    let _ = diagnostic_log::write(
+                        "error",
+                        "desktop.tray",
+                        "could not show main window from tray click",
+                        Some(serde_json::json!({"error": error})),
+                    );
+                }
+            }
+        })
+        .build(app)
+        .map_err(|error| format!("could not create tray icon: {error}"))?;
+    Ok(())
+}
+
 fn main() {
     let desktop_log_path = diagnostic_log::initialize();
     diagnostic_log::install_panic_hook();
@@ -545,8 +725,34 @@ fn main() {
     );
     configure_webkit_environment();
     let smoke_test = smoke_test_requested();
+    let frontend_smoke_test = frontend_smoke_test_requested();
+    let tray_state = TrayState::default();
+    let tray_state_for_setup = tray_state.clone();
+    let tray_state_for_close = tray_state.clone();
 
     let result = tauri::Builder::default()
+        .on_window_event(move |window, event| {
+            if window.label() != MAIN_WINDOW_LABEL {
+                return;
+            }
+            if let WindowEvent::CloseRequested { api, .. } = event {
+                if tray_state_for_close.available.load(Ordering::SeqCst)
+                    && !tray_state_for_close.exiting.load(Ordering::SeqCst)
+                {
+                    match window.hide() {
+                        Ok(()) => api.prevent_close(),
+                        Err(error) => {
+                            let _ = diagnostic_log::write(
+                                "error",
+                                "desktop.tray",
+                                "could not hide main window to tray",
+                                Some(serde_json::json!({"error": error.to_string()})),
+                            );
+                        }
+                    }
+                }
+            }
+        })
         .plugin(tauri_plugin_dialog::init())
         .manage(SmokeState::default())
         .setup(move |app| {
@@ -560,23 +766,46 @@ fn main() {
                 );
                 error
             })?;
-            let smoke_backend_ok = api_ready(backend_state.port)
+            let frontend_smoke_backend_ok = api_ready(backend_state.port);
+            let strict_smoke_backend_ok = frontend_smoke_backend_ok
                 && backend_state.packaged_runtime
                 && backend_state.runtime_dir.is_some()
-                && backend_state.rerun_available;
+                && cached_rerun_available(&backend_state);
             let smoke_state = app.state::<SmokeState>().inner().clone();
             app.manage(backend_state);
-            if smoke_test {
-                if let Some(window) = app.get_webview_window("main") {
+            match initialize_tray(app.handle(), tray_state_for_setup.clone()) {
+                Ok(()) => {
+                    tray_state_for_setup.available.store(true, Ordering::SeqCst);
+                    let _ = diagnostic_log::write(
+                        "info",
+                        "desktop.tray",
+                        "system tray icon initialized",
+                        None,
+                    );
+                }
+                Err(error) => {
+                    let _ = diagnostic_log::write(
+                        "warn",
+                        "desktop.tray",
+                        "system tray icon is unavailable",
+                        Some(serde_json::json!({"error": error})),
+                    );
+                }
+            }
+            if smoke_test || frontend_smoke_test {
+                if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
                     let _ = window.hide();
                 }
                 let handle = app.handle().clone();
                 std::thread::spawn(move || {
-                    let frontend_ready = wait_for_frontend_ready(
-                        &smoke_state,
-                        Duration::from_secs(10),
-                    );
-                    handle.exit(if smoke_backend_ok && frontend_ready { 0 } else { 1 });
+                    let frontend_ready =
+                        wait_for_frontend_ready(&smoke_state, Duration::from_secs(10));
+                    let backend_ok = if smoke_test {
+                        strict_smoke_backend_ok
+                    } else {
+                        frontend_smoke_backend_ok
+                    };
+                    handle.exit(if backend_ok && frontend_ready { 0 } else { 1 });
                 });
             }
             Ok(())

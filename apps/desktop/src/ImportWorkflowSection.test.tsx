@@ -4,13 +4,23 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ImportWorkflowSection } from "./ImportWorkflowSection";
 import { createTranslator } from "./i18n";
-import type { Job } from "./types";
+import type { Job, Source } from "./types";
 
 afterEach(() => cleanup());
 
 const t = createTranslator("en");
 
 describe("ImportWorkflowSection build feedback", () => {
+  it("shows the guided import workflow and advanced build entry", () => {
+    renderSection();
+
+    expect(screen.getByText("Source")).toBeInTheDocument();
+    expect(screen.getByText("Schema")).toBeInTheDocument();
+    expect(screen.getByText("Mapping")).toBeInTheDocument();
+    expect(screen.getByText("Artifacts")).toBeInTheDocument();
+    expect(screen.getByText("Advanced build options")).toBeInTheDocument();
+  });
+
   it("locks only build controls and shows progress while a build job is active", () => {
     renderSection({
       buildJob: makeJob({
@@ -47,7 +57,9 @@ describe("ImportWorkflowSection build feedback", () => {
     expect(screen.getByDisplayValue("run_001")).toBeEnabled();
     expect(screen.getByLabelText("Rerun artifact folder")).toBeEnabled();
     expect(screen.getByRole("button", { name: "Build .rrd + .rbl" })).toBeEnabled();
-    expect(screen.getByRole("status")).toHaveTextContent("Conversion failed");
+    expect(screen.getByRole("status")).toHaveTextContent("The task failed");
+    expect(screen.getByRole("status")).not.toHaveTextContent("Conversion failed");
+    expect(screen.getByRole("button", { name: "View details" })).toBeEnabled();
   });
 
   it("enables opening Rerun after a successful build", () => {
@@ -81,13 +93,56 @@ describe("ImportWorkflowSection build feedback", () => {
     expect(screen.getByText("Ready")).toBeInTheDocument();
     expect(screen.getByText("2.0 KiB / 512 B")).toBeInTheDocument();
     expect(screen.getByText("rerun_python_sdk")).toBeInTheDocument();
+    expect(screen.getAllByText("basic").length).toBeGreaterThan(0);
+    expect(screen.getByText("none")).toBeInTheDocument();
+  });
+
+  it("shows MCAP importer options only for MCAP-like sources", () => {
+    const { rerender } = renderSection({
+      rerun033Available: true,
+      source: makeSource({ type: "csv" })
+    });
+
+    expect(screen.queryByLabelText("MCAP decoders")).not.toBeInTheDocument();
+
+    rerender(
+      <ImportWorkflowSection
+        {...baseProps({
+          rerun033Available: true,
+          source: makeSource({ type: "mcap" })
+        })}
+      />
+    );
+
+    expect(screen.getByLabelText("MCAP decoders")).toBeEnabled();
+  });
+
+  it("disables Rerun 0.33 options when the runtime does not support them", () => {
+    renderSection({
+      source: makeSource({ type: "mcap" }),
+      rerun033Available: false
+    });
+
+    expect(screen.getByLabelText("MCAP decoders")).toBeDisabled();
+    expect(screen.getByLabelText("RRD optimize profile")).toBeDisabled();
+    expect(screen.getByLabelText("Artifact validation")).toBeDisabled();
+    expect(screen.getByLabelText("Register with Rerun Catalog")).toBeDisabled();
+    expect(
+      screen.getByText("The current Rerun version or platform does not support 0.33 build options.")
+    ).toBeInTheDocument();
   });
 });
 
 function renderSection(
   overrides: Partial<ComponentProps<typeof ImportWorkflowSection>> = {}
 ) {
-  const props: ComponentProps<typeof ImportWorkflowSection> = {
+  return render(<ImportWorkflowSection {...baseProps(overrides)} />);
+}
+
+function baseProps(
+  overrides: Partial<ComponentProps<typeof ImportWorkflowSection>> = {}
+): ComponentProps<typeof ImportWorkflowSection> {
+  return {
     selectedTemplateId: "",
     templateOptions: [],
     selectedMappingTemplateId: "",
@@ -109,9 +164,18 @@ function renderSection(
     outputNameRef: createRef<HTMLInputElement>(),
     outputName: "run_001",
     artifactOutputDir: "/tmp/rerun",
+    mcapDecoders: "",
+    rrdOptimizeProfile: "none",
+    artifactValidation: "basic",
+    catalogEnabled: false,
+    catalogDataset: "datascope",
+    catalogManagedLocal: true,
+    catalogServerUrl: "",
+    rerun033Available: true,
     buildResult: null,
     buildJob: null,
     isBuildSubmitting: false,
+    previewRows: [],
     previewText: "",
     isBusy: false,
     language: "en",
@@ -133,12 +197,19 @@ function renderSection(
     onRunMappingDiff: vi.fn(),
     onOutputNameChange: vi.fn(),
     onArtifactOutputDirChange: vi.fn(),
+    onMcapDecodersChange: vi.fn(),
+    onRrdOptimizeProfileChange: vi.fn(),
+    onArtifactValidationChange: vi.fn(),
+    onCatalogEnabledChange: vi.fn(),
+    onCatalogDatasetChange: vi.fn(),
+    onCatalogManagedLocalChange: vi.fn(),
+    onCatalogServerUrlChange: vi.fn(),
     onChooseArtifactOutputFolder: vi.fn(),
     onBuildRecording: vi.fn(),
+    onShowBuildJobDetails: vi.fn(),
     onOpenInRerun: vi.fn(),
     ...overrides
   };
-  return render(<ImportWorkflowSection {...props} />);
 }
 
 function makeJob(overrides: Partial<Job> = {}): Job {
@@ -154,6 +225,21 @@ function makeJob(overrides: Partial<Job> = {}): Job {
     attempt: 1,
     created_at: "2026-06-23T00:00:00Z",
     updated_at: "2026-06-23T00:00:00Z",
+    ...overrides
+  };
+}
+
+function makeSource(overrides: Partial<Source> = {}): Source {
+  return {
+    id: "source_1",
+    project_id: "project",
+    type: "csv",
+    uri: "/tmp/source.csv",
+    storage_mode: "copy" as const,
+    checksum: "checksum",
+    size_bytes: 10,
+    status: "ready",
+    metadata: {},
     ...overrides
   };
 }

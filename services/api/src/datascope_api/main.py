@@ -13,6 +13,8 @@ from pydantic import BaseModel, Field
 
 from datascope_core.mapping import mapping_from_yaml_dict, mapping_to_yaml_dict
 from datascope_core.mapping_validation import MappingValidationError
+from datascope_core.recipes import list_builtin_recipes
+from datascope_core.rerun_artifacts import rerun_features, rerun_version
 from datascope_core.version import __version__
 from datascope_core.viewer import open_recording
 from datascope_core.workspace import (
@@ -37,6 +39,10 @@ class SourceCreate(BaseModel):
     path: str = Field(min_length=1)
     storage_mode: str = "copy"
     import_options: dict[str, Any] = Field(default_factory=dict)
+
+
+class SourceImportWorkflowRequest(SourceCreate):
+    template_id: str | None = None
 
 
 class SourceEstimateRequest(BaseModel):
@@ -87,6 +93,10 @@ class BuildRecordingRequest(BaseModel):
     template_id: str = "sensor_monitor"
     output_name: str | None = None
     output_dir: str | None = None
+    mcap_decoders: list[str] | None = None
+    rrd_optimize_profile: str = "none"
+    artifact_validation: str = "basic"
+    catalog_registration: dict[str, Any] | None = None
 
 
 class ViewerOpenRequest(BaseModel):
@@ -112,6 +122,13 @@ class QueryRequest(BaseModel):
 class QueryExportRequest(QueryRequest):
     format: str = "csv"
     output_path: str | None = None
+
+
+class CustomQueryRequest(BaseModel):
+    recording_ids: list[str] | None = None
+    semantic_types: list[str] | None = None
+    filters: dict[str, Any] = Field(default_factory=dict)
+    limit: int = Field(default=1000, ge=1, le=10000)
 
 
 class PluginInstallRequest(BaseModel):
@@ -172,7 +189,7 @@ class JobSettingsPatch(BaseModel):
 
 @asynccontextmanager
 async def _lifespan(_: FastAPI):
-    _workspace()
+    services.warm_workspace()
     try:
         yield
     finally:
@@ -247,6 +264,15 @@ def create_app() -> FastAPI:
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
+    @app.get("/api/status")
+    def status() -> dict[str, Any]:
+        return {
+            "status": "ok",
+            "version": __version__,
+            "rerun_version": rerun_version(),
+            "rerun_features": rerun_features(),
+        }
+
     @app.post("/api/projects")
     def create_project(payload: ProjectCreate) -> dict[str, Any]:
         return _guard(
@@ -275,6 +301,49 @@ def create_app() -> FastAPI:
                 import_options=payload.import_options,
             )
         )
+
+    @app.post("/api/projects/{project_id}/sources/import-workflow")
+    def import_source_workflow(
+        project_id: str,
+        payload: SourceImportWorkflowRequest,
+    ) -> dict[str, Any]:
+        def run() -> dict[str, Any]:
+            workspace = _workspace()
+            added = workspace.add_source(
+                project_id,
+                payload.path,
+                storage_mode=payload.storage_mode,
+                import_options=payload.import_options,
+            )
+            inspection = workspace.inspect_source(added["id"])
+            template_matches = workspace.suggest_templates(added["id"])
+            selected_template_id = (
+                payload.template_id
+                or (
+                    str(template_matches[0]["template_id"])
+                    if template_matches
+                    else "sensor_monitor"
+                )
+            )
+            spec = workspace.suggest_mapping(
+                added["id"],
+                template_id=selected_template_id,
+            )
+            saved_mapping = workspace.save_mapping(project_id, added["id"], spec)
+            mapping_preview = workspace.mapping_preview(added["id"], spec)
+            return {
+                "source": inspection["source"],
+                "streams": inspection["streams"],
+                "template_matches": template_matches,
+                "template_id": selected_template_id,
+                "mapping": {"mapping": mapping_preview["mapping"]},
+                "saved_mapping": saved_mapping,
+                "preview": mapping_preview["preview"],
+                "schema_profile": mapping_preview["schema_profile"],
+                "validation": mapping_preview["validation"],
+            }
+
+        return _guard(run)
 
     @app.post("/api/projects/{project_id}/estimates/source-import")
     def estimate_source_import(
@@ -377,6 +446,14 @@ def create_app() -> FastAPI:
     @app.post("/api/recordings/build", status_code=202)
     def build_recording(payload: BuildRecordingRequest) -> dict[str, Any]:
         def enqueue() -> dict[str, Any]:
+            catalog_registration = dict(payload.catalog_registration or {})
+            if catalog_registration.get("enabled") and catalog_registration.get("managed_local"):
+                if not rerun_features().get("catalog"):
+                    raise ValueError(
+                        "Rerun Catalog registration requires rerun-sdk 0.33+ "
+                        "on a supported platform."
+                    )
+                catalog_registration["server_url"] = services.ensure_local_catalog_server()
             job = _workspace().enqueue_build_recording(
                 payload.project_id,
                 payload.source_id,
@@ -384,6 +461,10 @@ def create_app() -> FastAPI:
                 output_name=payload.output_name,
                 template_id=payload.template_id,
                 output_dir=payload.output_dir,
+                mcap_decoders=payload.mcap_decoders,
+                rrd_optimize_profile=payload.rrd_optimize_profile,
+                artifact_validation=payload.artifact_validation,
+                catalog_registration=catalog_registration or payload.catalog_registration,
             )
             services.supervisor().wake()
             return job
@@ -417,8 +498,18 @@ def create_app() -> FastAPI:
         return _guard(lambda: _workspace().get_job(job_id))
 
     @app.get("/api/projects/{project_id}/jobs")
-    def list_jobs(project_id: str) -> list[dict[str, Any]]:
-        return _guard(lambda: _workspace().list_jobs(project_id))
+    def list_jobs(
+        project_id: str,
+        active_only: bool = False,
+        limit: int | None = Query(None, ge=1, le=1000),
+    ) -> list[dict[str, Any]]:
+        return _guard(
+            lambda: _workspace().list_jobs(
+                project_id,
+                active_only=active_only,
+                limit=limit,
+            )
+        )
 
     @app.post("/api/jobs/{job_id}/cancel")
     def cancel_job(job_id: str) -> dict[str, Any]:
@@ -483,6 +574,18 @@ def create_app() -> FastAPI:
             )
         )
 
+    @app.post("/api/projects/{project_id}/query/custom")
+    def custom_query(project_id: str, payload: CustomQueryRequest) -> dict[str, Any]:
+        return _guard(
+            lambda: _workspace().custom_query(
+                project_id,
+                filters=payload.filters,
+                recording_ids=payload.recording_ids,
+                semantic_types=payload.semantic_types,
+                limit=payload.limit,
+            )
+        )
+
     @app.post("/api/projects/{project_id}/diagnostics")
     def diagnostics(project_id: str, payload: DiagnosticsRequest) -> dict[str, Any]:
         return _guard(
@@ -535,6 +638,10 @@ def create_app() -> FastAPI:
     @app.get("/api/templates")
     def list_templates() -> list[dict[str, Any]]:
         return _guard(lambda: _workspace().list_templates())
+
+    @app.get("/api/recipes")
+    def list_recipes() -> list[dict[str, Any]]:
+        return list_builtin_recipes()
 
     @app.post("/api/templates/install")
     def install_template(payload: TemplateInstallRequest) -> dict[str, Any]:

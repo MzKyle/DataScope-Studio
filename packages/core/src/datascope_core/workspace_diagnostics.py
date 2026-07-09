@@ -16,7 +16,7 @@ DIAGNOSTIC_PRESETS = {
     "balanced": {
         "id": "balanced",
         "name": "Balanced",
-        "description": "Default offline robot diagnostics thresholds.",
+        "description": "Default offline data health diagnostics thresholds.",
         "thresholds": dict(DEFAULT_THRESHOLDS),
     },
     "strict": {
@@ -28,6 +28,11 @@ DIAGNOSTIC_PRESETS = {
             "detection_confidence": 0.7,
             "time_sync_warn_s": 0.05,
             "time_sync_critical_s": 0.5,
+            "missing_ratio_warn": 0.1,
+            "missing_ratio_critical": 0.35,
+            "time_parse_ratio_warn": 0.99,
+            "time_gap_factor_warn": 3.0,
+            "outlier_iqr_multiplier": 1.5,
         },
     },
     "lenient": {
@@ -39,6 +44,11 @@ DIAGNOSTIC_PRESETS = {
             "detection_confidence": 0.3,
             "time_sync_warn_s": 0.25,
             "time_sync_critical_s": 2.0,
+            "missing_ratio_warn": 0.35,
+            "missing_ratio_critical": 0.75,
+            "time_parse_ratio_warn": 0.85,
+            "time_gap_factor_warn": 10.0,
+            "outlier_iqr_multiplier": 3.0,
         },
     },
 }
@@ -69,6 +79,7 @@ class WorkspaceDiagnosticsMixin:
             if recording.get("source_id")
         }
         sources = [self.get_source(source_id) for source_id in sorted(source_ids)]
+        schema_profiles = [self.get_schema_profile(source["id"]) for source in sources]
         row_limit = max(int(limit), 1)
         topic_rows = self._query_rows(
             project_id,
@@ -94,7 +105,7 @@ class WorkspaceDiagnosticsMixin:
             ),
             "low_battery",
             None,
-            {"threshold": (thresholds or {}).get("battery_low", 0.2)},
+            {"threshold": resolved_thresholds["battery_low"]},
             row_limit,
         )["rows"]
         detection_rows = run_query_template(
@@ -105,9 +116,14 @@ class WorkspaceDiagnosticsMixin:
             ),
             "detection_failure",
             None,
-            {"threshold": (thresholds or {}).get("detection_confidence", 0.5)},
+            {"threshold": resolved_thresholds["detection_confidence"]},
             row_limit,
         )["rows"]
+        general_rows = self._query_rows(
+            project_id,
+            recording_ids=selected_recording_ids,
+            semantic_types=["scalar", "scalar_group", "state"],
+        )
         return build_diagnostic_report(
             project_id=project_id,
             recordings=recordings,
@@ -116,13 +132,21 @@ class WorkspaceDiagnosticsMixin:
             error_rows=error_rows,
             battery_rows=battery_rows,
             detection_rows=detection_rows,
+            schema_profiles=schema_profiles,
+            query_rows=general_rows,
             thresholds=resolved_thresholds,
             limit=row_limit,
         )
 
     def diagnostic_presets(self, project_id: str) -> list[dict[str, Any]]:
         self.get_project(project_id)
-        return [dict(value) for value in DIAGNOSTIC_PRESETS.values()]
+        return [
+            {
+                **value,
+                "thresholds": dict(value["thresholds"]),
+            }
+            for value in DIAGNOSTIC_PRESETS.values()
+        ]
 
     def export_diagnostics(
         self,

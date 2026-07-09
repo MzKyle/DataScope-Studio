@@ -15,6 +15,7 @@ type BuildJobStatusProps = {
   job: Job | null;
   isSubmitting: boolean;
   t: Translate;
+  onShowDetails?: (job: Job) => void;
 };
 
 const ACTIVE_BUILD_STATUSES = new Set<Job["status"]>([
@@ -30,6 +31,7 @@ const STAGE_TRANSLATIONS: Record<string, TranslationKey> = {
   converting: "buildStageConverting",
   ros2_to_mcap: "buildStageRos2ToMcap",
   rerun_mcap: "buildStageRerunMcap",
+  rrd_optimize: "buildStageRrdOptimize",
   blueprint: "buildStageBlueprint",
   completed: "buildStageCompleted",
   failed: "buildStageFailed",
@@ -47,7 +49,7 @@ export function buildStageLabel(stage: string | null | undefined, t: Translate):
   return key ? t(key) : stage;
 }
 
-export function BuildJobStatus({ job, isSubmitting, t }: BuildJobStatusProps) {
+export function BuildJobStatus({ job, isSubmitting, t, onShowDetails }: BuildJobStatusProps) {
   if (!isSubmitting && !job) return null;
 
   const progress = Math.min(1, Math.max(0, job?.progress ?? 0));
@@ -68,7 +70,7 @@ export function BuildJobStatus({ job, isSubmitting, t }: BuildJobStatusProps) {
       icon = <CheckCircle2 size={20} />;
     } else if (status === "failed") {
       title = t("buildFailed");
-      description = job.error?.message || job.error_message || t("buildFailedHint");
+      description = t("buildFailedHint");
       tone = "danger";
       icon = <XCircle size={20} />;
     } else if (status === "cancelled") {
@@ -78,7 +80,7 @@ export function BuildJobStatus({ job, isSubmitting, t }: BuildJobStatusProps) {
       icon = <Ban size={20} />;
     } else if (status === "interrupted") {
       title = t("buildInterrupted");
-      description = job.error?.message || job.error_message || t("buildInterruptedHint");
+      description = t("buildInterruptedHint");
       tone = "danger";
       icon = <CircleAlert size={20} />;
     } else if (status === "cancel_requested") {
@@ -104,6 +106,16 @@ export function BuildJobStatus({ job, isSubmitting, t }: BuildJobStatusProps) {
           {job && <span>{buildStageLabel(job.stage, t)}</span>}
         </div>
         <p>{description}</p>
+        {job && (job.error || job.error_message) && onShowDetails && (
+          <button
+            className="inline-link-button"
+            type="button"
+            onClick={() => onShowDetails(job)}
+          >
+            <CircleAlert size={14} />
+            {t("viewDetails")}
+          </button>
+        )}
         {(active || job) && (
           <div className="build-job-progress">
             <div>

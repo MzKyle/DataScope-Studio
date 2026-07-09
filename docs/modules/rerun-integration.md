@@ -15,10 +15,19 @@ DataScope Studio 通过 Rerun Python SDK 写入 recording，通过外部 `rerun`
 - `recording_size_bytes` / `blueprint_size_bytes`
 - `app_id`、`template_id`、`rerun_recording_id`
 - `source_type`、`converter`、`rerun_version`
+- `mcap_decoders`、`rrd_optimize_profile`、`artifact_validation`
+- `artifact_checks`、`catalog_registration`
 
 `converter` 用于区分当前 Rerun 链路：表格、图像和点云使用
 `rerun_python_sdk`，MCAP 使用 `rerun_mcap_cli`，ROS2 DB3 使用
 `ros2_db3_to_mcap_to_rerun_cli`。
+
+默认构建保持兼容：MCAP importer 不显式选择 decoder，`.rrd` 不做 optimize，
+artifact 只做存在与非空校验。用户启用高级选项后，可以指定 MCAP decoder、
+运行 `rerun rrd optimize --profile live|object-store`、执行 `verify`/`strict`
+校验，或把 `.rrd` 注册到会话内托管的本地 Rerun Catalog。
+桌面/API 的 managed local 模式会按会话启动 `rerun server`；CLI 不保留后台
+server，启用 `--catalog-dataset` 时必须同时传 `--catalog-url`。
 
 Recording 列表还会基于当前文件路径动态返回 `artifact_status`，用于提示 artifact
 是否就绪、缺失或为空。

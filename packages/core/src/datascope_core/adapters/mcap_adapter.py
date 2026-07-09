@@ -8,6 +8,7 @@ from typing import Any
 
 from datascope_core.inference import safe_slug
 from datascope_core.models import ConvertRequest, MappingSpec, SourceInfo, StreamInfo
+from datascope_core.rerun_artifacts import normalize_mcap_decoders
 from datascope_core.rerun_cli import rerun_command, rerun_subprocess_env
 
 
@@ -157,6 +158,8 @@ def convert_mcap_to_rrd(mcap_path: Path, request: ConvertRequest) -> None:
         "--recording-id",
         request.recording_id,
     ]
+    for decoder in normalize_mcap_decoders(request.mcap_decoders) or []:
+        command.extend(["-d", decoder])
     if not request.poll_subprocess:
         result = subprocess.run(
             command,

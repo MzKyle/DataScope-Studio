@@ -7,6 +7,7 @@ import type {
   DiagnosticExportResult,
   DiagnosticPreset,
   DiagnosticThresholds,
+  CustomQueryFilters,
   DiskEstimate,
   Job,
   JobSettings,
@@ -21,6 +22,7 @@ import type {
   QueryExportResult,
   QueryResult,
   QueryTemplate,
+  Recipe,
   Recording,
   Source,
   SchemaProfile,
@@ -43,15 +45,44 @@ type ApiCommandResponse = {
   body: string;
 };
 
+type JobListOptions = {
+  activeOnly?: boolean;
+  limit?: number;
+};
+
+type ImportWorkflowResult = {
+  source: Source;
+  streams: StreamInfo[];
+  template_matches: TemplateMatch[];
+  template_id: string;
+  mapping: MappingPayload;
+  saved_mapping: { id: string; path: string };
+  preview: { columns: string[]; rows: Record<string, unknown>[] };
+  schema_profile: SchemaProfile;
+  validation: MappingValidation;
+};
+
 export type ApiStatus = {
   status: string;
   port: number;
   packaged_runtime: boolean;
   runtime_dir: string | null;
   rerun_available: boolean;
+  rerun_version?: string | null;
+  rerun_features?: RerunFeatures;
   log_dir: string;
   desktop_log_path: string;
   backend_log_path: string;
+};
+
+export type RerunFeatures = {
+  rerun_033: boolean;
+  mcap_decoders: boolean;
+  rrd_optimize: boolean;
+  artifact_verify: boolean;
+  headless_screenshot: boolean;
+  catalog: boolean;
+  legacy_intel_mac: boolean;
 };
 
 export type ApiErrorDetails = {
@@ -85,6 +116,22 @@ function delay(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
+let tauriApiBasePromise: Promise<string> | null = null;
+
+function setTauriApiBase(status: ApiStatus) {
+  tauriApiBasePromise = Promise.resolve(`http://127.0.0.1:${status.port}`);
+}
+
+function getTauriApiBase() {
+  if (!tauriApiBasePromise) {
+    tauriApiBasePromise = invoke<ApiStatus>("api_status").then((status) => {
+      setTauriApiBase(status);
+      return `http://127.0.0.1:${status.port}`;
+    });
+  }
+  return tauriApiBasePromise;
+}
+
 async function fetchWithRetry(url: string, init: RequestInit): Promise<Response> {
   let lastError: unknown;
   for (let attempt = 0; attempt <= NETWORK_RETRIES; attempt += 1) {
@@ -105,30 +152,19 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     if (init?.body && !headers.has("Content-Type")) {
       headers.set("Content-Type", "application/json");
     }
+    const requestInit = {
+      ...init,
+      headers
+    };
     if (isTauriRuntime()) {
-      const body = typeof init?.body === "string" ? init.body : undefined;
-      const result = await invoke<ApiCommandResponse>("api_request", {
-        request: {
-          method,
-          path,
-          body
-        }
-      });
-      const parsedBody = parseBody(result.body);
-      if (result.status < 200 || result.status >= 300) {
-        throw apiErrorFromResponse(parsedBody, result.status, `HTTP ${result.status}`);
+      try {
+        return await requestWithFetch<T>(`${await getTauriApiBase()}${path}`, requestInit);
+      } catch (error) {
+        if (error instanceof ApiError) throw error;
+        return await requestWithTauriProxy<T>(path, method, init);
       }
-      return parsedBody as T;
     }
-    const response = await fetchWithRetry(`${API_BASE}${path}`, {
-      headers,
-      ...init
-    });
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw apiErrorFromResponse(body, response.status, response.statusText);
-    }
-    return body as T;
+    return await requestWithFetch<T>(`${API_BASE}${path}`, requestInit);
   } catch (error) {
     const apiError = asApiError(error);
     logDiagnostic(
@@ -139,6 +175,35 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     );
     throw error;
   }
+}
+
+async function requestWithFetch<T>(url: string, init: RequestInit): Promise<T> {
+  const response = await fetchWithRetry(url, init);
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw apiErrorFromResponse(body, response.status, response.statusText);
+  }
+  return body as T;
+}
+
+async function requestWithTauriProxy<T>(
+  path: string,
+  method: string,
+  init?: RequestInit
+): Promise<T> {
+  const body = typeof init?.body === "string" ? init.body : undefined;
+  const result = await invoke<ApiCommandResponse>("api_request", {
+    request: {
+      method,
+      path,
+      body
+    }
+  });
+  const parsedBody = parseBody(result.body);
+  if (result.status < 200 || result.status >= 300) {
+    throw apiErrorFromResponse(parsedBody, result.status, `HTTP ${result.status}`);
+  }
+  return parsedBody as T;
 }
 
 function isTauriRuntime() {
@@ -170,8 +235,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+function jobListQuery(options: JobListOptions): string {
+  const params = new URLSearchParams();
+  if (options.activeOnly) params.set("active_only", "true");
+  if (options.limit !== undefined) params.set("limit", String(options.limit));
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
 export const api = {
-  status: () => invoke<ApiStatus>("api_status"),
+  status: async () => {
+    const status = await invoke<ApiStatus>("api_status");
+    setTauriApiBase(status);
+    return status;
+  },
   projects: () => request<Project[]>("/api/projects"),
   createProject: (name: string) =>
     request<Project>("/api/projects", {
@@ -190,6 +267,22 @@ export const api = {
         path,
         storage_mode: storageMode,
         import_options: importOptions
+      })
+    }),
+  importWorkflow: (
+    projectId: string,
+    path: string,
+    storageMode: "copy" | "reference" = "copy",
+    importOptions: Record<string, unknown> = {},
+    templateId?: string
+  ) =>
+    request<ImportWorkflowResult>(`/api/projects/${projectId}/sources/import-workflow`, {
+      method: "POST",
+      body: JSON.stringify({
+        path,
+        storage_mode: storageMode,
+        import_options: importOptions,
+        template_id: templateId || null
       })
     }),
   estimateSourceImport: (
@@ -249,7 +342,13 @@ export const api = {
     mappingId: string,
     outputName: string,
     templateId: string,
-    outputDir?: string
+    outputDir?: string,
+    options?: {
+      mcap_decoders?: string[] | null;
+      rrd_optimize_profile?: string;
+      artifact_validation?: string;
+      catalog_registration?: Record<string, unknown> | null;
+    }
   ) =>
     request<Job>("/api/recordings/build", {
       method: "POST",
@@ -259,7 +358,11 @@ export const api = {
         mapping_id: mappingId,
         template_id: templateId,
         output_name: outputName,
-        output_dir: outputDir || null
+        output_dir: outputDir || null,
+        mcap_decoders: options?.mcap_decoders ?? null,
+        rrd_optimize_profile: options?.rrd_optimize_profile ?? "none",
+        artifact_validation: options?.artifact_validation ?? "basic",
+        catalog_registration: options?.catalog_registration ?? null
       })
     }),
   estimateBuild: (projectId: string, sourceId: string) =>
@@ -272,7 +375,8 @@ export const api = {
       body: JSON.stringify({ recording_path: recordingPath, blueprint_path: blueprintPath })
     }),
   recordings: (projectId: string) => request<Recording[]>(`/api/projects/${projectId}/recordings`),
-  jobs: (projectId: string) => request<Job[]>(`/api/projects/${projectId}/jobs`),
+  jobs: (projectId: string, options: JobListOptions = {}) =>
+    request<Job[]>(`/api/projects/${projectId}/jobs${jobListQuery(options)}`),
   job: (jobId: string) => request<Job>(`/api/jobs/${jobId}`),
   jobSettings: () => request<JobSettings>("/api/jobs/settings"),
   updateJobSettings: (maxWorkers: number) =>
@@ -325,6 +429,22 @@ export const api = {
         limit
       })
     }),
+  customQuery: (
+    projectId: string,
+    recordingIds: string[],
+    semanticTypes: string[],
+    filters: CustomQueryFilters,
+    limit = 1000
+  ) =>
+    request<QueryResult>(`/api/projects/${projectId}/query/custom`, {
+      method: "POST",
+      body: JSON.stringify({
+        recording_ids: recordingIds.length ? recordingIds : null,
+        semantic_types: semanticTypes.length ? semanticTypes : null,
+        filters,
+        limit
+      })
+    }),
   diagnostics: (
     projectId: string,
     recordingIds: string[],
@@ -370,6 +490,7 @@ export const api = {
       body: JSON.stringify({ path })
     }),
   templates: () => request<TemplateRegistryItem[]>("/api/templates"),
+  recipes: () => request<Recipe[]>("/api/recipes"),
   installTemplate: (path: string) =>
     request<TemplateRegistryItem>("/api/templates/install", {
       method: "POST",

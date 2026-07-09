@@ -10,6 +10,38 @@ from tests.api_helpers import wait_for_job
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 
 
+def test_api_status_includes_rerun_capabilities() -> None:
+    response = TestClient(app).get("/api/status")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert isinstance(payload["rerun_version"], str)
+    assert set(payload["rerun_features"]).issuperset(
+        {
+            "rerun_033",
+            "mcap_decoders",
+            "rrd_optimize",
+            "artifact_verify",
+            "headless_screenshot",
+            "catalog",
+            "legacy_intel_mac",
+        }
+    )
+
+
+def test_api_lists_builtin_recipes() -> None:
+    response = TestClient(app).get("/api/recipes")
+
+    assert response.status_code == 200
+    ids = {item["id"] for item in response.json()}
+    assert {
+        "sensor_csv_health",
+        "robot_bag_health",
+        "cv_detection_review",
+        "point_cloud_review",
+    } <= ids
+
+
 def test_api_logs_file_open_errors(tmp_path: Path, monkeypatch, caplog) -> None:
     monkeypatch.setenv("DATASCOPE_WORKSPACE", str(tmp_path / "workspace"))
     client = TestClient(app)
@@ -99,6 +131,37 @@ def test_api_project_source_mapping_build_flow(tmp_path: Path, monkeypatch) -> N
     assert error["output_name"] == "api_run"
     assert result["recording_path"] in error["paths"]
     assert result["blueprint_path"] in error["paths"]
+
+
+def test_api_source_import_workflow_batches_import_inspect_and_mapping(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("DATASCOPE_WORKSPACE", str(tmp_path / "workflow_workspace"))
+    client = TestClient(app)
+    project = client.post("/api/projects", json={"name": "Import Workflow"}).json()
+
+    response = client.post(
+        f"/api/projects/{project['id']}/sources/import-workflow",
+        json={
+            "path": str(FIXTURES / "sample_sensor.csv"),
+            "storage_mode": "copy",
+            "template_id": "sensor_monitor",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["source"]["status"] == "inspected"
+    assert payload["source"]["project_id"] == project["id"]
+    assert payload["streams"]
+    assert payload["template_id"] == "sensor_monitor"
+    assert payload["template_matches"]
+    assert payload["mapping"]["mapping"]["source"] == payload["source"]["id"]
+    assert payload["saved_mapping"]["id"] == payload["mapping"]["mapping"]["id"]
+    assert payload["preview"]["rows"]
+    assert payload["schema_profile"]["source_id"] == payload["source"]["id"]
+    assert "valid" in payload["validation"]
 
 
 def test_api_batch_management_retry_and_job_settings(tmp_path: Path, monkeypatch) -> None:

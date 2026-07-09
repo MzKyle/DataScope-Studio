@@ -24,7 +24,10 @@ describe("DiagnosticsSection", () => {
     );
 
     expect(screen.getByText("Run Diagnostics")).toBeInTheDocument();
-    expect(screen.getByText(/Run diagnostics to see health score/)).toBeInTheDocument();
+    expect(screen.getByText("No health report yet")).toBeInTheDocument();
+    expect(
+      screen.getByText("Run diagnostics to see health score, top findings, and export actions.")
+    ).toBeInTheDocument();
   });
 
   it("renders summary checks and findings", () => {
@@ -40,7 +43,7 @@ describe("DiagnosticsSection", () => {
       />
     );
 
-    expect(screen.getByText("76")).toBeInTheDocument();
+    expect(screen.getAllByText("76").length).toBeGreaterThan(0);
     expect(screen.getByText("Topic Coverage")).toBeInTheDocument();
     expect(screen.getByText("TF transform topic is missing.")).toBeInTheDocument();
   });
@@ -68,7 +71,12 @@ describe("DiagnosticsSection", () => {
         battery_low: 0.2,
         detection_confidence: 0.5,
         time_sync_warn_s: 0.1,
-        time_sync_critical_s: 1.0
+        time_sync_critical_s: 1.0,
+        missing_ratio_warn: 0.2,
+        missing_ratio_critical: 0.5,
+        time_parse_ratio_warn: 0.95,
+        time_gap_factor_warn: 5.0,
+        outlier_iqr_multiplier: 1.5
       },
       "balanced"
     );
@@ -91,7 +99,12 @@ describe("DiagnosticsSection", () => {
               battery_low: 0.2,
               detection_confidence: 0.5,
               time_sync_warn_s: 0.1,
-              time_sync_critical_s: 1
+              time_sync_critical_s: 1,
+              missing_ratio_warn: 0.2,
+              missing_ratio_critical: 0.5,
+              time_parse_ratio_warn: 0.95,
+              time_gap_factor_warn: 5,
+              outlier_iqr_multiplier: 1.5
             }
           },
           {
@@ -102,7 +115,12 @@ describe("DiagnosticsSection", () => {
               battery_low: 0.3,
               detection_confidence: 0.8,
               time_sync_warn_s: 0.05,
-              time_sync_critical_s: 0.5
+              time_sync_critical_s: 0.5,
+              missing_ratio_warn: 0.1,
+              missing_ratio_critical: 0.35,
+              time_parse_ratio_warn: 0.99,
+              time_gap_factor_warn: 3,
+              outlier_iqr_multiplier: 1.5
             }
           }
         ]}
@@ -129,7 +147,12 @@ describe("DiagnosticsSection", () => {
         battery_low: 0.3,
         detection_confidence: 0.8,
         time_sync_warn_s: 0.05,
-        time_sync_critical_s: 0.5
+        time_sync_critical_s: 0.5,
+        missing_ratio_warn: 0.1,
+        missing_ratio_critical: 0.35,
+        time_parse_ratio_warn: 0.99,
+        time_gap_factor_warn: 3,
+        outlier_iqr_multiplier: 1.5
       },
       "strict"
     );
@@ -139,7 +162,12 @@ describe("DiagnosticsSection", () => {
         battery_low: 0.3,
         detection_confidence: 0.8,
         time_sync_warn_s: 0.05,
-        time_sync_critical_s: 0.5
+        time_sync_critical_s: 0.5,
+        missing_ratio_warn: 0.1,
+        missing_ratio_critical: 0.35,
+        time_parse_ratio_warn: 0.99,
+        time_gap_factor_warn: 3,
+        outlier_iqr_multiplier: 1.5
       },
       "strict",
       "html"
@@ -191,7 +219,12 @@ const report: DiagnosticReport = {
     battery_low: 0.2,
     detection_confidence: 0.5,
     time_sync_warn_s: 0.1,
-    time_sync_critical_s: 1
+    time_sync_critical_s: 1,
+    missing_ratio_warn: 0.2,
+    missing_ratio_critical: 0.5,
+    time_parse_ratio_warn: 0.95,
+    time_gap_factor_warn: 5,
+    outlier_iqr_multiplier: 1.5
   },
   summary: {
     health_score: 76,
