@@ -5,17 +5,21 @@ import {
   Image,
   LayoutDashboard,
   ListChecks,
+  Minus,
   RefreshCcw,
   Settings,
+  Square,
   Upload,
+  X,
   type LucideIcon
 } from "lucide-react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
 import type { ApiError } from "./api";
 import type { TranslationKey } from "./i18n";
 import type { SectionId } from "./stores/ui-store";
 import type { Project } from "./types";
-import { InlineError, NavButton } from "./app-support";
+import { InlineError, isTauriRuntime, NavButton } from "./app-support";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 
@@ -58,16 +62,30 @@ type AppNavigationProps = {
 export function AppTopbar(props: AppNavigationProps) {
   const currentSection =
     navigationItems.find((item) => item.id === props.activeSection)?.labelKey ?? "dashboard";
+  const toggleWindowMaximize = () => {
+    if (!isTauriRuntime()) return;
+    void getCurrentWindow().toggleMaximize();
+  };
 
   return (
     <header className="topbar">
-      <div className="topbar-main">
-        <div className="brand-mark" aria-hidden="true"><Database size={20} /></div>
-        <div className="topbar-title">
+      <div
+        className="topbar-main"
+        data-tauri-drag-region
+        onDoubleClick={toggleWindowMaximize}
+      >
+        <div className="brand-mark" aria-hidden="true" data-tauri-drag-region>
+          <Database size={20} />
+        </div>
+        <div className="topbar-title" data-tauri-drag-region>
           <h1>DataScope Studio</h1>
           <span>{props.t("localCatalog")}</span>
         </div>
-        <div className="topbar-context" title={props.selectedProject?.workspace_path}>
+        <div
+          className="topbar-context"
+          data-tauri-drag-region
+          title={props.selectedProject?.workspace_path}
+        >
           <span>{props.t(currentSection)}</span>
           <strong>{props.selectedProject?.name ?? props.t("selectProject")}</strong>
         </div>
@@ -95,8 +113,52 @@ export function AppTopbar(props: AppNavigationProps) {
         >
           <Settings size={16} />
         </Button>
+        <WindowControls t={props.t} />
       </div>
     </header>
+  );
+}
+
+function WindowControls({ t }: { t: Translate }) {
+  if (!isTauriRuntime()) return null;
+
+  const performWindowAction = (action: "close" | "minimize" | "toggleMaximize") => {
+    const appWindow = getCurrentWindow();
+    if (action === "minimize") void appWindow.minimize();
+    if (action === "toggleMaximize") void appWindow.toggleMaximize();
+    if (action === "close") void appWindow.close();
+  };
+
+  return (
+    <div className="window-controls" aria-label={t("windowControls")}>
+      <button
+        aria-label={t("minimizeWindow")}
+        className="window-control-button"
+        onClick={() => performWindowAction("minimize")}
+        title={t("minimizeWindow")}
+        type="button"
+      >
+        <Minus size={15} />
+      </button>
+      <button
+        aria-label={t("maximizeWindow")}
+        className="window-control-button"
+        onClick={() => performWindowAction("toggleMaximize")}
+        title={t("maximizeWindow")}
+        type="button"
+      >
+        <Square size={13} />
+      </button>
+      <button
+        aria-label={t("closeWindow")}
+        className="window-control-button close"
+        onClick={() => performWindowAction("close")}
+        title={t("closeWindow")}
+        type="button"
+      >
+        <X size={16} />
+      </button>
+    </div>
   );
 }
 

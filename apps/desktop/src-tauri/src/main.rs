@@ -12,7 +12,14 @@ use std::sync::{
 };
 use std::time::{Duration, Instant};
 
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::WindowEvent;
 use tauri::{AppHandle, Manager};
+
+const MAIN_WINDOW_LABEL: &str = "main";
+const TRAY_SHOW_WINDOW_ID: &str = "tray_show_window";
+const TRAY_QUIT_ID: &str = "tray_quit";
 
 #[derive(serde::Deserialize)]
 struct ApiRequest {
@@ -75,6 +82,12 @@ struct BackendState {
 #[derive(Clone, Default)]
 struct SmokeState {
     frontend_ready: Arc<AtomicBool>,
+}
+
+#[derive(Clone, Default)]
+struct TrayState {
+    available: Arc<AtomicBool>,
+    exiting: Arc<AtomicBool>,
 }
 
 impl Drop for BackendState {
@@ -624,6 +637,79 @@ fn frontend_smoke_test_requested() -> bool {
     env::args().any(|arg| arg == "--frontend-smoke-test")
 }
 
+fn show_main_window(app: &AppHandle) -> Result<(), String> {
+    let window = app
+        .get_webview_window(MAIN_WINDOW_LABEL)
+        .ok_or_else(|| "main window is unavailable".to_string())?;
+    window
+        .show()
+        .map_err(|error| format!("could not show main window: {error}"))?;
+    window
+        .unminimize()
+        .map_err(|error| format!("could not unminimize main window: {error}"))?;
+    window
+        .set_focus()
+        .map_err(|error| format!("could not focus main window: {error}"))?;
+    Ok(())
+}
+
+fn initialize_tray(app: &AppHandle, tray_state: TrayState) -> Result<(), String> {
+    let icon = app
+        .default_window_icon()
+        .cloned()
+        .ok_or_else(|| "missing default window icon".to_string())?;
+    let show_item = MenuItem::with_id(app, TRAY_SHOW_WINDOW_ID, "显示窗口", true, None::<&str>)
+        .map_err(|error| format!("could not create tray show menu item: {error}"))?;
+    let separator = PredefinedMenuItem::separator(app)
+        .map_err(|error| format!("could not create tray separator: {error}"))?;
+    let quit_item = MenuItem::with_id(app, TRAY_QUIT_ID, "退出", true, None::<&str>)
+        .map_err(|error| format!("could not create tray quit menu item: {error}"))?;
+    let menu = Menu::with_items(app, &[&show_item, &separator, &quit_item])
+        .map_err(|error| format!("could not create tray menu: {error}"))?;
+    let menu_state = tray_state.clone();
+
+    TrayIconBuilder::with_id("main")
+        .icon(icon)
+        .tooltip("DataScope Studio")
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .on_menu_event(move |app, event| {
+            if event.id() == TRAY_SHOW_WINDOW_ID {
+                if let Err(error) = show_main_window(app) {
+                    let _ = diagnostic_log::write(
+                        "error",
+                        "desktop.tray",
+                        "could not show main window from tray menu",
+                        Some(serde_json::json!({"error": error})),
+                    );
+                }
+            } else if event.id() == TRAY_QUIT_ID {
+                menu_state.exiting.store(true, Ordering::SeqCst);
+                app.exit(0);
+            }
+        })
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } = event
+            {
+                if let Err(error) = show_main_window(tray.app_handle()) {
+                    let _ = diagnostic_log::write(
+                        "error",
+                        "desktop.tray",
+                        "could not show main window from tray click",
+                        Some(serde_json::json!({"error": error})),
+                    );
+                }
+            }
+        })
+        .build(app)
+        .map_err(|error| format!("could not create tray icon: {error}"))?;
+    Ok(())
+}
+
 fn main() {
     let desktop_log_path = diagnostic_log::initialize();
     diagnostic_log::install_panic_hook();
@@ -640,8 +726,33 @@ fn main() {
     configure_webkit_environment();
     let smoke_test = smoke_test_requested();
     let frontend_smoke_test = frontend_smoke_test_requested();
+    let tray_state = TrayState::default();
+    let tray_state_for_setup = tray_state.clone();
+    let tray_state_for_close = tray_state.clone();
 
     let result = tauri::Builder::default()
+        .on_window_event(move |window, event| {
+            if window.label() != MAIN_WINDOW_LABEL {
+                return;
+            }
+            if let WindowEvent::CloseRequested { api, .. } = event {
+                if tray_state_for_close.available.load(Ordering::SeqCst)
+                    && !tray_state_for_close.exiting.load(Ordering::SeqCst)
+                {
+                    match window.hide() {
+                        Ok(()) => api.prevent_close(),
+                        Err(error) => {
+                            let _ = diagnostic_log::write(
+                                "error",
+                                "desktop.tray",
+                                "could not hide main window to tray",
+                                Some(serde_json::json!({"error": error.to_string()})),
+                            );
+                        }
+                    }
+                }
+            }
+        })
         .plugin(tauri_plugin_dialog::init())
         .manage(SmokeState::default())
         .setup(move |app| {
@@ -662,8 +773,27 @@ fn main() {
                 && cached_rerun_available(&backend_state);
             let smoke_state = app.state::<SmokeState>().inner().clone();
             app.manage(backend_state);
+            match initialize_tray(app.handle(), tray_state_for_setup.clone()) {
+                Ok(()) => {
+                    tray_state_for_setup.available.store(true, Ordering::SeqCst);
+                    let _ = diagnostic_log::write(
+                        "info",
+                        "desktop.tray",
+                        "system tray icon initialized",
+                        None,
+                    );
+                }
+                Err(error) => {
+                    let _ = diagnostic_log::write(
+                        "warn",
+                        "desktop.tray",
+                        "system tray icon is unavailable",
+                        Some(serde_json::json!({"error": error})),
+                    );
+                }
+            }
             if smoke_test || frontend_smoke_test {
-                if let Some(window) = app.get_webview_window("main") {
+                if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
                     let _ = window.hide();
                 }
                 let handle = app.handle().clone();
@@ -675,11 +805,7 @@ fn main() {
                     } else {
                         frontend_smoke_backend_ok
                     };
-                    handle.exit(if backend_ok && frontend_ready {
-                        0
-                    } else {
-                        1
-                    });
+                    handle.exit(if backend_ok && frontend_ready { 0 } else { 1 });
                 });
             }
             Ok(())
