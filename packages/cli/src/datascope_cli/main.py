@@ -139,7 +139,10 @@ def import_source(
 ) -> None:
     """Import a source into a project and build .rrd/.rbl artifacts."""
     if catalog_dataset and not catalog_url:
-        raise typer.BadParameter("--catalog-url is required when --catalog-dataset is set.")
+        raise typer.BadParameter(
+            "is required when --catalog-dataset is set.",
+            param_hint="--catalog-url",
+        )
     workspace = Workspace(os.environ.get("DATASCOPE_WORKSPACE"))
     existing = next((item for item in workspace.list_projects() if item["name"] == project), None)
     project_row = existing or workspace.create_project(project)

@@ -99,7 +99,7 @@ def test_create_macos_dmg_uses_hdiutil_without_mounting(
 
     output = build_tauri.create_macos_dmg(bundle_root)
 
-    assert output.name == "DataScope Studio_0.3.1_x64.dmg"
+    assert output.name == f"DataScope Studio_{build_tauri.VERSION}_x64.dmg"
     assert app.is_dir()
     assert len(commands) == 1
     command = commands[0]
