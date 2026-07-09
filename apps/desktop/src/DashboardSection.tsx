@@ -61,6 +61,8 @@ type DashboardSectionProps = {
   csvHeaderMode: "auto" | "header" | "no_header";
   csvColumnNames: string;
   isBusy: boolean;
+  isLatestRecordingOpening: boolean;
+  openingRecordingIds: Set<string>;
   importError?: ApiError;
   dashboardError?: ApiError;
   projectExport: ProjectExportResult | null;
@@ -126,7 +128,7 @@ export function DashboardSection(props: DashboardSectionProps) {
             <button
               type="button"
               onClick={props.onOpenLatest}
-              disabled={(!props.buildResult && !props.latestRecording) || props.isBusy}
+              disabled={(!props.buildResult && !props.latestRecording) || props.isLatestRecordingOpening}
             >
               <ExternalLink size={16} />
               {props.t("openInRerun")}
@@ -305,7 +307,7 @@ export function DashboardSection(props: DashboardSectionProps) {
           </button>
           <button
             onClick={props.onOpenLatest}
-            disabled={(!props.buildResult && !props.latestRecording) || props.isBusy}
+            disabled={(!props.buildResult && !props.latestRecording) || props.isLatestRecordingOpening}
           >
             <ExternalLink size={16} />
             {props.t("openInRerun")}
@@ -360,7 +362,7 @@ export function DashboardSection(props: DashboardSectionProps) {
                   <button
                     className="mini-button"
                     onClick={() => props.onOpenRecording(recording)}
-                    disabled={props.isBusy}
+                    disabled={props.openingRecordingIds.has(recording.id)}
                     title={props.t("openInRerun")}
                   >
                     <ExternalLink size={15} />

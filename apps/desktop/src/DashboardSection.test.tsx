@@ -70,6 +70,22 @@ describe("DashboardSection", () => {
     expect(screen.getByText("Recent Runs")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Import & Auto Map" })[0]).toBeEnabled();
   });
+
+  it("uses row-level opening state for recent recording actions", () => {
+    const idleRecording = { ...recording, id: "recording_2", run_name: "idle" };
+
+    renderSection({
+      selectedProject: project,
+      latestRecording: recording,
+      recordings: [recording, idleRecording],
+      isBusy: true,
+      openingRecordingIds: new Set([recording.id])
+    });
+
+    const recentRunButtons = screen.getAllByTitle("Open in Rerun");
+    expect(recentRunButtons[0]).toBeDisabled();
+    expect(recentRunButtons[1]).toBeEnabled();
+  });
 });
 
 function renderSection(overrides: Partial<ComponentProps<typeof DashboardSection>> = {}) {
@@ -93,6 +109,8 @@ function baseProps(
     csvHeaderMode: "auto",
     csvColumnNames: "",
     isBusy: false,
+    isLatestRecordingOpening: false,
+    openingRecordingIds: new Set(),
     importError: undefined,
     dashboardError: undefined,
     projectExport: null,

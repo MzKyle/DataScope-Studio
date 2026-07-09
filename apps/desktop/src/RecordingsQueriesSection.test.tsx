@@ -54,6 +54,34 @@ describe("RecordingsQueriesSection", () => {
     expect(screen.getByText("Artifact Missing")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open in Rerun" })).toBeDisabled();
   });
+
+  it("keeps ready recording open actions enabled during background busy work", () => {
+    const recording = makeRecording();
+
+    renderSection({
+      recordings: [recording],
+      visibleRecordings: [recording],
+      isBusy: true
+    });
+
+    expect(screen.getByRole("button", { name: "Open in Rerun" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Add Tag" })).toBeDisabled();
+  });
+
+  it("disables only the recording currently opening", () => {
+    const opening = makeRecording({ id: "recording_opening", run_name: "opening" });
+    const idle = makeRecording({ id: "recording_idle", run_name: "idle" });
+
+    renderSection({
+      recordings: [opening, idle],
+      visibleRecordings: [opening, idle],
+      openingRecordingIds: new Set([opening.id])
+    });
+
+    const openButtons = screen.getAllByRole("button", { name: "Open in Rerun" });
+    expect(openButtons[0]).toBeDisabled();
+    expect(openButtons[1]).toBeEnabled();
+  });
 });
 
 function renderSection(
@@ -87,6 +115,7 @@ function renderSection(
       jobs={[]}
       visibleJobs={[]}
       isBusy={false}
+      openingRecordingIds={new Set()}
       language="en"
       errors={{}}
       t={t}

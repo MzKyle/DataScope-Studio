@@ -82,11 +82,14 @@ import type {
 const thresholdTemplates = new Set(["low_battery", "detection_failure"]);
 const TABLE_RENDER_LIMIT = 100;
 const JOB_POLL_LIMIT = 50;
+const ACTIVE_JOB_POLL_MS = 1000;
+const IDLE_JOB_POLL_MS = 15_000;
 const JOB_SETTINGS_STORAGE_KEY = "datascope.jobSettings.maxWorkers";
 type RunOptions = {
   area?: ErrorArea | "global";
   retry?: () => void;
   onError?: (error: ApiError) => void;
+  blockUi?: boolean;
 };
 const semanticTypesByFamily: Record<string, string[]> = {
   tabular: [
@@ -118,6 +121,17 @@ const timeUnits = ["auto", "relative_s", "unix_s", "unix_ms", "unix_us", "unix_n
 function getInitialJobSettings(): JobSettings {
   const stored = Number(window.localStorage.getItem(JOB_SETTINGS_STORAGE_KEY) || "1");
   return { max_workers: Math.min(4, Math.max(1, Number.isFinite(stored) ? stored : 1)) };
+}
+
+function activeJobs(jobRows: Job[]) {
+  return jobRows.filter((job) => !isTerminalJob(job));
+}
+
+function mergeJobRows(current: Job[], updates: Job[]) {
+  const updateIds = new Set(updates.map((job) => job.id));
+  return [...updates, ...current.filter((job) => !updateIds.has(job.id))].sort(
+    (left, right) => Date.parse(right.created_at) - Date.parse(left.created_at)
+  );
 }
 
 export function StudioWorkspace() {
@@ -211,6 +225,7 @@ export function StudioWorkspace() {
   const [catalogManagedLocal, setCatalogManagedLocal] = useState(true);
   const [catalogServerUrl, setCatalogServerUrl] = useState("");
   const [tagInput, setTagInput] = useState("");
+  const [openingRecordingIds, setOpeningRecordingIds] = useState<Set<string>>(() => new Set());
   const busy = useUiStore((state) => state.busy);
   const setBusy = useUiStore((state) => state.setBusy);
   const [areaErrors, setAreaErrors] = useState<AreaErrors>({});
@@ -225,6 +240,8 @@ export function StudioWorkspace() {
   const setLanguage = usePreferencesStore((state) => state.setLanguage);
   const outputNameRef = useRef<HTMLInputElement>(null);
   const processedJobIds = useRef(new Set<string>());
+  const trackedActiveJobIds = useRef(new Set<string>());
+  const [jobPollRevision, setJobPollRevision] = useState(0);
   const t = useMemo(() => createTranslator(language), [language]);
 
   const selectedProject = useMemo(
@@ -281,7 +298,9 @@ export function StudioWorkspace() {
 
   useEffect(() => {
     if (selectedProjectId) {
-      refreshProjectData(selectedProjectId, activeSection === "recordings");
+      void refreshProjectData(selectedProjectId, activeSection === "recordings", {
+        blockUi: false
+      });
       if (activeSection === "diagnostics") {
         refreshDiagnosticData(selectedProjectId);
       }
@@ -292,11 +311,13 @@ export function StudioWorkspace() {
     setActiveBuildJobId("");
     setIsBuildSubmitting(false);
     setSelectedBatch(null);
+    processedJobIds.current.clear();
+    trackedActiveJobIds.current.clear();
   }, [selectedProjectId]);
 
   useEffect(() => {
     if (selectedProjectId && ["recordings", "diagnostics"].includes(activeSection)) {
-      refreshProjectData(selectedProjectId, true);
+      void refreshProjectData(selectedProjectId, true, { blockUi: false });
     }
     if (selectedProjectId && activeSection === "diagnostics") {
       refreshDiagnosticData(selectedProjectId);
@@ -312,59 +333,96 @@ export function StudioWorkspace() {
   }, [mappingTemplates, selectedMappingTemplateId]);
 
   useEffect(() => {
-    processedJobIds.current.clear();
     if (!selectedProjectId) return;
 
     let disposed = false;
     let polling = false;
+    let timer: number | undefined;
+    const schedule = (delayMs: number) => {
+      if (!disposed) {
+        timer = window.setTimeout(() => void poll(), delayMs);
+      }
+    };
+
+    const processCompletedJobs = (jobRows: Job[], trackedJobIds: Set<string>) => {
+      const completed = jobRows.filter(
+        (job) =>
+          trackedJobIds.has(job.id) &&
+          isTerminalJob(job) &&
+          !processedJobIds.current.has(job.id)
+      );
+      completed.forEach((job) => {
+        processedJobIds.current.add(job.id);
+        if (job.status !== "succeeded" || !job.result) return;
+        if (isBuildResult(job.result)) setBuildResult(job.result);
+        if (isBatchResult(job.result)) setBatchResult(job.result);
+      });
+      return completed.length > 0;
+    };
+
+    const refreshCompletedProjectData = async () => {
+      const selectedBatchId = selectedBatch?.id ?? "";
+      const [, selectedBatchRow] = await Promise.all([
+        refreshProjectData(selectedProjectId, activeSection === "recordings", {
+          blockUi: false
+        }),
+        selectedBatchId ? api.batch(selectedBatchId) : Promise.resolve(null)
+      ]);
+      if (!disposed && selectedBatchRow) setSelectedBatch(selectedBatchRow);
+    };
+
     const poll = async () => {
       if (polling) return;
       polling = true;
       try {
-        const jobRows = await api.jobs(selectedProjectId, { limit: JOB_POLL_LIMIT });
-        if (disposed) return;
-        setJobs(jobRows);
-
-        const completed = jobRows.filter(
-          (job) =>
-            isTerminalJob(job) &&
-            !processedJobIds.current.has(job.id)
-        );
-        if (!completed.length) return;
-        completed.forEach((job) => {
-          processedJobIds.current.add(job.id);
-          if (job.status !== "succeeded" || !job.result) return;
-          if (isBuildResult(job.result)) setBuildResult(job.result);
-          if (isBatchResult(job.result)) setBatchResult(job.result);
+        const trackedJobIds = new Set(trackedActiveJobIds.current);
+        const wasTrackingActiveJobs = trackedJobIds.size > 0;
+        const jobRows = await api.jobs(selectedProjectId, {
+          activeOnly: wasTrackingActiveJobs,
+          limit: JOB_POLL_LIMIT
         });
+        if (disposed) return;
 
-        const selectedBatchId = selectedBatch?.id ?? "";
-        const [recordingRows, sourceRows, batchRows, selectedBatchRow] = await Promise.all([
-          api.recordings(selectedProjectId),
-          api.sources(selectedProjectId),
-          api.batches(selectedProjectId),
-          selectedBatchId ? api.batch(selectedBatchId) : Promise.resolve(null)
-        ]);
-        if (!disposed) {
-          setRecordings(recordingRows);
-          setProjectSources(sourceRows);
-          setBatches(batchRows);
-          if (selectedBatchRow) setSelectedBatch(selectedBatchRow);
+        if (wasTrackingActiveJobs) {
+          const activeRows = activeJobs(jobRows);
+          const activeIds = new Set(activeRows.map((job) => job.id));
+          const missingTrackedJob = [...trackedJobIds].some((jobId) => !activeIds.has(jobId));
+          if (activeRows.length && !missingTrackedJob) {
+            trackedActiveJobIds.current = activeIds;
+            setJobs((current) => mergeJobRows(current, activeRows));
+            schedule(ACTIVE_JOB_POLL_MS);
+            return;
+          }
+
+          const fullJobRows = await api.jobs(selectedProjectId, { limit: JOB_POLL_LIMIT });
+          if (disposed) return;
+          setJobs(fullJobRows);
+          const nextActiveRows = activeJobs(fullJobRows);
+          trackedActiveJobIds.current = new Set(nextActiveRows.map((job) => job.id));
+          const completed = processCompletedJobs(fullJobRows, trackedJobIds);
+          if (completed) await refreshCompletedProjectData();
+          schedule(nextActiveRows.length ? ACTIVE_JOB_POLL_MS : IDLE_JOB_POLL_MS);
+          return;
         }
+
+        setJobs(jobRows);
+        const nextActiveRows = activeJobs(jobRows);
+        trackedActiveJobIds.current = new Set(nextActiveRows.map((job) => job.id));
+        schedule(nextActiveRows.length ? ACTIVE_JOB_POLL_MS : IDLE_JOB_POLL_MS);
       } catch {
         // The regular refresh path surfaces connectivity errors; polling stays quiet.
+        schedule(IDLE_JOB_POLL_MS);
       } finally {
         polling = false;
       }
     };
 
     void poll();
-    const timer = window.setInterval(() => void poll(), 1000);
     return () => {
       disposed = true;
-      window.clearInterval(timer);
+      if (timer !== undefined) window.clearTimeout(timer);
     };
-  }, [selectedProjectId, selectedBatch?.id]);
+  }, [selectedProjectId, selectedBatch?.id, activeSection, jobPollRevision]);
 
   function clearAreaError(area: ErrorArea) {
     setAreaErrors((current) => clearErrorAreaState(current, area));
@@ -375,6 +433,38 @@ export function StudioWorkspace() {
       ...current,
       [area]: new ApiError(message, 0, code)
     }));
+  }
+
+  function setRecordingOpening(recordingId: string, opening: boolean) {
+    if (!recordingId) return;
+    setOpeningRecordingIds((current) => {
+      const next = new Set(current);
+      if (opening) {
+        next.add(recordingId);
+      } else {
+        next.delete(recordingId);
+      }
+      return next;
+    });
+  }
+
+  function trackJobForPolling(job: Job) {
+    if (isTerminalJob(job)) return;
+    trackedActiveJobIds.current.add(job.id);
+    setJobPollRevision((current) => current + 1);
+  }
+
+  function upsertJob(job: Job) {
+    setJobs((current) => [job, ...current.filter((item) => item.id !== job.id)]);
+    trackJobForPolling(job);
+  }
+
+  function trackActiveJobsFromRows(jobRows: Job[]) {
+    const next = new Set(activeJobs(jobRows).map((job) => job.id));
+    const current = trackedActiveJobIds.current;
+    const changed = next.size !== current.size || [...next].some((jobId) => !current.has(jobId));
+    trackedActiveJobIds.current = next;
+    if (next.size && changed) setJobPollRevision((value) => value + 1);
   }
 
   function shouldOpenErrorDialog(area: ErrorArea | "global", error: ApiError) {
@@ -423,7 +513,8 @@ export function StudioWorkspace() {
     options: RunOptions = {}
   ): Promise<T | null> {
     const area = options.area ?? "global";
-    setBusy(label);
+    const blockUi = options.blockUi ?? true;
+    if (blockUi) setBusy(label);
     if (area === "global") {
       setGlobalNotification(null);
     } else {
@@ -449,7 +540,7 @@ export function StudioWorkspace() {
       options.onError?.(apiError);
       return null;
     } finally {
-      setBusy("");
+      if (blockUi) setBusy("");
     }
   }
 
@@ -476,7 +567,8 @@ export function StudioWorkspace() {
 
   async function refreshProjectData(
     projectId = selectedProjectId,
-    includeQueryTemplates = false
+    includeQueryTemplates = false,
+    options: { blockUi?: boolean } = {}
   ): Promise<boolean> {
     if (!projectId) return true;
     const result = await run(
@@ -493,15 +585,18 @@ export function StudioWorkspace() {
             const templatesRows = includeQueryTemplates ? await api.queryTemplates(projectId) : null;
             return { recordingRows, jobRows, sourceRows, batchRows, templatesRows };
           },
-          queryKey: queryKeys.projectData(projectId, includeQueryTemplates)
+          queryKey: queryKeys.projectData(projectId, includeQueryTemplates),
+          staleTime: 0
         }),
       {
-        retry: () => void refreshProjectData(projectId, includeQueryTemplates)
+        blockUi: options.blockUi,
+        retry: () => void refreshProjectData(projectId, includeQueryTemplates, options)
       }
     );
     if (result) {
       setRecordings(result.recordingRows);
       setJobs(result.jobRows);
+      trackActiveJobsFromRows(result.jobRows);
       setProjectSources(result.sourceRows);
       setBatches(result.batchRows);
       if (selectedBatch && !result.batchRows.some((batch) => batch.id === selectedBatch.id)) {
@@ -851,7 +946,7 @@ export function StudioWorkspace() {
       );
       setSavedMappingId(mappingId);
       setActiveBuildJobId(built.id);
-      setJobs((current) => [built, ...current.filter((job) => job.id !== built.id)]);
+      upsertJob(built);
       setBuildResult(null);
     } catch (err) {
       const apiError = asApiError(err);
@@ -879,7 +974,7 @@ export function StudioWorkspace() {
       { area: "recordings" }
     );
     if (result) {
-      setJobs((current) => current.map((item) => (item.id === result.id ? result : item)));
+      upsertJob(result);
     }
   }
 
@@ -890,28 +985,43 @@ export function StudioWorkspace() {
       { area: "recordings" }
     );
     if (result) {
-      setJobs((current) => [result, ...current.filter((item) => item.id !== result.id)]);
+      upsertJob(result);
     }
   }
 
   async function openInRerun() {
     const recordingPath = buildResult?.recording_path ?? latestRecording?.path;
     const blueprintPath = buildResult?.blueprint_path ?? latestRecording?.blueprint_path ?? undefined;
+    const recordingId = buildResult?.recording_id ?? latestRecording?.id ?? "";
     if (!recordingPath) {
       showAreaError(activeSection === "import" ? "build" : "dashboard", t("errorNoRecordingToOpen"));
       return;
     }
-    await run(t("busyOpeningRerun"), () => api.open(recordingPath, blueprintPath), {
-      area: activeSection === "import" ? "build" : "dashboard"
-    });
+    setRecordingOpening(recordingId, true);
+    try {
+      await run(t("busyOpeningRerun"), () => api.open(recordingPath, blueprintPath), {
+        area: activeSection === "import" ? "build" : "dashboard",
+        blockUi: false
+      });
+    } finally {
+      setRecordingOpening(recordingId, false);
+    }
   }
 
   async function openRecording(recording: Recording) {
-    await run(
-      t("busyOpeningRerun"),
-      () => api.open(recording.path, recording.blueprint_path ?? undefined),
-      { area: activeSection === "dashboard" ? "dashboard" : "recordings" }
-    );
+    setRecordingOpening(recording.id, true);
+    try {
+      await run(
+        t("busyOpeningRerun"),
+        () => api.open(recording.path, recording.blueprint_path ?? undefined),
+        {
+          area: activeSection === "dashboard" ? "dashboard" : "recordings",
+          blockUi: false
+        }
+      );
+    } finally {
+      setRecordingOpening(recording.id, false);
+    }
   }
 
   function updateMappingStream(
@@ -1189,7 +1299,7 @@ export function StudioWorkspace() {
     );
     if (updated) {
       setTagInput("");
-      refreshProjectData(updated.project_id);
+      void refreshProjectData(updated.project_id, false, { blockUi: false });
     }
   }
 
@@ -1335,7 +1445,7 @@ export function StudioWorkspace() {
       { area: "batch" }
     );
     if (result) {
-      setJobs((current) => [result, ...current.filter((job) => job.id !== result.id)]);
+      upsertJob(result);
       setBatchResult(null);
       setBatchEstimate("");
       await refreshProjectData(selectedProjectId);
@@ -1384,7 +1494,7 @@ export function StudioWorkspace() {
       { area: "batch" }
     );
     if (result) {
-      setJobs((current) => [result, ...current.filter((job) => job.id !== result.id)]);
+      upsertJob(result);
       await refreshProjectData(selectedProjectId);
       await selectBatch(batchId);
     }
@@ -1610,6 +1720,11 @@ export function StudioWorkspace() {
     }
   }
 
+  const latestRecordingOpening = Boolean(
+    (buildResult?.recording_id && openingRecordingIds.has(buildResult.recording_id)) ||
+      (latestRecording?.id && openingRecordingIds.has(latestRecording.id))
+  );
+
   const navigationProps = {
     activeSection,
     busy,
@@ -1656,6 +1771,8 @@ export function StudioWorkspace() {
               csvHeaderMode={csvHeaderMode}
               csvColumnNames={csvColumnNames}
               isBusy={isBusy}
+              isLatestRecordingOpening={latestRecordingOpening}
+              openingRecordingIds={openingRecordingIds}
               importError={areaErrors.import}
               dashboardError={areaErrors.dashboard}
               projectExport={projectExport}
@@ -1822,6 +1939,7 @@ export function StudioWorkspace() {
               jobs={jobs}
               visibleJobs={visibleJobs}
               isBusy={isBusy}
+              openingRecordingIds={openingRecordingIds}
               language={language}
               errors={areaErrors}
               t={t}

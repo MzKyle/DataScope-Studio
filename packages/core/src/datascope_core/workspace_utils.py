@@ -9,6 +9,7 @@ import sqlite3
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
+from stat import S_ISREG
 from typing import Any
 
 from datascope_core.adapters.ros2_db3_adapter import metadata_references_db3
@@ -50,40 +51,47 @@ def _artifact_status(recording_path: Path, blueprint_path: Path | None) -> dict[
     paths = [recording_path]
     if blueprint_path is not None:
         paths.append(blueprint_path)
-    missing = [str(path) for path in paths if not path.is_file()]
+    sizes = {path: _file_size(path) for path in paths}
+    missing = [str(path) for path in paths if sizes[path] is None]
     if missing:
         return {
             "status": "missing",
             "message": f"Missing artifact file: {missing[0]}",
             "recording_path": str(recording_path),
             "blueprint_path": str(blueprint_path) if blueprint_path is not None else None,
-            "recording_size_bytes": _file_size(recording_path),
-            "blueprint_size_bytes": _file_size(blueprint_path),
+            "recording_size_bytes": sizes.get(recording_path),
+            "blueprint_size_bytes": sizes.get(blueprint_path),
         }
-    empty = [str(path) for path in paths if path.stat().st_size <= 0]
+    empty = [str(path) for path in paths if (sizes[path] or 0) <= 0]
     if empty:
         return {
             "status": "empty",
             "message": f"Empty artifact file: {empty[0]}",
             "recording_path": str(recording_path),
             "blueprint_path": str(blueprint_path) if blueprint_path is not None else None,
-            "recording_size_bytes": _file_size(recording_path),
-            "blueprint_size_bytes": _file_size(blueprint_path),
+            "recording_size_bytes": sizes.get(recording_path),
+            "blueprint_size_bytes": sizes.get(blueprint_path),
         }
     return {
         "status": "ready",
         "message": "",
         "recording_path": str(recording_path),
         "blueprint_path": str(blueprint_path) if blueprint_path is not None else None,
-        "recording_size_bytes": _file_size(recording_path),
-        "blueprint_size_bytes": _file_size(blueprint_path),
+        "recording_size_bytes": sizes.get(recording_path),
+        "blueprint_size_bytes": sizes.get(blueprint_path),
     }
 
 
 def _file_size(path: Path | None) -> int | None:
-    if path is None or not path.is_file():
+    if path is None:
         return None
-    return path.stat().st_size
+    try:
+        info = path.stat()
+    except OSError:
+        return None
+    if not S_ISREG(info.st_mode):
+        return None
+    return info.st_size
 
 
 def job_from_row(row: sqlite3.Row) -> dict[str, Any]:

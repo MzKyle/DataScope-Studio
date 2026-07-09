@@ -59,6 +59,7 @@ type RecordingsQueriesSectionProps = {
   jobs: Job[];
   visibleJobs: Job[];
   isBusy: boolean;
+  openingRecordingIds: Set<string>;
   language: Language;
   errors: AreaErrors;
   t: Translate;
@@ -113,6 +114,7 @@ export function RecordingsQueriesSection({
   jobs,
   visibleJobs,
   isBusy,
+  openingRecordingIds,
   language,
   errors,
   t,
@@ -207,6 +209,7 @@ export function RecordingsQueriesSection({
                       const artifact = recording.params.rerun_artifact;
                       const artifactStatus = recording.artifact_status;
                       const artifactReady = !artifactStatus || artifactStatus.status === "ready";
+                      const openingRecording = openingRecordingIds.has(recording.id);
                       const recordingSize =
                         artifact?.recording_size_bytes ?? artifactStatus?.recording_size_bytes;
                       const blueprintSize =
@@ -247,7 +250,7 @@ export function RecordingsQueriesSection({
                             <div className="table-actions">
                               <button
                                 onClick={() => onOpenRecording(recording)}
-                                disabled={isBusy || !artifactReady}
+                                disabled={openingRecording || !artifactReady}
                               >
                                 <ExternalLink size={16} />
                                 {t("openInRerun")}
