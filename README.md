@@ -81,13 +81,13 @@ Download the installer for your computer from
 
 | System | Download |
 | --- | --- |
-| Windows 10/11 x64 | `DataScope-Studio-v0.3.1-windows-x86_64-setup.exe` |
-| macOS Apple Silicon | `DataScope-Studio-v0.3.1-macos-aarch64.dmg` |
-| macOS Intel | `DataScope-Studio-v0.3.1-macos-x86_64.dmg` |
-| Debian/Ubuntu x64 | `DataScope-Studio-v0.3.1-linux-amd64.deb` |
-| Other Linux x64 | `DataScope-Studio-v0.3.1-linux-x86_64.AppImage` |
+| Windows 10/11 x64 | `DataScope-Studio-v0.4.0-windows-x86_64-setup.exe` |
+| macOS Apple Silicon | `DataScope-Studio-v0.4.0-macos-aarch64.dmg` |
+| macOS Intel | `DataScope-Studio-v0.4.0-macos-x86_64.dmg` |
+| Debian/Ubuntu x64 | `DataScope-Studio-v0.4.0-linux-amd64.deb` |
+| Other Linux x64 | `DataScope-Studio-v0.4.0-linux-x86_64.AppImage` |
 
-The `v0.3.1` packages are unsigned prerelease builds:
+The `v0.4.0` packages are unsigned prerelease builds:
 
 - **Windows:** if SmartScreen appears, choose **More info** and then **Run anyway** after
   confirming the installer came from this repository.
@@ -97,14 +97,14 @@ The `v0.3.1` packages are unsigned prerelease builds:
 - **Linux AppImage:** make it executable before launching:
 
 ```bash
-chmod +x DataScope-Studio-v0.3.1-linux-x86_64.AppImage
-./DataScope-Studio-v0.3.1-linux-x86_64.AppImage
+chmod +x DataScope-Studio-v0.4.0-linux-x86_64.AppImage
+./DataScope-Studio-v0.4.0-linux-x86_64.AppImage
 ```
 
 For the Debian package:
 
 ```bash
-sudo apt install ./DataScope-Studio-v0.3.1-linux-amd64.deb
+sudo apt install ./DataScope-Studio-v0.4.0-linux-amd64.deb
 ```
 
 ## Desktop Workflow
