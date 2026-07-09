@@ -1,10 +1,12 @@
 from pathlib import Path
 import json
 
+import pytest
+import typer
 from typer.testing import CliRunner
 
 from datascope_core.workspace import Workspace
-from datascope_cli.main import app
+from datascope_cli.main import app, import_source
 
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
@@ -72,6 +74,27 @@ def test_cli_catalog_registration_requires_catalog_url(
 ) -> None:
     monkeypatch.setenv("DATASCOPE_WORKSPACE", str(tmp_path / "workspace"))
 
+    with pytest.raises(typer.BadParameter) as exc_info:
+        import_source(
+            FIXTURES / "sample_sensor.csv",
+            "CLI Catalog",
+            "sensor_monitor",
+            None,
+            None,
+            None,
+            "none",
+            "basic",
+            "robot_runs",
+            None,
+            "copy",
+            False,
+            False,
+        )
+
+    assert exc_info.value.param_hint == "--catalog-url"
+    assert str(exc_info.value) == "is required when --catalog-dataset is set."
+    assert not (tmp_path / "workspace").exists()
+
     result = CliRunner().invoke(
         app,
         [
@@ -85,8 +108,6 @@ def test_cli_catalog_registration_requires_catalog_url(
     )
 
     assert result.exit_code != 0
-    assert "--catalog-url" in result.output
-    assert "is required when --catalog-dataset is set" in result.output
 
 
 def test_cli_import_defaults_artifact_names_to_source_name(tmp_path: Path, monkeypatch) -> None:
