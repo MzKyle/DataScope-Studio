@@ -1,6 +1,7 @@
 from pathlib import Path
 import json
 
+from click.utils import strip_ansi
 import pytest
 import typer
 from typer.testing import CliRunner
@@ -108,7 +109,7 @@ def test_cli_catalog_registration_requires_catalog_url(
     )
 
     assert result.exit_code != 0
-    assert "--catalog-url is required" in result.output
+    assert "--catalog-url is required" in strip_ansi(result.output)
 
 
 def test_cli_import_defaults_artifact_names_to_source_name(tmp_path: Path, monkeypatch) -> None:
