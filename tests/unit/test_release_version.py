@@ -16,8 +16,9 @@ SPEC.loader.exec_module(check_version)
 
 def test_repository_product_versions_match() -> None:
     versions = check_version.collect_versions(REPO_ROOT)
+    expected = (REPO_ROOT / "VERSION").read_text(encoding="utf-8").strip()
 
-    assert check_version.validate_versions(versions, "v0.3.1") == "0.3.1"
+    assert check_version.validate_versions(versions, f"v{expected}") == expected
 
 
 def test_version_validation_rejects_mismatch() -> None:
