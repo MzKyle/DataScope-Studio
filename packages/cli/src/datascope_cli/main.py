@@ -15,6 +15,18 @@ from datascope_core.viewer import open_recording
 from datascope_core.workspace import Workspace
 
 
+CATALOG_URL_REQUIRED_MESSAGE = "is required when --catalog-dataset is set."
+CATALOG_URL_REQUIRED_CLI_MESSAGE = f"--catalog-url {CATALOG_URL_REQUIRED_MESSAGE}"
+
+
+class CatalogUrlRequiredParameter(typer.BadParameter):
+    def __init__(self) -> None:
+        super().__init__(CATALOG_URL_REQUIRED_CLI_MESSAGE, param_hint="--catalog-url")
+
+    def __str__(self) -> str:
+        return CATALOG_URL_REQUIRED_MESSAGE
+
+
 app = typer.Typer(help="DataScope Studio local-first data import tools.")
 plugin_app = typer.Typer(help="Install and validate local DataScope plugins.")
 template_app = typer.Typer(help="Install and validate local DataScope templates.")
@@ -139,10 +151,7 @@ def import_source(
 ) -> None:
     """Import a source into a project and build .rrd/.rbl artifacts."""
     if catalog_dataset and not catalog_url:
-        raise typer.BadParameter(
-            "is required when --catalog-dataset is set.",
-            param_hint="--catalog-url",
-        )
+        raise CatalogUrlRequiredParameter()
     workspace = Workspace(os.environ.get("DATASCOPE_WORKSPACE"))
     existing = next((item for item in workspace.list_projects() if item["name"] == project), None)
     project_row = existing or workspace.create_project(project)

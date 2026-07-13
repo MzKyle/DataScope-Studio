@@ -108,6 +108,7 @@ def test_cli_catalog_registration_requires_catalog_url(
     )
 
     assert result.exit_code != 0
+    assert "--catalog-url is required" in result.output
 
 
 def test_cli_import_defaults_artifact_names_to_source_name(tmp_path: Path, monkeypatch) -> None:
