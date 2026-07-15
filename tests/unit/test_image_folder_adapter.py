@@ -128,11 +128,13 @@ def test_image_folder_convert_logs_stable_score_paths(tmp_path: Path, monkeypatc
     assert "/camera/pred/scores" in logged_paths
     assert "/camera/pred/scores/min" in logged_paths
     assert "/camera/pred/scores/mean" in logged_paths
+    assert recorder.disconnected is True
 
 
 class FakeRerunRecording:
     def __init__(self) -> None:
         self.logs = []
+        self.disconnected = False
 
     def __enter__(self):
         return self
@@ -142,6 +144,9 @@ class FakeRerunRecording:
 
     def save(self, path: str) -> None:
         Path(path).write_bytes(b"fake rrd")
+
+    def disconnect(self) -> None:
+        self.disconnected = True
 
     def send_recording_name(self, recording_id: str) -> None:
         self.recording_id = recording_id
