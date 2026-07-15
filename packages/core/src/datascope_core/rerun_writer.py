@@ -3,6 +3,7 @@ from __future__ import annotations
 import pickle
 import sqlite3
 from collections.abc import Iterable, Iterator, Mapping
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -16,14 +17,36 @@ def write_tabular_recording(frame: pd.DataFrame, request: ConvertRequest) -> Non
     write_tabular_chunks([frame], request)
 
 
-def write_tabular_chunks(frames: Iterable[pd.DataFrame], request: ConvertRequest) -> None:
+@contextmanager
+def recording_stream(
+    application_id: str,
+    recording_id: str,
+) -> Iterator[Any]:
+    """Create a recording stream and release its native sinks after use."""
     import rerun as rr
 
-    Path(request.output_rrd).parent.mkdir(parents=True, exist_ok=True)
-    with rr.RecordingStream(
-        request.app_id,
-        recording_id=request.recording_id,
+    rec = rr.RecordingStream(
+        application_id,
+        recording_id=recording_id,
         send_properties=False,
+    )
+    try:
+        with rec:
+            yield rec
+    finally:
+        # __exit__ flushes and finalizes file sinks, but does not disconnect
+        # them. A long-lived process would otherwise retain native resources
+        # for every conversion it performs.
+        disconnect = getattr(rec, "disconnect", None)
+        if callable(disconnect):
+            disconnect()
+
+
+def write_tabular_chunks(frames: Iterable[pd.DataFrame], request: ConvertRequest) -> None:
+    Path(request.output_rrd).parent.mkdir(parents=True, exist_ok=True)
+    with recording_stream(
+        request.app_id,
+        request.recording_id,
     ) as rec:
         rec.save(request.output_rrd)
         rec.send_recording_name(request.recording_id)

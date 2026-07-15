@@ -19,6 +19,7 @@ from datascope_core.cv_schema import (
 )
 from datascope_core.inference import safe_slug
 from datascope_core.models import ConvertRequest, IMAGE_EXTENSIONS, MappingSpec, SourceInfo, StreamInfo
+from datascope_core.rerun_writer import recording_stream
 
 
 class ImageFolderAdapter:
@@ -229,10 +230,9 @@ class ImageFolderAdapter:
         pred_masks_path = _entity_path(request.mappings, "pred_masks", "/camera/pred/masks")
 
         Path(request.output_rrd).parent.mkdir(parents=True, exist_ok=True)
-        with rr.RecordingStream(
+        with recording_stream(
             request.app_id,
-            recording_id=request.recording_id,
-            send_properties=False,
+            request.recording_id,
         ) as rec:
             rec.save(request.output_rrd)
             rec.send_recording_name(request.recording_id)
