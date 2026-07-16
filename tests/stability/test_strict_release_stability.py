@@ -64,84 +64,87 @@ def test_repeated_import_build_query_loop(tmp_path: Path) -> None:
 
 def test_batch_import_retry_and_worker_settings_are_stable(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("DATASCOPE_WORKSPACE", str(tmp_path / "api_workspace"))
-    client = TestClient(api_app)
-    project = client.post("/api/projects", json={"name": "Strict Batch"}).json()
+    with TestClient(api_app) as client:
+        project = client.post("/api/projects", json={"name": "Strict Batch"}).json()
 
-    for workers in (1, 2, 4):
-        patch = client.patch("/api/jobs/settings", json={"max_workers": workers})
-        assert patch.status_code == 200
-        assert patch.json()["max_workers"] == workers
+        for workers in (1, 2, 4):
+            patch = client.patch("/api/jobs/settings", json={"max_workers": workers})
+            assert patch.status_code == 200
+            assert patch.json()["max_workers"] == workers
 
-        first = tmp_path / f"worker_{workers}_first.csv"
-        second = tmp_path / f"worker_{workers}_second.csv"
-        first.write_text((FIXTURES / "sample_sensor.csv").read_text(), encoding="utf-8")
-        second.write_text((FIXTURES / "sample_sensor.csv").read_text(), encoding="utf-8")
+            first = tmp_path / f"worker_{workers}_first.csv"
+            second = tmp_path / f"worker_{workers}_second.csv"
+            first.write_text((FIXTURES / "sample_sensor.csv").read_text(), encoding="utf-8")
+            second.write_text((FIXTURES / "sample_sensor.csv").read_text(), encoding="utf-8")
 
+            response = client.post(
+                "/api/batch/import",
+                json={
+                    "project_id": project["id"],
+                    "patterns": [str(first), str(second)],
+                    "template_id": "sensor_monitor",
+                    "output_prefix": f"worker_{workers}",
+                },
+            )
+            assert response.status_code == 202
+            job = wait_for_job(client, response.json()["id"], timeout=30)
+            assert job["status"] == "succeeded"
+            assert job["result"]["succeeded"] == 2
+
+        bad = tmp_path / "recoverable.jsonl"
+        good = tmp_path / "retry_good.csv"
+        bad.write_text('{"timestamp": 1, "value": 2}\nnot-json\n', encoding="utf-8")
+        good.write_text((FIXTURES / "sample_sensor.csv").read_text(), encoding="utf-8")
         response = client.post(
             "/api/batch/import",
             json={
                 "project_id": project["id"],
-                "patterns": [str(first), str(second)],
+                "patterns": [str(good), str(bad)],
                 "template_id": "sensor_monitor",
-                "output_prefix": f"worker_{workers}",
+                "output_prefix": "retry",
             },
         )
         assert response.status_code == 202
-        job = wait_for_job(client, response.json()["id"], timeout=30)
-        assert job["status"] == "succeeded"
-        assert job["result"]["succeeded"] == 2
+        failed_job = wait_for_job(client, response.json()["id"], timeout=30)
+        assert failed_job["status"] == "failed"
 
-    bad = tmp_path / "recoverable.jsonl"
-    good = tmp_path / "retry_good.csv"
-    bad.write_text('{"timestamp": 1, "value": 2}\nnot-json\n', encoding="utf-8")
-    good.write_text((FIXTURES / "sample_sensor.csv").read_text(), encoding="utf-8")
-    response = client.post(
-        "/api/batch/import",
-        json={
-            "project_id": project["id"],
-            "patterns": [str(good), str(bad)],
-            "template_id": "sensor_monitor",
-            "output_prefix": "retry",
-        },
-    )
-    assert response.status_code == 202
-    failed_job = wait_for_job(client, response.json()["id"], timeout=30)
-    assert failed_job["status"] == "failed"
-
-    bad.write_text('{"timestamp": 1, "value": 2}\n', encoding="utf-8")
-    detail = client.get(f"/api/batch/{failed_job['resource_id']}").json()
-    failed_item = next(item for item in detail["items"] if item["status"] == "failed")
-    retry = client.post(f"/api/batch/{failed_job['resource_id']}/items/{failed_item['id']}/retry")
-    assert retry.status_code == 202
-    retry_job = wait_for_job(client, retry.json()["id"], timeout=30)
-    assert retry_job["status"] == "succeeded"
+        bad.write_text('{"timestamp": 1, "value": 2}\n', encoding="utf-8")
+        detail = client.get(f"/api/batch/{failed_job['resource_id']}").json()
+        failed_item = next(item for item in detail["items"] if item["status"] == "failed")
+        retry = client.post(
+            f"/api/batch/{failed_job['resource_id']}/items/{failed_item['id']}/retry"
+        )
+        assert retry.status_code == 202
+        retry_job = wait_for_job(client, retry.json()["id"], timeout=30)
+        assert retry_job["status"] == "succeeded"
 
 
 def test_api_health_and_core_requests_remain_stable(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("DATASCOPE_WORKSPACE", str(tmp_path / "health_workspace"))
-    client = TestClient(api_app)
-    assert client.get("/api/health").json() == {"status": "ok"}
-    start_rss = _current_rss_bytes()
+    with TestClient(api_app) as client:
+        assert client.get("/api/health").json() == {"status": "ok"}
+        assert isinstance(client.get("/api/projects").json(), list)
+        start_rss = _current_rss_bytes()
 
-    duration = _env_int("DATASCOPE_HEALTH_DURATION_SECONDS", 1800)
-    interval = max(1, _env_int("DATASCOPE_HEALTH_INTERVAL_SECONDS", 5))
-    deadline = time.monotonic() + duration
-    iterations = 0
-    while True:
-        health = client.get("/api/health")
-        projects = client.get("/api/projects")
-        assert health.status_code == 200
-        assert health.json() == {"status": "ok"}
-        assert projects.status_code == 200
-        assert isinstance(projects.json(), list)
-        iterations += 1
-        remaining = deadline - time.monotonic()
-        if remaining <= 0:
-            break
-        time.sleep(min(interval, remaining))
+        duration = _env_int("DATASCOPE_HEALTH_DURATION_SECONDS", 1800)
+        interval = max(1, _env_int("DATASCOPE_HEALTH_INTERVAL_SECONDS", 5))
+        deadline = time.monotonic() + duration
+        iterations = 0
+        while True:
+            health = client.get("/api/health")
+            projects = client.get("/api/projects")
+            assert health.status_code == 200
+            assert health.json() == {"status": "ok"}
+            assert projects.status_code == 200
+            assert isinstance(projects.json(), list)
+            iterations += 1
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            time.sleep(min(interval, remaining))
 
-    assert iterations >= 1
-    _assert_memory_growth_within_limit(start_rss, _current_rss_bytes())
+        assert iterations >= 1
+        _assert_memory_growth_within_limit(start_rss, _current_rss_bytes())
 
 
 def _env_int(name: str, default: int) -> int:
