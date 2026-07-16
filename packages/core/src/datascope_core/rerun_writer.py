@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pickle
 import sqlite3
+import sys
 from collections.abc import Iterable, Iterator, Mapping
 from contextlib import contextmanager
 from pathlib import Path
@@ -40,6 +41,21 @@ def recording_stream(
         disconnect = getattr(rec, "disconnect", None)
         if callable(disconnect):
             disconnect()
+
+
+def cleanup_recording_streams() -> None:
+    """Release native runtimes belonging to recording streams that are no longer referenced."""
+    rr = sys.modules.get("rerun")
+    if rr is None:
+        return
+
+    cleanup = getattr(
+        getattr(rr, "bindings", None),
+        "flush_and_cleanup_orphaned_recordings",
+        None,
+    )
+    if callable(cleanup):
+        cleanup()
 
 
 def write_tabular_chunks(frames: Iterable[pd.DataFrame], request: ConvertRequest) -> None:

@@ -68,6 +68,7 @@ from datascope_core.rerun_artifacts import (
     rerun_version,
     validate_artifacts,
 )
+from datascope_core.rerun_writer import cleanup_recording_streams
 from datascope_core.template_registry import (
     BUILTIN_TEMPLATES,
     load_template_manifest,
@@ -628,6 +629,7 @@ class Workspace(
                 mcap_decoders=mcap_decoders,
             )
             self._adapter_for_path(source_row["uri"], source_row["type"]).convert(request)
+            cleanup_recording_streams()
             check_cancel()
             if rrd_optimize_profile != "none":
                 if _manage_job and job_id is not None:

@@ -56,6 +56,33 @@ def test_build_recording_persists_artifact_info(tmp_path: Path, monkeypatch) -> 
     assert recording["artifact_status"]["recording_size_bytes"] == 3
 
 
+def test_build_recording_cleans_up_orphaned_recording_streams(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    workspace, project, source, mapping = _mapped_csv_workspace(tmp_path)
+    _install_fake_artifact_writers(
+        monkeypatch,
+        recording_payload=b"rrd",
+        blueprint_payload=b"rbl",
+    )
+    cleanup_calls = []
+    monkeypatch.setattr(
+        workspace_module,
+        "cleanup_recording_streams",
+        lambda: cleanup_calls.append(True),
+    )
+
+    workspace.build_recording(
+        project["id"],
+        source["id"],
+        mapping_id=mapping["id"],
+        output_name="cleanup",
+    )
+
+    assert cleanup_calls == [True]
+
+
 def test_build_recording_persists_enabled_artifact_options(
     tmp_path: Path,
     monkeypatch,
