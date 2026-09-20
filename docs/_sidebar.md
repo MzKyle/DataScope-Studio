@@ -39,3 +39,4 @@
   - [查询与导出](workflow/query-export.md)
   - [项目导出与导入](workflow/package-import-export.md)
   - [测试验收](workflow/testing.md)
+  - [3 分钟新用户测试](usability/new-user-3min-test.md)

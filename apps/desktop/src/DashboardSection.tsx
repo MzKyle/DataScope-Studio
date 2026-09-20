@@ -25,6 +25,7 @@ import {
   CardHeader,
   EmptyState,
   InlineError,
+  NextAction,
   ProjectVisual,
   SummaryTile,
   StatusBadge,
@@ -162,11 +163,11 @@ export function DashboardSection(props: DashboardSectionProps) {
           </div>
         </div>
         <div className="next-action-panel">
-          <div>
-            <span className="eyebrow">{props.t("nextStep")}</span>
-            <strong>{nextAction}</strong>
-            <p>{props.t("dashboardNextStepHint")}</p>
-          </div>
+          <NextAction
+            eyebrow={props.t("nextStep")}
+            title={nextAction}
+            text={props.t("dashboardNextStepHint")}
+          />
           <ProjectVisual
             recordings={props.recordings.length}
             streams={props.streamCount}
@@ -372,7 +373,16 @@ export function DashboardSection(props: DashboardSectionProps) {
             ))}
           </div>
         ) : (
-          <EmptyState text={props.t("recordingsWillAppear")} />
+          <EmptyState
+            title={props.t("noRecordingsYet")}
+            text={props.t("recordingsWillAppear")}
+            action={
+              <button type="button" onClick={props.onToggleSourcePicker} disabled={props.isBusy}>
+                <FolderOpen size={16} />
+                {props.t("chooseSource")}
+              </button>
+            }
+          />
         )}
       </section>
 

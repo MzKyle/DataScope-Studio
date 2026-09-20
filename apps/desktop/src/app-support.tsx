@@ -1,9 +1,11 @@
 import { memo, useState, type ReactNode } from "react";
 import {
   AlertCircle,
+  ArrowRight,
   CheckCircle2,
   Command,
   Copy,
+  LoaderCircle,
   RefreshCcw,
   X
 } from "lucide-react";
@@ -928,8 +930,85 @@ export const ResultTable = memo(function ResultTable({
   );
 });
 
-export const EmptyState = memo(function EmptyState({ text }: { text: string }) {
-  return <div className="empty-state"><Command size={17} /><span>{text}</span></div>;
+export const EmptyState = memo(function EmptyState({
+  action,
+  text,
+  title
+}: {
+  action?: ReactNode;
+  text: string;
+  title?: string;
+}) {
+  return (
+    <div className="empty-state">
+      <Command size={17} />
+      <div className="empty-state-copy">
+        {title && <strong>{title}</strong>}
+        <span>{text}</span>
+      </div>
+      {action && <div className="empty-state-action">{action}</div>}
+    </div>
+  );
+});
+
+export const BusyState = memo(function BusyState({
+  text,
+  title
+}: {
+  text?: string;
+  title: string;
+}) {
+  return (
+    <div className="busy-state" role="status" aria-live="polite">
+      <LoaderCircle className="build-status-spinner" size={17} />
+      <div>
+        <strong>{title}</strong>
+        {text && <span>{text}</span>}
+      </div>
+    </div>
+  );
+});
+
+export const ResultBanner = memo(function ResultBanner({
+  action,
+  text,
+  title,
+  tone = "neutral"
+}: {
+  action?: ReactNode;
+  text: string;
+  title: string;
+  tone?: "success" | "warning" | "neutral";
+}) {
+  return (
+    <div className={`result-banner is-${tone}`} role="status" aria-live="polite">
+      {tone === "success" ? <CheckCircle2 size={17} /> : <AlertCircle size={17} />}
+      <div>
+        <strong>{title}</strong>
+        <span>{text}</span>
+      </div>
+      {action && <div className="result-banner-action">{action}</div>}
+    </div>
+  );
+});
+
+export const NextAction = memo(function NextAction({
+  eyebrow,
+  text,
+  title
+}: {
+  eyebrow: string;
+  text: string;
+  title: string;
+}) {
+  return (
+    <div className="next-action-copy">
+      <span className="eyebrow">{eyebrow}</span>
+      <strong>{title}</strong>
+      <p>{text}</p>
+      <ArrowRight size={16} aria-hidden="true" />
+    </div>
+  );
 });
 
 function formatCell(value: unknown) {

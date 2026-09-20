@@ -274,7 +274,7 @@ export function RecordingsQueriesSection({
               )}
             </>
           ) : (
-            <EmptyState text={t("recordingBrowserEmpty")} />
+            <EmptyState title={t("noRecordingsYet")} text={t("recordingBrowserEmpty")} />
           )}
         </section>
       )}
@@ -458,7 +458,7 @@ export function RecordingsQueriesSection({
               t={t}
             />
           ) : (
-            <EmptyState text={t("jobsEmpty")} />
+            <EmptyState title={t("jobsEmptyTitle")} text={t("jobsEmpty")} />
           )}
         </section>
       )}

@@ -22,6 +22,11 @@ def test_release_sanity_rejects_version_mismatch(monkeypatch, tmp_path: Path) ->
     monkeypatch.setattr(sanity_check, "_validate_repo_quality", lambda repo_root: None)
     monkeypatch.setattr(
         sanity_check.check_version,
+        "validate_public_release_docs",
+        lambda repo_root, tag=None: "0.3.1",
+    )
+    monkeypatch.setattr(
+        sanity_check.check_version,
         "collect_versions",
         lambda repo_root: {"VERSION": "0.3.0", "desktop": "0.4.0"},
     )

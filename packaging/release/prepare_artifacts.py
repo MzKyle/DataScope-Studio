@@ -5,20 +5,16 @@ import argparse
 import hashlib
 import json
 import shutil
+import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_VERSION = (REPO_ROOT / "VERSION").read_text(encoding="utf-8").strip()
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
 
-
-def public_artifact_names(version: str) -> list[str]:
-    return [
-        f"DataScope-Studio-v{version}-linux-amd64.deb",
-        f"DataScope-Studio-v{version}-linux-x86_64.AppImage",
-        f"DataScope-Studio-v{version}-windows-x86_64-setup.exe",
-        f"DataScope-Studio-v{version}-macos-aarch64.dmg",
-        f"DataScope-Studio-v{version}-macos-x86_64.dmg",
-    ]
+from release_manifest import public_artifact_names  # noqa: E402
 
 
 def find_one(root: Path, predicate, description: str) -> Path:

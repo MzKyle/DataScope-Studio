@@ -281,11 +281,11 @@ function TemplatesSection(props: ExtensionsSectionsProps) {
                 </table>
               </div>
             ) : (
-              <EmptyState text={props.t("selectBatch")} />
+              <EmptyState title={props.t("selectBatchTitle")} text={props.t("selectBatch")} />
             )}
           </>
         ) : (
-          <EmptyState text={props.t("batchEmpty")} />
+          <EmptyState title={props.t("batchEmptyTitle")} text={props.t("batchEmpty")} />
         )}
       </section>
 
@@ -428,7 +428,7 @@ function TemplatesSection(props: ExtensionsSectionsProps) {
           </p>
         )}
         {!props.plugins.length && !props.templateRegistry.length && (
-          <EmptyState text={props.t("registryEmpty")} />
+          <EmptyState title={props.t("registryEmptyTitle")} text={props.t("registryEmpty")} />
         )}
       </section>
 
@@ -457,7 +457,10 @@ function TemplatesSection(props: ExtensionsSectionsProps) {
             ))}
           </div>
         ) : (
-          <EmptyState text={props.t("recipeRegistryEmpty")} />
+          <EmptyState
+            title={props.t("recipeRegistryEmptyTitle")}
+            text={props.t("recipeRegistryEmpty")}
+          />
         )}
       </section>
     </section>

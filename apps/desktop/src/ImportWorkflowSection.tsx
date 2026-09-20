@@ -19,6 +19,7 @@ import {
   EmptyState,
   InlineError,
   MappingIssueCard,
+  ResultBanner,
   SectionTitle,
   StreamTable,
   WorkflowSteps,
@@ -270,7 +271,7 @@ export function ImportWorkflowSection({
               />
             </>
           ) : (
-            <EmptyState text={t("sourceEmpty")} />
+            <EmptyState title={t("sourceEmptyTitle")} text={t("sourceEmpty")} />
           )}
         </section>
 
@@ -484,7 +485,7 @@ export function ImportWorkflowSection({
               <InlineError error={errors.mapping} t={t} />
             </>
           ) : (
-            <EmptyState text={t("mappingEmpty")} />
+            <EmptyState title={t("mappingEmptyTitle")} text={t("mappingEmpty")} />
           )}
         </section>
       </div>
@@ -713,57 +714,64 @@ export function ImportWorkflowSection({
           />
           <InlineError id="build-error" error={errors.build} t={t} />
           {buildResult ? (
-            <dl className="artifact-list">
-              <div>
-                <dt>{t("recording")}</dt>
-                <dd>{buildResult.recording_path}</dd>
-              </div>
-              <div>
-                <dt>{t("blueprint")}</dt>
-                <dd>{buildResult.blueprint_path}</dd>
-              </div>
-              {buildResult.artifact_info ? (
-                <>
-                  <div>
-                    <dt>{t("artifactStatus")}</dt>
-                    <dd>{t("ready")}</dd>
-                  </div>
-                  <div>
-                    <dt>{t("artifactSizes")}</dt>
-                    <dd>
-                      {formatBytes(buildResult.artifact_info.recording_size_bytes)} /{" "}
-                      {formatBytes(buildResult.artifact_info.blueprint_size_bytes)}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>{t("converter")}</dt>
-                    <dd>{buildResult.artifact_info.converter}</dd>
-                  </div>
-                  <div>
-                    <dt>{t("artifactValidation")}</dt>
-                    <dd>{buildResult.artifact_info.artifact_validation ?? "basic"}</dd>
-                  </div>
-                  <div>
-                    <dt>{t("rrdOptimizeProfile")}</dt>
-                    <dd>{buildResult.artifact_info.rrd_optimize_profile ?? "none"}</dd>
-                  </div>
-                  {buildResult.artifact_info.catalog_registration?.enabled ? (
+            <>
+              <ResultBanner
+                tone="success"
+                title={t("buildCompleted")}
+                text={t("buildCompletedHint")}
+              />
+              <dl className="artifact-list">
+                <div>
+                  <dt>{t("recording")}</dt>
+                  <dd>{buildResult.recording_path}</dd>
+                </div>
+                <div>
+                  <dt>{t("blueprint")}</dt>
+                  <dd>{buildResult.blueprint_path}</dd>
+                </div>
+                {buildResult.artifact_info ? (
+                  <>
                     <div>
-                      <dt>{t("catalogRegistration")}</dt>
-                      <dd>{buildResult.artifact_info.catalog_registration.status}</dd>
+                      <dt>{t("artifactStatus")}</dt>
+                      <dd>{t("ready")}</dd>
                     </div>
-                  ) : null}
-                </>
-              ) : null}
-              <div>
-                <dt>{t("job")}</dt>
-                <dd>
-                  {buildResult.job_id} / {buildResult.status}
-                </dd>
-              </div>
-            </dl>
+                    <div>
+                      <dt>{t("artifactSizes")}</dt>
+                      <dd>
+                        {formatBytes(buildResult.artifact_info.recording_size_bytes)} /{" "}
+                        {formatBytes(buildResult.artifact_info.blueprint_size_bytes)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>{t("converter")}</dt>
+                      <dd>{buildResult.artifact_info.converter}</dd>
+                    </div>
+                    <div>
+                      <dt>{t("artifactValidation")}</dt>
+                      <dd>{buildResult.artifact_info.artifact_validation ?? "basic"}</dd>
+                    </div>
+                    <div>
+                      <dt>{t("rrdOptimizeProfile")}</dt>
+                      <dd>{buildResult.artifact_info.rrd_optimize_profile ?? "none"}</dd>
+                    </div>
+                    {buildResult.artifact_info.catalog_registration?.enabled ? (
+                      <div>
+                        <dt>{t("catalogRegistration")}</dt>
+                        <dd>{buildResult.artifact_info.catalog_registration.status}</dd>
+                      </div>
+                    ) : null}
+                  </>
+                ) : null}
+                <div>
+                  <dt>{t("job")}</dt>
+                  <dd>
+                    {buildResult.job_id} / {buildResult.status}
+                  </dd>
+                </div>
+              </dl>
+            </>
           ) : !isBuildSubmitting && !buildJob ? (
-            <EmptyState text={t("buildEmpty")} />
+            <EmptyState title={t("buildEmptyTitle")} text={t("buildEmpty")} />
           ) : null}
         </section>
 
@@ -775,7 +783,7 @@ export function ImportWorkflowSection({
               <pre className="preview">{previewText}</pre>
             </>
           ) : (
-            <EmptyState text={t("previewEmpty")} />
+            <EmptyState title={t("previewEmptyTitle")} text={t("previewEmpty")} />
           )}
         </section>
       </div>

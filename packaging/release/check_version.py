@@ -4,9 +4,26 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from release_manifest import (  # noqa: E402
+    load_public_release_metadata,
+    public_artifact_names,
+    public_download_version,
+    public_release_tag,
+)
+
+PUBLIC_RELEASE_DOCS = (
+    Path("README.md"),
+    Path("README.zh-CN.md"),
+    Path("docs/guide/package-install.md"),
+)
 
 
 def read_assignment(path: Path, key: str) -> str:
@@ -71,6 +88,49 @@ def validate_versions(versions: dict[str, str], tag: str | None = None) -> str:
     return expected
 
 
+def validate_public_release_docs(
+    repo_root: Path = REPO_ROOT,
+    *,
+    metadata: dict[str, object] | None = None,
+    tag: str | None = None,
+) -> str:
+    metadata = dict(metadata or load_public_release_metadata(repo_root))
+    download_version = public_download_version(metadata)
+    release_tag = public_release_tag(metadata)
+    if tag:
+        tag_version = tag[1:] if tag.startswith("v") else tag
+        if tag_version != download_version:
+            raise RuntimeError(
+                "Public release metadata must match the release tag before publishing; "
+                f"metadata={release_tag}, tag={tag}"
+            )
+
+    product_version = (repo_root / "VERSION").read_text(encoding="utf-8").strip()
+    expected_names = public_artifact_names(download_version)
+    stale_names = (
+        public_artifact_names(product_version)
+        if product_version and product_version != download_version
+        else []
+    )
+    for relative_path in PUBLIC_RELEASE_DOCS:
+        text = (repo_root / relative_path).read_text(encoding="utf-8")
+        missing = [name for name in expected_names if name not in text]
+        if missing:
+            raise RuntimeError(
+                f"{relative_path} does not list public installer artifacts for {release_tag}: "
+                + ", ".join(missing)
+            )
+        if release_tag not in text:
+            raise RuntimeError(f"{relative_path} does not mention public release {release_tag}")
+        stale = [name for name in stale_names if name in text]
+        if stale:
+            raise RuntimeError(
+                f"{relative_path} still references unreleased installer artifacts: "
+                + ", ".join(stale)
+            )
+    return download_version
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Validate DataScope product versions.")
     parser.add_argument("--tag", help="Optional release tag, for example v0.3.0")
@@ -78,9 +138,11 @@ def main() -> None:
 
     versions = collect_versions()
     version = validate_versions(versions, args.tag)
+    public_version = validate_public_release_docs(tag=args.tag)
     for name, value in versions.items():
         print(f"{name}: {value}")
     print(f"DataScope version {version} is consistent.")
+    print(f"Public installer documentation targets v{public_version}.")
 
 
 if __name__ == "__main__":

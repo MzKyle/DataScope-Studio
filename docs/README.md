@@ -31,6 +31,7 @@ DataScope Studio 是一个本地优先的数据可视化工作台，用来把 CS
 - [故障排查](faq/troubleshooting.md)
 - [环境依赖](guide/prerequisites.md)
 - [开发运行](guide/run-app.md)
+- [3 分钟新用户测试](usability/new-user-3min-test.md)
 - [架构总览](architecture/README.md)
 - [HTTP API](interfaces/api.md)
 - [CLI 命令](interfaces/cli.md)

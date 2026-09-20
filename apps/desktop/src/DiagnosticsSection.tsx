@@ -449,7 +449,10 @@ export function DiagnosticsSection({
               ))}
             </div>
           ) : (
-            <EmptyState text={t("diagnosticsNoRecordings")} />
+            <EmptyState
+              title={t("diagnosticsNoRecordingsTitle")}
+              text={t("diagnosticsNoRecordings")}
+            />
           )}
         </section>
       </div>
@@ -556,16 +559,24 @@ export function DiagnosticsSection({
                     </tbody>
                   </table>
                 </div>
-                {!filteredFindings.length && <EmptyState text={t("diagnosticsNoFindings")} />}
+                {!filteredFindings.length && (
+                  <EmptyState
+                    title={t("diagnosticsNoFindingsTitle")}
+                    text={t("diagnosticsNoFindings")}
+                  />
+                )}
               </>
             ) : (
-              <EmptyState text={t("diagnosticsNoFindings")} />
+              <EmptyState
+                title={t("diagnosticsNoFindingsTitle")}
+                text={t("diagnosticsNoFindings")}
+              />
             )}
           </section>
         </>
       ) : (
         <section className="card">
-          <EmptyState text={t("diagnosticsEmpty")} />
+          <EmptyState title={t("diagnosticsEmptyTitle")} text={t("diagnosticsEmpty")} />
         </section>
       )}
 
@@ -595,7 +606,10 @@ export function DiagnosticsSection({
             </table>
           </div>
         ) : (
-          <EmptyState text={t("noDiagnosticExports")} />
+          <EmptyState
+            title={t("noDiagnosticExportsTitle")}
+            text={t("noDiagnosticExports")}
+          />
         )}
       </section>
     </section>

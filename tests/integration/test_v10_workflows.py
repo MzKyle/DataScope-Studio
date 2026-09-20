@@ -68,7 +68,7 @@ def test_project_package_import_restores_recordings(tmp_path: Path) -> None:
 def test_project_export_uses_visible_default_and_accepts_directory(tmp_path: Path, monkeypatch) -> None:
     home = tmp_path / "home"
     home.mkdir()
-    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setattr(Path, "home", lambda: home)
 
     workspace = Workspace()
     project = workspace.create_project("Visible Export")

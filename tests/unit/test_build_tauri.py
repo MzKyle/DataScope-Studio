@@ -94,7 +94,13 @@ def test_create_macos_dmg_uses_hdiutil_without_mounting(
         commands.append(command)
         Path(command[-1]).write_bytes(b"dmg")
 
+    symlinks: list[tuple[str, Path, bool]] = []
+
+    def fake_symlink(target, link, target_is_directory=False):
+        symlinks.append((target, Path(link), target_is_directory))
+
     monkeypatch.setattr(build_tauri.platform, "machine", lambda: "x86_64")
+    monkeypatch.setattr(build_tauri.os, "symlink", fake_symlink)
     monkeypatch.setattr(build_tauri.subprocess, "run", fake_run)
 
     output = build_tauri.create_macos_dmg(bundle_root)
@@ -113,6 +119,7 @@ def test_create_macos_dmg_uses_hdiutil_without_mounting(
     assert Path(command[5]).parent == bundle_root / "macos"
     assert Path(command[5]).name.startswith(".datascope-dmg-")
     assert command[6:] == ["-ov", "-format", "UDZO", str(output)]
+    assert symlinks == [("/Applications", Path(command[5]) / "Applications", True)]
 
 
 def test_windows_nsis_bundle_has_required_icon() -> None:

@@ -2123,6 +2123,7 @@ tbody tr:last-child td {
   border-radius: var(--radius-16);
   color: var(--color-text-muted);
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-10, 10px);
   min-height: 116px;
   min-width: 0;
@@ -2132,6 +2133,73 @@ tbody tr:last-child td {
 .empty-state svg {
   color: var(--color-primary);
   flex: 0 0 auto;
+}
+
+.empty-state-copy,
+.busy-state > div,
+.result-banner > div,
+.next-action-copy {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.empty-state-copy {
+  flex: 1 1 220px;
+}
+
+.empty-state-copy strong,
+.busy-state strong,
+.result-banner strong {
+  color: var(--color-text);
+  font-size: 13px;
+}
+
+.empty-state-copy span,
+.busy-state span,
+.result-banner span {
+  color: var(--color-text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.empty-state-action,
+.result-banner-action {
+  margin-left: auto;
+}
+
+.busy-state,
+.result-banner {
+  align-items: flex-start;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-16);
+  display: flex;
+  gap: var(--space-12);
+  margin: var(--space-12) 0;
+  padding: var(--space-14, 14px);
+}
+
+.busy-state {
+  background: rgba(10, 132, 255, 0.07);
+  color: var(--color-primary);
+}
+
+.result-banner.is-success {
+  background: var(--color-success-soft);
+  border-color: rgba(27, 129, 88, 0.25);
+  color: var(--color-success);
+}
+
+.result-banner.is-warning {
+  background: rgba(251, 191, 36, 0.12);
+  border-color: rgba(180, 83, 9, 0.24);
+  color: #92400e;
+}
+
+.result-banner.is-neutral {
+  background: var(--color-surface-soft);
+  color: var(--color-text-muted);
 }
 
 .tag-row {
@@ -2429,6 +2497,11 @@ tbody tr:last-child td {
 
 .next-action-panel p {
   margin-top: var(--space-8);
+}
+
+.next-action-copy svg {
+  color: var(--color-primary);
+  margin-top: var(--space-6);
 }
 
 .workflow-card {

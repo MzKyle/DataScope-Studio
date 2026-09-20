@@ -69,6 +69,9 @@ DataScope 采用本地优先设计。源数据、Mapping、Recording 和 SQLite 
 
 从 [GitHub Releases](https://github.com/MzKyle/DataScope-Studio/releases) 下载对应安装包：
 
+当前源码树是 `0.4.0` 开发线；当前公开可下载的安装包版本是 `v0.3.1`。在
+`v0.4.0` Release 资产正式发布前，不要使用 `v0.4.0` 安装包文件名。
+
 | 系统 | 安装包 |
 | --- | --- |
 | Windows 10/11 x64 | `DataScope-Studio-v0.3.1-windows-x86_64-setup.exe` |

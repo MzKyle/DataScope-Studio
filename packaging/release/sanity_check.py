@@ -30,6 +30,7 @@ QUALITY_PATTERN = re.compile(
 
 def run_sanity(repo_root: Path = REPO_ROOT, *, tag: str | None = None) -> None:
     check_version.validate_versions(check_version.collect_versions(repo_root), tag)
+    check_version.validate_public_release_docs(repo_root, tag=tag)
     _validate_examples(repo_root)
     _validate_job_status_docs(repo_root)
     _validate_repo_quality(repo_root)
