@@ -1484,6 +1484,71 @@ tbody tr:last-child td {
   margin-bottom: var(--space-12);
 }
 
+.mapping-readiness-panel {
+  display: grid;
+  gap: var(--space-12);
+  margin-bottom: var(--space-16);
+}
+
+.mapping-readiness-grid {
+  display: grid;
+  gap: var(--space-10);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.mapping-readiness-grid > div {
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-12);
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: var(--space-10);
+}
+
+.mapping-readiness-grid span,
+.detected-fields-summary > strong {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.mapping-readiness-grid strong {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.mapping-readiness-issues,
+.detected-fields-summary ul {
+  margin: 0;
+  padding-left: var(--space-20);
+}
+
+.mapping-readiness-issues {
+  color: var(--color-text);
+  display: grid;
+  gap: var(--space-4);
+  font-size: 13px;
+}
+
+.detected-fields-summary {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-12);
+  display: grid;
+  gap: var(--space-8);
+  padding: var(--space-12);
+}
+
+.detected-fields-summary li {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.mapping-advanced-panel {
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-16);
+}
+
 .mapping-template-toolbar,
 .mapping-template-manager {
   display: grid;
@@ -2858,11 +2923,19 @@ tbody tr:last-child td {
   .workflow-steps {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .mapping-readiness-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 720px) {
   body {
     min-width: 0;
+  }
+
+  .mapping-readiness-grid {
+    grid-template-columns: 1fr;
   }
 
   .topbar {

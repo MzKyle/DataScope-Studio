@@ -1,10 +1,10 @@
 import { createRef, type ComponentProps } from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ImportWorkflowSection } from "./ImportWorkflowSection";
 import { createTranslator } from "./i18n";
-import type { Job, Source } from "./types";
+import type { Job, MappingPayload, MappingValidation, MappingValidationIssue, Source } from "./types";
 
 afterEach(() => cleanup());
 
@@ -131,6 +131,75 @@ describe("ImportWorkflowSection build feedback", () => {
       screen.getByText("The current Rerun version or platform does not support 0.33 build options.")
     ).toBeInTheDocument();
   });
+
+  it("shows mapping readiness first and keeps the editor collapsed when ready", () => {
+    const onConfirmMapping = vi.fn();
+    renderSection({
+      ...mappingSectionProps(),
+      mappingConfirmed: false,
+      onConfirmMapping
+    });
+
+    expect(screen.getByText("Data mapping ready")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Continue" })).toBeVisible();
+    expect(screen.queryByLabelText("Time Field")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Review detected fields" }));
+
+    expect(screen.getByLabelText("Time Field")).toBeInTheDocument();
+  });
+
+  it("shows a review summary for valid mappings with warnings", () => {
+    renderSection({
+      ...mappingSectionProps({
+        mappingValidation: makeValidation({
+          warnings: [makeIssue({ code: "field_nulls", severity: "warning" })]
+        })
+      })
+    });
+
+    expect(screen.getByText("Mapping should be reviewed")).toBeInTheDocument();
+    expect(screen.getByText("Mapped fields contain empty values")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Review mapping" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Continue" })).not.toBeInTheDocument();
+  });
+
+  it("expands the mapping editor for blocked mappings", () => {
+    renderSection({
+      ...mappingSectionProps({
+        mappingValidation: makeValidation({
+          errors: [makeIssue({ code: "required_field_missing", severity: "error" })],
+          valid: false
+        })
+      })
+    });
+
+    expect(screen.getByText("Mapping needs attention")).toBeInTheDocument();
+    expect(screen.getByLabelText("Time Field")).toBeInTheDocument();
+    expect(screen.getAllByText("Required field is missing").length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: "Continue" })).not.toBeInTheDocument();
+  });
+
+  it("does not keep stale ready state after mapping edits clear validation", () => {
+    const props = mappingSectionProps();
+    const { rerender } = renderSection(props);
+
+    expect(screen.getByText("Data mapping ready")).toBeInTheDocument();
+
+    rerender(
+      <ImportWorkflowSection
+        {...baseProps({
+          ...props,
+          mapping: makeMapping({ sourceFields: ["temperature_c"] }),
+          mappingValidation: null
+        })}
+      />
+    );
+
+    expect(screen.queryByText("Data mapping ready")).not.toBeInTheDocument();
+    expect(screen.getByText("Mapping should be reviewed")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Validate Mapping" })).toBeVisible();
+  });
 });
 
 function renderSection(
@@ -240,6 +309,106 @@ function makeSource(overrides: Partial<Source> = {}): Source {
     size_bytes: 10,
     status: "ready",
     metadata: {},
+    ...overrides
+  };
+}
+
+function mappingSectionProps(
+  overrides: Partial<ComponentProps<typeof ImportWorkflowSection>> = {}
+): Partial<ComponentProps<typeof ImportWorkflowSection>> {
+  return {
+    source: makeSource(),
+    streams: [
+      {
+        stream_id: "stream_1",
+        name: "temperature",
+        semantic_type: "scalar",
+        fields: ["temperature"],
+        time_key: "time",
+        confidence: 0.91,
+        metadata: {}
+      }
+    ],
+    mapping: makeMapping(),
+    schemaProfile: {
+      schema_version: 1,
+      source_id: "source_1",
+      source_type: "csv",
+      source_family: "tabular",
+      field_names: ["time", "temperature"],
+      fields: [],
+      timeline: {},
+      adapter_metadata: {}
+    },
+    mappingValidation: makeValidation(),
+    mappingConfirmed: false,
+    supportedSemanticTypes: ["scalar"],
+    timeUnits: ["auto", "seconds"],
+    ...overrides
+  };
+}
+
+function makeMapping(options: { sourceFields?: string[] } = {}): MappingPayload {
+  return {
+    mapping: {
+      schema_version: 2,
+      id: "mapping_1",
+      source: "source_1",
+      app_id: "datascope.sensor_monitor.v1",
+      recording_id: "recording_1",
+      status: "draft",
+      timelines: {
+        primary: {
+          name: "time",
+          source_field: "time",
+          unit: "auto",
+          sort: "source"
+        }
+      },
+      streams: [
+        {
+          stream_id: "stream_1",
+          source_fields: options.sourceFields ?? ["temperature"],
+          semantic_type: "scalar",
+          entity_path: "/temperature",
+          archetype: "Scalar",
+          view: "time_series",
+          confidence: 0.91,
+          enabled: true,
+          required: false,
+          origin: "inferred",
+          rule_key: "inferred:stream_1",
+          name: "temperature"
+        }
+      ]
+    }
+  };
+}
+
+function makeValidation(
+  options: {
+    errors?: MappingValidationIssue[];
+    valid?: boolean;
+    warnings?: MappingValidationIssue[];
+  } = {}
+): MappingValidation {
+  const errors = options.errors ?? [];
+  const warnings = options.warnings ?? [];
+  return {
+    valid: options.valid ?? errors.length === 0,
+    errors,
+    warnings,
+    issues: [...errors, ...warnings],
+    summary: { errors: errors.length, warnings: warnings.length },
+    effective_timeline_unit: "seconds"
+  };
+}
+
+function makeIssue(overrides: Partial<MappingValidationIssue>): MappingValidationIssue {
+  return {
+    severity: "warning",
+    code: "field_nulls",
+    message: "Mapped fields contain empty values.",
     ...overrides
   };
 }

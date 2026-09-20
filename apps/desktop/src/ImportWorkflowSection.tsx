@@ -1,4 +1,4 @@
-import { useState, type RefObject } from "react";
+import { useEffect, useMemo, useState, type RefObject } from "react";
 import {
   Activity,
   CheckCircle2,
@@ -15,6 +15,11 @@ import {
 
 import { BuildJobStatus, isActiveBuildJob } from "./BuildJobStatus";
 import {
+  deriveMappingReadiness,
+  type MappingReadiness,
+  type MappingReadinessState
+} from "./features/mapping/mapping-readiness";
+import {
   CardHeader,
   EmptyState,
   InlineError,
@@ -24,6 +29,7 @@ import {
   StreamTable,
   WorkflowSteps,
   formatBytes,
+  mappingIssueTitle,
   type AreaErrors
 } from "./app-support";
 import type { Language, TranslationKey } from "./i18n";
@@ -32,6 +38,7 @@ import type {
   Job,
   MappingDiff,
   MappingPayload,
+  MappingStream,
   MappingSuggestion,
   MappingTemplateItem,
   MappingValidation,
@@ -185,9 +192,20 @@ export function ImportWorkflowSection({
   onOpenInRerun
 }: ImportWorkflowSectionProps) {
   const [advancedBuildOpen, setAdvancedBuildOpen] = useState(false);
+  const [advancedMappingOpen, setAdvancedMappingOpen] = useState(false);
   const buildJobActive = isActiveBuildJob(buildJob);
   const buildControlsLocked = isBusy || isBuildSubmitting || buildJobActive;
   const sourceUsesMcapImporter = source?.type === "mcap" || source?.type === "ros2_db3";
+  const mappingReadiness = useMemo(
+    () => deriveMappingReadiness({ mapping, streams, validation: mappingValidation }),
+    [mapping, streams, mappingValidation]
+  );
+  const showAdvancedMapping = mappingReadiness.state === "blocked" || advancedMappingOpen;
+  const mappingReadinessIssues =
+    mappingReadiness.state === "blocked"
+      ? mappingReadiness.blockingIssues
+      : mappingReadiness.reviewIssues;
+  const validationPending = mappingReadiness.reasons.includes("validation_pending");
   const buildPercent = Math.round(
     Math.min(1, Math.max(0, buildJob?.progress ?? 0)) * 100
   );
@@ -203,6 +221,10 @@ export function ImportWorkflowSection({
       state: buildResult ? "done" : mappingConfirmed ? "active" : "pending"
     }
   ];
+
+  useEffect(() => {
+    setAdvancedMappingOpen(false);
+  }, [source?.id, mapping?.mapping.id]);
 
   return (
     <section className="section-stack" id="import">
@@ -319,6 +341,98 @@ export function ImportWorkflowSection({
           </div>
           {mapping ? (
             <>
+              <div className="mapping-readiness-panel">
+                <ResultBanner
+                  tone={mappingReadiness.state === "ready" ? "success" : "warning"}
+                  title={mappingReadinessTitle(mappingReadiness.state, t)}
+                  text={mappingReadinessText(mappingReadiness.state, validationPending, t)}
+                  action={
+                    mappingReadiness.state === "ready" ? (
+                      <button
+                        className="button-primary"
+                        type="button"
+                        onClick={onConfirmMapping}
+                        disabled={isBusy || mappingConfirmed}
+                      >
+                        <CheckCircle2 size={16} />
+                        {mappingConfirmed ? t("mappingConfirmed") : t("continueMapping")}
+                      </button>
+                    ) : mappingReadiness.state === "review" ? (
+                      <button
+                        type="button"
+                        onClick={
+                          validationPending
+                            ? onValidateMapping
+                            : () => setAdvancedMappingOpen(true)
+                        }
+                        disabled={isBusy}
+                      >
+                        <ListChecks size={16} />
+                        {validationPending ? t("validateMapping") : t("reviewMapping")}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setAdvancedMappingOpen(true)}
+                        disabled={isBusy}
+                      >
+                        <SlidersHorizontal size={16} />
+                        {t("fixMapping")}
+                      </button>
+                    )
+                  }
+                />
+                <div className="mapping-readiness-grid">
+                  <div>
+                    <span>{t("detectedStreams")}</span>
+                    <strong>{mappingReadiness.detectedStreamCount}</strong>
+                  </div>
+                  <div>
+                    <span>{t("enabledStreams")}</span>
+                    <strong>{mappingReadiness.enabledStreamCount}</strong>
+                  </div>
+                  <div>
+                    <span>{t("timelineDetected")}</span>
+                    <strong>{mappingReadiness.timelineField ?? t("rowSequence")}</strong>
+                  </div>
+                  <div>
+                    <span>{t("validationSummary")}</span>
+                    <strong>{mappingValidationSummary(mappingReadiness, t)}</strong>
+                  </div>
+                </div>
+                {mappingReadinessIssues.length > 0 && (
+                  <ul className="mapping-readiness-issues">
+                    {mappingReadinessIssues.slice(0, 3).map((issue, index) => (
+                      <li key={`${issue.code}-${issue.stream_id ?? issue.field ?? index}`}>
+                        {mappingIssueTitle(issue, t)}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <div className="detected-fields-summary">
+                  <strong>{t("detectedFields")}</strong>
+                  <ul>
+                    {mapping.mapping.streams
+                      .filter((stream) => stream.enabled)
+                      .slice(0, 6)
+                      .map((stream) => (
+                        <li key={stream.stream_id}>{detectedFieldLabel(stream)}</li>
+                      ))}
+                  </ul>
+                </div>
+                {!showAdvancedMapping && (
+                  <button
+                    className="inline-link-button"
+                    type="button"
+                    onClick={() => setAdvancedMappingOpen(true)}
+                  >
+                    <SlidersHorizontal size={14} />
+                    {t("reviewDetectedFields")}
+                  </button>
+                )}
+              </div>
+              {showAdvancedMapping && (
+                <div className="mapping-advanced-panel">
               <div className="mapping-meta">
                 <span>{mapping.mapping.app_id}</span>
                 <span>
@@ -482,6 +596,8 @@ export function ImportWorkflowSection({
                   {mappingConfirmed ? t("mappingConfirmed") : t("mappingDraft")}
                 </span>
               </div>
+                </div>
+              )}
               <InlineError error={errors.mapping} t={t} />
             </>
           ) : (
@@ -861,6 +977,40 @@ function PreviewVisuals({
       </div>
     </div>
   );
+}
+
+function mappingReadinessTitle(state: MappingReadinessState, t: Translate) {
+  if (state === "ready") return t("dataMappingReady");
+  if (state === "review") return t("mappingNeedsReview");
+  return t("mappingNeedsAttention");
+}
+
+function mappingReadinessText(
+  state: MappingReadinessState,
+  validationPending: boolean,
+  t: Translate
+) {
+  if (state === "ready") return t("dataMappingReadyText");
+  if (state === "review") {
+    return validationPending ? t("mappingValidationPendingText") : t("mappingNeedsReviewText");
+  }
+  return t("mappingNeedsAttentionText");
+}
+
+function mappingValidationSummary(readiness: MappingReadiness, t: Translate) {
+  if (readiness.errorCount > 0) {
+    return `${readiness.errorCount} ${t("errors")}`;
+  }
+  if (readiness.warningCount > 0) {
+    return `${readiness.warningCount} ${t("warnings")}`;
+  }
+  return t("noBlockingIssues");
+}
+
+function detectedFieldLabel(stream: MappingStream) {
+  const name = stream.name || stream.stream_id;
+  const fields = stream.source_fields.length ? stream.source_fields.join(", ") : stream.semantic_type;
+  return `${name}: ${fields}`;
 }
 
 function firstNumericSeries(rows: Record<string, unknown>[]) {

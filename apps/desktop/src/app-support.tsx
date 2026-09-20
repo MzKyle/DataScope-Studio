@@ -574,6 +574,11 @@ const validationRecommendationKeys: Record<string, TranslationKey> = {
   no_enabled_streams: "recommendNoEnabledStreams"
 };
 
+export function mappingIssueTitle(issue: MappingValidationIssue, t: Translate) {
+  const key = validationIssueKeys[issue.code];
+  return key ? t(key) : issue.message ?? issue.code;
+}
+
 export function MappingIssueCard({
   issue,
   language,
@@ -596,7 +601,7 @@ export function MappingIssueCard({
     <article className={`validation-issue is-${issue.severity}`}>
       <div className="validation-issue-heading">
         <span className="validation-severity">{issue.severity.toUpperCase()}</span>
-        <strong>{validationIssueKeys[issue.code] ? t(validationIssueKeys[issue.code]) : issue.code}</strong>
+        <strong>{mappingIssueTitle(issue, t)}</strong>
         <code>{issue.code}</code>
       </div>
       {location && <span className="validation-location">{location}</span>}
