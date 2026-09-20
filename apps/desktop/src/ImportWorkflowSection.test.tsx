@@ -56,7 +56,7 @@ describe("ImportWorkflowSection build feedback", () => {
 
     expect(screen.getByDisplayValue("run_001")).toBeEnabled();
     expect(screen.getByLabelText("Rerun artifact folder")).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Build .rrd + .rbl" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Generate Visualization" })).toBeEnabled();
     expect(screen.getByRole("status")).toHaveTextContent("The task failed");
     expect(screen.getByRole("status")).not.toHaveTextContent("Conversion failed");
     expect(screen.getByRole("button", { name: "View details" })).toBeEnabled();
@@ -89,6 +89,7 @@ describe("ImportWorkflowSection build feedback", () => {
     });
 
     expect(screen.getByRole("button", { name: "Open in Rerun" })).toBeEnabled();
+    expect(screen.getByText("Visualization ready")).toBeInTheDocument();
     expect(screen.getByText("/tmp/run_001.rrd")).toBeInTheDocument();
     expect(screen.getByText("Ready")).toBeInTheDocument();
     expect(screen.getByText("2.0 KiB / 512 B")).toBeInTheDocument();
@@ -149,6 +150,18 @@ describe("ImportWorkflowSection build feedback", () => {
     expect(screen.getByLabelText("Time Field")).toBeInTheDocument();
   });
 
+  it("shows quick inspect READY with Generate Visualization and a collapsed editor", () => {
+    renderSection({
+      ...mappingSectionProps(),
+      mode: "quick-inspect",
+      mappingConfirmed: false
+    });
+
+    expect(screen.getByText("Data mapping ready")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Generate Visualization" }).length).toBeGreaterThan(0);
+    expect(screen.queryByLabelText("Time Field")).not.toBeInTheDocument();
+  });
+
   it("shows a review summary for valid mappings with warnings", () => {
     renderSection({
       ...mappingSectionProps({
@@ -162,6 +175,20 @@ describe("ImportWorkflowSection build feedback", () => {
     expect(screen.getByText("Mapped fields contain empty values")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Review mapping" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Continue" })).not.toBeInTheDocument();
+  });
+
+  it("shows quick inspect REVIEW as a mapping review action", () => {
+    renderSection({
+      ...mappingSectionProps({
+        mappingValidation: makeValidation({
+          warnings: [makeIssue({ code: "field_nulls", severity: "warning" })]
+        })
+      }),
+      mode: "quick-inspect"
+    });
+
+    expect(screen.getByText("Mapping should be reviewed")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Review mapping" })).toBeVisible();
   });
 
   it("expands the mapping editor for blocked mappings", () => {
@@ -178,6 +205,40 @@ describe("ImportWorkflowSection build feedback", () => {
     expect(screen.getByLabelText("Time Field")).toBeInTheDocument();
     expect(screen.getAllByText("Required field is missing").length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "Continue" })).not.toBeInTheDocument();
+  });
+
+  it("shows quick inspect BLOCKED with the mapping editor open", () => {
+    renderSection({
+      ...mappingSectionProps({
+        mappingValidation: makeValidation({
+          errors: [makeIssue({ code: "required_field_missing", severity: "error" })],
+          valid: false
+        })
+      }),
+      mode: "quick-inspect"
+    });
+
+    expect(screen.getByText("Mapping needs attention")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Fix mapping" })).toBeVisible();
+    expect(screen.getByLabelText("Time Field")).toBeInTheDocument();
+  });
+
+  it("shows quick inspect build completion as visualization ready", () => {
+    renderSection({
+      ...mappingSectionProps(),
+      mode: "quick-inspect",
+      mappingConfirmed: true,
+      buildResult: {
+        job_id: "",
+        status: "succeeded",
+        recording_id: "recording_1",
+        recording_path: "/tmp/run_001.rrd",
+        blueprint_path: "/tmp/run_001.rbl"
+      }
+    });
+
+    expect(screen.getByText("Visualization ready")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open in Rerun" })).toBeEnabled();
   });
 
   it("does not keep stale ready state after mapping edits clear validation", () => {

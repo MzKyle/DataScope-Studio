@@ -38,6 +38,12 @@ import { ImportWorkflowSection } from "../../ImportWorkflowSection";
 import { RecordingsQueriesSection } from "../../RecordingsQueriesSection";
 import { AppSidebar, AppTopbar } from "../../AppNavigation";
 import {
+  emptyQuickInspectSession,
+  hasQuickInspectSession,
+  type QuickInspectSessionState,
+  type WorkspaceMode
+} from "../quick-inspect/quick-inspect-state";
+import {
   createTranslator,
   type Language
 } from "../../i18n";
@@ -139,6 +145,9 @@ export function StudioWorkspace() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectName, setProjectName] = useState("Sensor Run");
   const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>("project");
+  const [quickInspectSession, setQuickInspectSession] =
+    useState<QuickInspectSessionState>(emptyQuickInspectSession);
   const sourcePath = useImportDraftStore((state) => state.sourcePath);
   const setSourcePath = useImportDraftStore((state) => state.setSourcePath);
   const sourceStorageMode = useImportDraftStore((state) => state.sourceStorageMode);
@@ -280,6 +289,8 @@ export function StudioWorkspace() {
     semanticTypesByFamily[schemaProfile?.source_family ?? "tabular"] ??
     semanticTypesByFamily.tabular;
   const isBusy = Boolean(busy);
+  const isQuickInspectMode =
+    workspaceMode === "quick-inspect" && hasQuickInspectSession(quickInspectSession);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -747,6 +758,82 @@ export function StudioWorkspace() {
     if (result) {
       setProjects((current) => [result, ...current]);
       setSelectedProjectId(result.id);
+      setWorkspaceMode("project");
+    }
+  }
+
+  function importOptionsForPath(path: string): Record<string, unknown> {
+    return path.toLowerCase().endsWith(".csv")
+      ? {
+          csv: {
+            header_mode: csvHeaderMode,
+            column_names: csvColumnNames
+              .split(",")
+              .map((name) => name.trim())
+              .filter(Boolean)
+          }
+        }
+      : {};
+  }
+
+  function applyInspectionResult(
+    result: {
+      source: Source;
+      streams: StreamInfo[];
+      template_matches: TemplateMatch[];
+      template_id: string;
+      mapping: MappingPayload;
+      saved_mapping: { id: string };
+      preview: { rows: Record<string, unknown>[] };
+      schema_profile: SchemaProfile;
+      validation: MappingValidation;
+    },
+    inspectedPath: string,
+    defaultNameKind?: "file" | "folder"
+  ) {
+    setSource(result.source);
+    setOutputName(defaultOutputName(inspectedPath, defaultNameKind));
+    setStreams(result.streams);
+    setTemplates(result.template_matches);
+    setSelectedTemplateId(result.template_id);
+    setMapping(result.mapping);
+    setPreviewRows(result.preview.rows);
+    setSchemaProfile(result.schema_profile);
+    setMappingValidation(result.validation);
+    setSavedMappingId(result.saved_mapping.id);
+    setMappingConfirmed(false);
+    setBuildResult(null);
+    setActiveBuildJobId("");
+    setIsBuildSubmitting(false);
+    clearAreaError("build");
+    setActiveSection("import");
+  }
+
+  async function startQuickInspect(path = sourcePath, defaultNameKind?: "file" | "folder") {
+    const nextSourcePath = normalizeSourcePathInput(path);
+    if (!nextSourcePath) {
+      showAreaError("import", t("errorMissingSourcePath"));
+      return;
+    }
+    if (nextSourcePath !== sourcePath) {
+      setSourcePath(nextSourcePath);
+    }
+    const result = await run(
+      t("busyInspectingSource"),
+      () =>
+        api.quickInspect(
+          nextSourcePath,
+          sourceStorageMode,
+          importOptionsForPath(nextSourcePath)
+        ),
+      { area: "import" }
+    );
+    if (result) {
+      setWorkspaceMode("quick-inspect");
+      setQuickInspectSession({ id: result.session_id, sourcePath: nextSourcePath });
+      setProjectSources([]);
+      setMappingDiff(null);
+      applyInspectionResult(result, nextSourcePath, defaultNameKind);
     }
   }
 
@@ -777,22 +864,11 @@ export function StudioWorkspace() {
           projectIdForImport = projectForImport.id;
         }
 
-        const importOptions = nextSourcePath.toLowerCase().endsWith(".csv")
-          ? {
-              csv: {
-                header_mode: csvHeaderMode,
-                column_names: csvColumnNames
-                  .split(",")
-                  .map((name) => name.trim())
-                  .filter(Boolean)
-              }
-            }
-          : {};
         const imported = await api.importWorkflow(
           projectIdForImport,
           nextSourcePath,
           sourceStorageMode,
-          importOptions
+          importOptionsForPath(nextSourcePath)
         );
         return {
           added: imported.source,
@@ -811,26 +887,26 @@ export function StudioWorkspace() {
       { area: "import" }
     );
     if (result) {
+      setWorkspaceMode("project");
+      setQuickInspectSession(emptyQuickInspectSession);
       setProjects(result.projectRows);
       if (result.project) {
         setSelectedProjectId(result.project.id);
       }
-      setSource(result.added);
-      setOutputName(defaultOutputName(nextSourcePath));
-      setStreams(result.streams);
-      setTemplates(result.templateMatches);
-      setSelectedTemplateId(result.nextTemplateId);
-      setMapping(result.suggested);
-      setPreviewRows(result.previewRows);
-      setSchemaProfile(result.schemaProfile);
-      setMappingValidation(result.validation);
-      setSavedMappingId(result.savedMappingId);
-      setMappingConfirmed(false);
-      setBuildResult(null);
-      setActiveBuildJobId("");
-      setIsBuildSubmitting(false);
-      clearAreaError("build");
-      setActiveSection("import");
+      applyInspectionResult(
+        {
+          source: result.added,
+          streams: result.streams,
+          template_matches: result.templateMatches,
+          template_id: result.nextTemplateId,
+          mapping: result.suggested,
+          saved_mapping: { id: result.savedMappingId },
+          preview: { rows: result.previewRows },
+          schema_profile: result.schemaProfile,
+          validation: result.validation
+        },
+        nextSourcePath
+      );
     }
   }
 
@@ -838,7 +914,10 @@ export function StudioWorkspace() {
     if (!source || !mapping) return;
     const saved = await run(
       t("busySavingMapping"),
-      () => api.saveMapping(source.id, mapping.mapping),
+      () =>
+        isQuickInspectMode
+          ? api.saveQuickInspectMapping(quickInspectSession.id, mapping.mapping)
+          : api.saveMapping(source.id, mapping.mapping),
       { area: "mapping" }
     );
     if (saved) {
@@ -856,7 +935,10 @@ export function StudioWorkspace() {
     if (!source || !mapping) return null;
     const result = await run(
       t("busyValidatingMapping"),
-      () => api.validateMapping(source.id, mapping.mapping),
+      () =>
+        isQuickInspectMode
+          ? api.validateQuickInspectMapping(quickInspectSession.id, mapping.mapping)
+          : api.validateMapping(source.id, mapping.mapping),
       { area: "mapping" }
     );
     if (result) setMappingValidation(result);
@@ -868,6 +950,9 @@ export function StudioWorkspace() {
     const result = await run(
       t("busyConfirmingMapping"),
       async () => {
+        if (isQuickInspectMode) {
+          return api.confirmQuickInspectMapping(quickInspectSession.id, mapping.mapping);
+        }
         const saved = savedMappingId
           ? { id: savedMappingId }
           : await api.saveMapping(source.id, mapping.mapping);
@@ -906,6 +991,93 @@ export function StudioWorkspace() {
   }
 
   async function buildRecording() {
+    if (isQuickInspectMode) {
+      if (!source || !mapping) {
+        showAreaError("build", t("errorMappingUnavailable"));
+        return;
+      }
+      if (isBuildSubmitting || isActiveBuildJob(buildJob)) return;
+
+      setIsBuildSubmitting(true);
+      setActiveBuildJobId("");
+      setBuildResult(null);
+      clearAreaError("build");
+      try {
+        let mappingId = savedMappingId;
+        if (!mappingConfirmed) {
+          const confirmed = await api.confirmQuickInspectMapping(
+            quickInspectSession.id,
+            mapping.mapping
+          );
+          mappingId = confirmed.mapping.id;
+          setSavedMappingId(mappingId);
+          setMappingValidation(confirmed.validation);
+          setMappingConfirmed(true);
+          setMapping((current) =>
+            current
+              ? {
+                  mapping: {
+                    ...current.mapping,
+                    status: "confirmed",
+                    timelines: {
+                      primary: {
+                        ...current.mapping.timelines.primary,
+                        effective_unit: confirmed.validation.effective_timeline_unit
+                      }
+                    }
+                  }
+                }
+              : current
+          );
+        }
+        const built = await api.buildQuickInspect(
+          quickInspectSession.id,
+          outputName,
+          selectedTemplateId,
+          normalizeSourcePathInput(defaultArtifactDir) || undefined,
+          {
+            mcap_decoders:
+              source.type === "mcap" || source.type === "ros2_db3"
+                ? parseListInput(mcapDecoders)
+                : null,
+            rrd_optimize_profile: rrdOptimizeProfile,
+            artifact_validation: artifactValidation,
+            catalog_registration: {
+              enabled: catalogEnabled,
+              dataset_name: catalogDataset,
+              server_url: catalogManagedLocal ? null : normalizeSourcePathInput(catalogServerUrl),
+              managed_local: catalogManagedLocal
+            }
+          }
+        );
+        setSavedMappingId(mappingId);
+        setBuildResult(built);
+      } catch (err) {
+        const apiError = asApiError(err);
+        logDiagnosticError("frontend.quick_inspect_build", apiError, {
+          code: apiError.code,
+          status: apiError.status
+        });
+        if (apiError.code === "mapping_validation_failed" && apiError.details.validation) {
+          setMappingValidation(apiError.details.validation);
+          setMappingConfirmed(false);
+        }
+        setAreaErrors((current) => ({ ...current, build: apiError }));
+        if (apiError.code !== "mapping_validation_failed") {
+          openErrorDialog(apiError, "build", undefined, { output_name: outputName });
+        }
+        if (apiError.code === "artifact_name_conflict") {
+          window.requestAnimationFrame(() => {
+            outputNameRef.current?.focus();
+            outputNameRef.current?.select();
+          });
+        }
+      } finally {
+        setIsBuildSubmitting(false);
+      }
+      return;
+    }
+
     if (!selectedProject || !source || !mapping) {
       showAreaError("build", t("errorMappingUnavailable"));
       return;
@@ -1148,7 +1320,10 @@ export function StudioWorkspace() {
     setMappingValidation(null);
     const result = await run(
       t("busyApplyingMappingFix"),
-      () => api.validateMapping(source.id, next.mapping),
+      () =>
+        isQuickInspectMode
+          ? api.validateQuickInspectMapping(quickInspectSession.id, next.mapping)
+          : api.validateMapping(source.id, next.mapping),
       { area: "mapping" }
     );
     if (result) setMappingValidation(result);
@@ -1161,10 +1336,29 @@ export function StudioWorkspace() {
     const result = await run(
       t("busySuggestingMapping"),
       async () => {
+        if (isQuickInspectMode) {
+          const suggested = await api.suggestQuickInspectTemplate(
+            quickInspectSession.id,
+            templateId
+          );
+          return {
+            suggested: suggested.mapping,
+            savedMappingId: suggested.saved_mapping.id,
+            validation: suggested.validation,
+            previewRows: suggested.preview.rows,
+            schemaProfile: suggested.schema_profile
+          };
+        }
         const suggested = await api.suggestMappingForTemplate(source.id, templateId);
         const savedMapping = await api.saveMapping(source.id, suggested.mapping);
         const validation = await api.validateMapping(source.id, suggested.mapping);
-        return { suggested, savedMappingId: savedMapping.id, validation };
+        return {
+          suggested,
+          savedMappingId: savedMapping.id,
+          validation,
+          previewRows: null,
+          schemaProfile: null
+        };
       },
       { area: "mappingToolbar" }
     );
@@ -1172,6 +1366,8 @@ export function StudioWorkspace() {
       setMapping(result.suggested);
       setSavedMappingId(result.savedMappingId);
       setMappingValidation(result.validation);
+      if (result.previewRows) setPreviewRows(result.previewRows);
+      if (result.schemaProfile) setSchemaProfile(result.schemaProfile);
       setMappingConfirmed(false);
     }
   }
@@ -1687,6 +1883,7 @@ export function StudioWorkspace() {
       setSourcePath(normalizedPath);
       setOutputName(defaultOutputName(normalizedPath));
       clearAreaError("import");
+      void startQuickInspect(normalizedPath);
     }
   }
 
@@ -1717,6 +1914,7 @@ export function StudioWorkspace() {
       setSourcePath(normalizedPath);
       setOutputName(defaultOutputName(normalizedPath, kind));
       clearAreaError("import");
+      await startQuickInspect(normalizedPath, kind);
     }
   }
 
@@ -1740,7 +1938,10 @@ export function StudioWorkspace() {
     onRefreshAll: () => void refreshAll(),
     onSectionChange: goToSection,
     onRefreshProjects: () => void refreshProjects(),
-    onSelectedProjectChange: setSelectedProjectId,
+    onSelectedProjectChange: (projectId: string) => {
+      setSelectedProjectId(projectId);
+      setWorkspaceMode("project");
+    },
     onProjectNameChange: (name: string) => {
       setProjectName(name);
       clearAreaError("project");
@@ -1783,7 +1984,7 @@ export function StudioWorkspace() {
               t={t}
               onToggleSourcePicker={() => setSourcePickerOpen((value) => !value)}
               onChooseSource={(kind) => void chooseSource(kind)}
-              onImport={() => void importAndInspect()}
+              onImport={() => void startQuickInspect()}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
@@ -1794,6 +1995,7 @@ export function StudioWorkspace() {
               onStorageModeChange={setSourceStorageMode}
               onCsvHeaderModeChange={setCsvHeaderMode}
               onCsvColumnNamesChange={setCsvColumnNames}
+              onProjectImport={() => void importAndInspect()}
               onRefresh={() => void refreshProjectData()}
               onExportProject={() => void exportProject()}
               onOpenPackage={() => void openProjectPackage()}
@@ -1804,6 +2006,7 @@ export function StudioWorkspace() {
 
           {activeSection === "import" && (
             <ImportWorkflowSection
+              mode={workspaceMode}
               selectedTemplateId={selectedTemplateId}
               templateOptions={templateOptions}
               selectedMappingTemplateId={selectedMappingTemplateId}

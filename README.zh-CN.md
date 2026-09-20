@@ -17,16 +17,15 @@ Recording，然后直接在 Rerun 中查看，无需为每种数据编写单独�
    对应平台的安装包。
 2. 启动 **DataScope Studio**。安装版会自动启动本地 API、Python runtime 和
    Rerun 集成。
-3. 在 **仪表盘** 创建项目，或选择已有项目。
-4. 选择一个数据文件或文件夹。希望项目自包含时使用“复制到项目”；希望数据保留
-   在原位置时使用“引用原路径”。
-5. 点击“导入并自动 Mapping”。DataScope 会检查数据源、推荐模板并生成草稿
-   Mapping。
-6. 在 **导入流程** 中检查 **Schema Inspector** 和 **Mapping Editor**。必要时
-   修改时间字段、时间单位、语义类型、entity path 或模板。
-7. 点击“校验 Mapping”，然后点击“确认 Mapping”。
-8. 填写输出名称，点击“生成 `.rrd + .rbl`”。
-9. 点击“在 Rerun 中打开”查看生成的 Recording。
+3. 在 **仪表盘** 使用 **Quick Inspect**：拖入文件或文件夹，或通过系统选择器
+   选择数据源。首次检查不需要先创建项目。
+4. DataScope 会检查数据源、推荐可视化模板、生成草稿 Mapping、完成校验，并显示
+   **Ready**、**Review** 或 **Blocked** 的 Mapping 就绪状态。
+5. Mapping 就绪时点击“生成可视化”。如果需要检查或修复，展开高级 Mapping 编辑器，
+   应用修复后重新校验。
+6. 点击“在 Rerun 中打开”查看生成的 Recording。
+7. 需要持久保存 runs、项目包、批量导入、查询历史、标签和导出时，再创建或打开
+   **项目**。
 
 安装包已经包含桌面应用、本地 API、Python runtime、DataScope 包和 Rerun。正常
 使用桌面端时，不需要另外安装 Python、Node.js、npm 或 Rerun。
@@ -35,6 +34,7 @@ Recording，然后直接在 Rerun 中查看，无需为每种数据编写单独�
 
 - 用统一、可重复的流程检查不同类型的数据。
 - 自动识别时间戳、标量、状态、日志、图像、检测结果和点云。
+- 不创建正式项目也能快速检查一个本地文件或文件夹。
 - 生成可复用的 Rerun `.rrd` Recording 和 `.rbl` Blueprint。
 - 在本地管理项目、数据源、Mapping、Recording、任务、标签、参数和查询导出。
 - 查询错误日志、低电量、检测失败、topic 摘要、时间同步问题和状态持续时间等常见问题。
@@ -48,6 +48,8 @@ Recording，然后直接在 Rerun 中查看，无需为每种数据编写单独�
 - API 启动时异步预热 workspace，健康检查和桌面窗口初始化不会等待完整目录扫描。
 - “导入并自动 Mapping”通过单个 import workflow 请求完成添加数据源、inspect、
   模板推荐、草稿 Mapping、预览和校验，减少多次往返带来的等待。
+- **Quick Inspect** 在隔离的临时 workspace 内复用同一套导入、Mapping、校验和
+  转换流程，因此不会污染正式项目列表。
 - 转换任务会限制进度写库频率，避免大文件转换时频繁 SQLite 更新拖慢转换线程。
 - 查询系统优先读取转换阶段生成的轻量 query index，并对常见查询模板使用游标式
   读取和结果上限，降低大项目查询时的内存占用。
@@ -101,9 +103,10 @@ sudo apt install ./DataScope-Studio-v0.3.1-linux-amd64.deb
 
 ## 桌面端使用流程
 
-- **仪表盘：** 创建项目、导入数据源、打开项目包，并查看最近生成的 Recording。
-- **导入流程：** 选择推荐模板，编辑或保存 Mapping 模板，校验 Mapping，生成
-  Rerun 产物，并在 Rerun 中打开。
+- **仪表盘：** 优先快速检查文件或文件夹；进入项目工作时可打开项目包、查看最近
+  生成的 Recording。
+- **导入流程：** 查看 Mapping 就绪状态，只在需要时展开高级 Mapping，生成 Rerun
+  产物，并在 Rerun 中打开。
 - **Recordings 与查询：** 重新打开 Recording、添加标签、运行查询模板、导出查询
   结果、对比 scalar 指标，并查看后台任务。
 - **诊断：** 对全部或指定 Recording 运行离线机器人健康报告，调整阈值，并导出报告。

@@ -165,6 +165,76 @@ describe("apiErrorFromResponse", () => {
     fetchMock.mockRestore();
   });
 
+  it("posts quick inspect requests without a project id", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          session_id: "session_1",
+          source: {},
+          streams: [],
+          template_matches: [],
+          template_id: "sensor_monitor",
+          mapping: { mapping: {} },
+          saved_mapping: { id: "mapping_1", path: "/tmp/mapping.yaml" },
+          preview: { columns: [], rows: [] },
+          schema_profile: {},
+          validation: {}
+        }),
+        { status: 200 }
+      )
+    );
+
+    await api.quickInspect("/tmp/source.csv", "reference", {
+      csv: { header_mode: "auto", column_names: [] }
+    });
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toContain("/api/quick-inspect");
+    expect(init?.method).toBe("POST");
+    expect(JSON.parse(String(init?.body))).toEqual({
+      path: "/tmp/source.csv",
+      storage_mode: "reference",
+      import_options: {
+        csv: { header_mode: "auto", column_names: [] }
+      },
+      template_id: null
+    });
+    fetchMock.mockRestore();
+  });
+
+  it("posts quick inspect builds synchronously", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          job_id: "",
+          status: "succeeded",
+          recording_id: "recording_1",
+          recording_path: "/tmp/run.rrd",
+          blueprint_path: "/tmp/run.rbl"
+        }),
+        { status: 200 }
+      )
+    );
+
+    await api.buildQuickInspect("session_1", "run", "sensor_monitor", "/tmp/out", {
+      artifact_validation: "basic"
+    });
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toContain("/api/quick-inspect/session_1/build");
+    expect(init?.method).toBe("POST");
+    expect(JSON.parse(String(init?.body))).toEqual({
+      template_id: "sensor_monitor",
+      output_name: "run",
+      output_dir: "/tmp/out",
+      mcap_decoders: null,
+      rrd_optimize_profile: "none",
+      artifact_validation: "basic",
+      catalog_registration: null
+    });
+    fetchMock.mockRestore();
+  });
+
   it("posts advanced build options", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(

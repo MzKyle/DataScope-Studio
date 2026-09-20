@@ -82,6 +82,7 @@ type DashboardSectionProps = {
   onStorageModeChange: (value: "copy" | "reference") => void;
   onCsvHeaderModeChange: (value: "auto" | "header" | "no_header") => void;
   onCsvColumnNamesChange: (value: string) => void;
+  onProjectImport: () => void;
   onRefresh: () => void;
   onExportProject: () => void;
   onOpenPackage: () => void;
@@ -98,47 +99,53 @@ export function DashboardSection(props: DashboardSectionProps) {
     ? props.diagnosticReport.summary.severity
     : props.t("notRun");
   const nextAction = !props.selectedProject
-    ? props.t("nextCreateProject")
+    ? props.t("nextQuickInspect")
     : props.recordings.length
       ? props.t("nextReviewRecording")
-      : props.t("nextImportSource");
+      : props.t("nextQuickInspect");
 
   return (
     <section className="dashboard" id="dashboard">
       <div className="hero-card project-summary-card">
         <div className="project-summary-main">
           <div>
-            <span className="eyebrow">{props.t("currentProjectEyebrow")}</span>
-            <h2>{props.selectedProject?.name ?? props.t("selectOrCreateProject")}</h2>
-            <p>
-              {props.selectedProject
-                ? props.t("projectReadyDescription")
-                : props.t("projectEmptyDescription")}
-            </p>
+            <span className="eyebrow">{props.t("quickInspectEyebrow")}</span>
+            <h2>{props.t("quickInspectHeroTitle")}</h2>
+            <p>{props.t("quickInspectHeroSubtitle")}</p>
           </div>
           <div className="hero-actions responsive-actions">
             <button
               className="button-primary"
               type="button"
+              onClick={() => props.onChooseSource("file")}
+              disabled={props.isBusy}
+            >
+              <FileSearch size={16} />
+              {props.t("chooseFile")}
+            </button>
+            <button
+              type="button"
+              onClick={() => props.onChooseSource("folder")}
+              disabled={props.isBusy}
+            >
+              <FolderOpen size={16} />
+              {props.t("chooseFolder")}
+            </button>
+            <button
+              type="button"
               onClick={props.onImport}
               disabled={props.isBusy || !props.sourcePath.trim()}
             >
               <FileSearch size={16} />
-              {props.t("inspectSource")}
-            </button>
-            <button
-              type="button"
-              onClick={props.onOpenLatest}
-              disabled={(!props.buildResult && !props.latestRecording) || props.isLatestRecordingOpening}
-            >
-              <ExternalLink size={16} />
-              {props.t("openInRerun")}
+              {props.t("quickInspectStart")}
             </button>
           </div>
           <div className="project-meta-list">
             <span className="project-meta-item">
               <FolderOpen size={14} />
-              {props.selectedProject?.workspace_path ?? props.t("createProject")}
+              {props.selectedProject
+                ? `${props.t("currentProject")}: ${props.selectedProject.name}`
+                : props.t("projectOptional")}
             </span>
             <span className="project-meta-item">
               <ListChecks size={14} />
@@ -166,7 +173,7 @@ export function DashboardSection(props: DashboardSectionProps) {
           <NextAction
             eyebrow={props.t("nextStep")}
             title={nextAction}
-            text={props.t("dashboardNextStepHint")}
+            text={props.t("quickInspectNextStepHint")}
           />
           <ProjectVisual
             recordings={props.recordings.length}
@@ -179,42 +186,26 @@ export function DashboardSection(props: DashboardSectionProps) {
       <section className="card import-card">
         <CardHeader
           icon={<Upload size={18} />}
-          title={props.t("importData")}
-          subtitle={props.t("importDataSubtitle")}
+          title={props.t("quickInspectDropTitle")}
+          subtitle={props.t("quickInspectDropSubtitle")}
         />
         <div className="source-picker-toolbar responsive-actions">
-          <div className="source-picker-wrap">
-            <button
-              className="button-primary source-picker-button"
-              disabled={props.isBusy}
-              onClick={props.onToggleSourcePicker}
-              type="button"
-            >
-              <FolderOpen size={16} />
-              {props.t("chooseSource")}
-            </button>
-            {props.sourcePickerOpen && (
-              <div className="source-picker-popover" role="menu">
-                <button type="button" onClick={() => props.onChooseSource("file")}>
-                  <FileSearch size={16} />
-                  <span>
-                    <strong>{props.t("selectSourceFile")}</strong>
-                    <small>{props.t("selectSourceFileHint")}</small>
-                  </span>
-                </button>
-                <button type="button" onClick={() => props.onChooseSource("folder")}>
-                  <FolderOpen size={16} />
-                  <span>
-                    <strong>{props.t("selectSourceFolder")}</strong>
-                    <small>{props.t("selectSourceFolderHint")}</small>
-                  </span>
-                </button>
-              </div>
-            )}
-          </div>
-          <button disabled={props.isBusy} onClick={props.onImport} type="button">
+          <button
+            className="button-primary"
+            disabled={props.isBusy}
+            onClick={() => props.onChooseSource("file")}
+            type="button"
+          >
             <FileSearch size={16} />
-            {props.t("inspectSource")}
+            {props.t("chooseFile")}
+          </button>
+          <button disabled={props.isBusy} onClick={() => props.onChooseSource("folder")} type="button">
+            <FolderOpen size={16} />
+            {props.t("chooseFolder")}
+          </button>
+          <button disabled={props.isBusy || !props.sourcePath.trim()} onClick={props.onImport} type="button">
+            <FileSearch size={16} />
+            {props.t("quickInspectStart")}
           </button>
         </div>
         <div
@@ -291,12 +282,19 @@ export function DashboardSection(props: DashboardSectionProps) {
         <CardHeader
           icon={<Zap size={18} />}
           title={props.t("workspaceActions")}
-          subtitle={props.t("workspaceActionsSubtitle")}
+          subtitle={props.t("projectWorkspaceSubtitle")}
         />
         <div className="quick-actions">
           <button onClick={props.onRefresh} disabled={!props.selectedProject || props.isBusy}>
             <Activity size={16} />
             {props.t("refreshRuns")}
+          </button>
+          <button
+            onClick={props.onProjectImport}
+            disabled={!props.selectedProject || props.isBusy || !props.sourcePath.trim()}
+          >
+            <Upload size={16} />
+            {props.t("importIntoProject")}
           </button>
           <button onClick={props.onExportProject} disabled={!props.selectedProject || props.isBusy}>
             <Download size={16} />
@@ -377,9 +375,13 @@ export function DashboardSection(props: DashboardSectionProps) {
             title={props.t("noRecordingsYet")}
             text={props.t("recordingsWillAppear")}
             action={
-              <button type="button" onClick={props.onToggleSourcePicker} disabled={props.isBusy}>
-                <FolderOpen size={16} />
-                {props.t("chooseSource")}
+              <button
+                type="button"
+                onClick={() => props.onChooseSource("file")}
+                disabled={props.isBusy}
+              >
+                <FileSearch size={16} />
+                {props.t("chooseFile")}
               </button>
             }
           />

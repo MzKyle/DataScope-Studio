@@ -11,12 +11,14 @@ afterEach(() => cleanup());
 const t = createTranslator("en");
 
 describe("DashboardSection", () => {
-  it("guides the user to create or select a project when none is active", () => {
+  it("shows quick inspect as the primary entry when no project is active", () => {
     renderSection();
 
-    expect(screen.getByText("Select or create a project")).toBeInTheDocument();
-    expect(screen.getByText("Create or select a project")).toBeInTheDocument();
-    expect(screen.getByText("Import Data")).toBeInTheDocument();
+    expect(screen.getByText("Inspect robot data")).toBeInTheDocument();
+    expect(screen.getByText("Quick inspect robot data")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Choose File" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: "Choose Folder" }).length).toBeGreaterThan(0);
+    expect(screen.getByText("Drop a file or folder here")).toBeInTheDocument();
     expect(screen.getByText("Recent Runs")).toBeInTheDocument();
     expect(screen.getByText("No latest run")).toBeInTheDocument();
     expect(screen.getByText("Recordings created from imports will appear here.")).toBeInTheDocument();
@@ -25,16 +27,16 @@ describe("DashboardSection", () => {
       .forEach((button) => expect(button).toBeDisabled());
   });
 
-  it("enables import actions when a source path is ready", () => {
+  it("enables quick inspect actions when a source path is ready", () => {
     renderSection({
       selectedProject: project,
       sourcePath: "/tmp/run.csv"
     });
 
-    expect(screen.getByText("Import a data source")).toBeInTheDocument();
+    expect(screen.getByText("Quick inspect robot data")).toBeInTheDocument();
     expect(
       screen
-        .getAllByRole("button", { name: "Import & Auto Map" })
+        .getAllByRole("button", { name: "Inspect" })
         .some((button) => !button.hasAttribute("disabled"))
     ).toBe(true);
   });
@@ -64,11 +66,12 @@ describe("DashboardSection", () => {
       jobCount: 2
     });
 
-    expect(screen.getByText("Robot Run")).toBeInTheDocument();
+    expect(screen.getByText("Current Project: Robot Run")).toBeInTheDocument();
     expect(screen.getByText("Latest Run: run")).toBeInTheDocument();
-    expect(screen.getByText("Import Data")).toBeInTheDocument();
+    expect(screen.getByText("Drop a file or folder here")).toBeInTheDocument();
     expect(screen.getByText("Recent Runs")).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "Import & Auto Map" })[0]).toBeEnabled();
+    expect(screen.getAllByRole("button", { name: "Inspect" })[0]).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Import into Project" })).toBeEnabled();
   });
 
   it("uses row-level opening state for recent recording actions", () => {
@@ -129,6 +132,7 @@ function baseProps(
     onStorageModeChange: vi.fn(),
     onCsvHeaderModeChange: vi.fn(),
     onCsvColumnNamesChange: vi.fn(),
+    onProjectImport: vi.fn(),
     onRefresh: vi.fn(),
     onExportProject: vi.fn(),
     onOpenPackage: vi.fn(),

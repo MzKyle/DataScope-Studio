@@ -18,17 +18,15 @@ visualization script.
    [GitHub Releases](https://github.com/MzKyle/DataScope-Studio/releases).
 2. Launch **DataScope Studio**. The installed app starts the local API, Python runtime,
    and Rerun integration automatically.
-3. On **Dashboard**, create a project or select an existing one.
-4. Choose a data source by selecting a file or folder. Use **Copy into project** when
-   you want a self-contained local project, or **Reference original path** when the
-   source data should stay in place.
-5. Select **Import & Auto Map**. DataScope inspects the source, recommends a template,
-   and creates a draft mapping.
-6. In **Import Workflow**, check **Schema Inspector** and **Mapping Editor**. Adjust
-   the time field, time unit, semantic type, entity path, or template if needed.
-7. Select **Validate Mapping**, then **Confirm Mapping**.
-8. Enter an output name and select **Build .rrd + .rbl**.
-9. Select **Open in Rerun** to inspect the generated recording.
+3. On **Dashboard**, use **Quick Inspect**: drop a file or folder, or choose one from
+   the system picker. No project setup is required for this first pass.
+4. DataScope inspects the source, recommends a visual template, creates a draft mapping,
+   validates it, and shows **Ready**, **Review**, or **Blocked** mapping readiness.
+5. If the mapping is ready, select **Generate Visualization**. If review or fixes are
+   needed, expand the advanced mapping editor, apply repairs, and validate again.
+6. Select **Open in Rerun** to inspect the generated recording.
+7. Create or open a **Project** when you want a persistent workspace for saved runs,
+   project packages, batch imports, query history, tags, and exports.
 
 The installer includes the desktop application, local API, Python runtime, DataScope
 packages, and Rerun. Python, Node.js, npm, and Rerun do not need to be installed
@@ -39,6 +37,7 @@ separately for normal desktop use.
 - Inspect heterogeneous data in one repeatable workflow.
 - Automatically map timestamps, scalar values, states, logs, images, detections, and
   point clouds.
+- Quickly inspect one local file or folder without adding a project to the workspace list.
 - Generate reusable Rerun `.rrd` recordings and `.rbl` blueprints.
 - Organize projects, sources, mappings, recordings, jobs, tags, parameters, and query
   exports locally.
@@ -56,6 +55,8 @@ separately for normal desktop use.
 - **Import & Auto Map** uses one import workflow request for adding the source, inspecting
   it, selecting templates, saving a draft mapping, previewing rows, and validating the
   mapping.
+- **Quick Inspect** reuses the same import, mapping, validation, and conversion workflow
+  inside an isolated temporary workspace, so the formal project list stays clean.
 - Conversion jobs throttle progress writes to SQLite so large conversions do not spend
   excessive time updating job metadata.
 - Query templates prefer the lightweight query index created during conversion and stream
@@ -112,10 +113,10 @@ sudo apt install ./DataScope-Studio-v0.3.1-linux-amd64.deb
 
 ## Desktop Workflow
 
-- **Dashboard:** create projects, import a source, open project packages, and review
-  recent recordings.
-- **Import Workflow:** choose a recommended template, edit or save mapping templates,
-  validate mappings, build Rerun artifacts, and open them in Rerun.
+- **Dashboard:** quick-inspect a file or folder first, then open project packages or
+  review recent recordings when working in a project.
+- **Import Workflow:** review mapping readiness, expand advanced mapping only when
+  needed, generate Rerun artifacts, and open them in Rerun.
 - **Recordings & Queries:** reopen recordings, add tags, run query templates, export
   query results, compare scalar metrics, and inspect background jobs.
 - **Diagnostics:** run offline robot health reports across all recordings or selected

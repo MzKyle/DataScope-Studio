@@ -10,6 +10,7 @@ from datascope_core.job_supervisor import JobSupervisor
 from datascope_core.rerun_artifacts import LOCAL_CATALOG_URL
 from datascope_core.rerun_cli import rerun_command, rerun_subprocess_env
 from datascope_core.workspace import Workspace, default_workspace_path
+from datascope_api.quick_inspect import QuickInspectSessionManager
 
 
 logger = logging.getLogger("uvicorn.error.datascope.services")
@@ -21,6 +22,8 @@ class AppServices:
         self._root: Path | None = None
         self._workspace: Workspace | None = None
         self._supervisor: JobSupervisor | None = None
+        self._quick_root: Path | None = None
+        self._quick_inspect: QuickInspectSessionManager | None = None
         self._catalog_process: subprocess.Popen[bytes] | None = None
         self._max_workers = int(os.environ.get("DATASCOPE_MAX_WORKERS", "1"))
         self._warmup_thread: threading.Thread | None = None
@@ -42,7 +45,24 @@ class AppServices:
                 self._supervisor.start()
             return self._supervisor
 
+    def quick_inspect(self) -> QuickInspectSessionManager:
+        root = Path(
+            os.environ.get("DATASCOPE_QUICK_INSPECT_ROOT")
+            or (default_workspace_path() / "quick-inspect")
+        )
+        with self._lock:
+            if self._quick_inspect is None or self._quick_root != root:
+                if self._quick_inspect is not None:
+                    self._quick_inspect.cleanup()
+                self._quick_root = root
+                self._quick_inspect = QuickInspectSessionManager(root)
+            return self._quick_inspect
+
+    def cleanup_quick_inspect_sessions(self) -> None:
+        self.quick_inspect().cleanup_stale()
+
     def warm_workspace(self) -> None:
+        self.cleanup_quick_inspect_sessions()
         with self._lock:
             if self._warmup_thread is not None and self._warmup_thread.is_alive():
                 return
@@ -105,9 +125,13 @@ class AppServices:
             except subprocess.TimeoutExpired:
                 self._catalog_process.kill()
                 self._catalog_process.wait(timeout=3)
+        if self._quick_inspect is not None:
+            self._quick_inspect.cleanup()
         self._supervisor = None
         self._catalog_process = None
         self._workspace = None
+        self._quick_inspect = None
+        self._quick_root = None
 
 
 services = AppServices()

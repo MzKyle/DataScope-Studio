@@ -51,8 +51,10 @@ import type {
 type Translate = (key: TranslationKey) => string;
 type MappingStreamKey = "entity_path" | "semantic_type" | "source_fields" | "enabled";
 type TimelineKey = "source_field" | "unit" | "sort";
+type WorkflowMode = "project" | "quick-inspect";
 
 type ImportWorkflowSectionProps = {
+  mode?: WorkflowMode;
   selectedTemplateId: string;
   templateOptions: TemplateMatch[];
   selectedMappingTemplateId: string;
@@ -125,6 +127,7 @@ type ImportWorkflowSectionProps = {
 };
 
 export function ImportWorkflowSection({
+  mode = "project",
   selectedTemplateId,
   templateOptions,
   selectedMappingTemplateId,
@@ -195,6 +198,8 @@ export function ImportWorkflowSection({
   const [advancedMappingOpen, setAdvancedMappingOpen] = useState(false);
   const buildJobActive = isActiveBuildJob(buildJob);
   const buildControlsLocked = isBusy || isBuildSubmitting || buildJobActive;
+  const isQuickInspect = mode === "quick-inspect";
+  const canShowProjectMappingTools = mode === "project";
   const sourceUsesMcapImporter = source?.type === "mcap" || source?.type === "ros2_db3";
   const mappingReadiness = useMemo(
     () => deriveMappingReadiness({ mapping, streams, validation: mappingValidation }),
@@ -230,8 +235,8 @@ export function ImportWorkflowSection({
     <section className="section-stack" id="import">
       <SectionTitle
         eyebrow={t("workspace")}
-        title={t("importWorkflow")}
-        subtitle={t("importWorkflowSubtitle")}
+        title={isQuickInspect ? t("quickInspect") : t("importWorkflow")}
+        subtitle={isQuickInspect ? t("quickInspectWorkflowSubtitle") : t("importWorkflowSubtitle")}
         action={
           <div className="template-control">
             <Image size={16} />
@@ -299,46 +304,6 @@ export function ImportWorkflowSection({
 
         <section className="card">
           <CardHeader icon={<Save size={18} />} title={t("mappingEditor")} />
-          <div className="mapping-template-toolbar inline-panel">
-            <div className="inline-panel-title">
-              <strong>{t("mappingTemplates")}</strong>
-              <span>{t("mappingTemplatesSubtitle")}</span>
-            </div>
-            <div className="inline-actions">
-              <select
-                aria-label={t("mappingTemplates")}
-                value={selectedMappingTemplateId}
-                onChange={(event) => onSelectedMappingTemplateChange(event.target.value)}
-              >
-                <option value="">{t("automaticMapping")}</option>
-                {mappingTemplates.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name} ({item.source_family})
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={onApplyMappingTemplate}
-                disabled={!source || !selectedMappingTemplateId || isBusy}
-              >
-                {t("applyMappingTemplate")}
-              </button>
-              <input
-                aria-label={t("mappingTemplateName")}
-                value={mappingTemplateName}
-                onChange={(event) => onMappingTemplateNameChange(event.target.value)}
-                placeholder={t("mappingTemplateName")}
-              />
-              <button
-                onClick={onCreateMappingTemplate}
-                disabled={!mapping || !mappingTemplateName.trim() || isBusy}
-              >
-                <Save size={16} />
-                {t("saveAsMappingTemplate")}
-              </button>
-            </div>
-            <InlineError error={errors.mappingToolbar} t={t} />
-          </div>
           {mapping ? (
             <>
               <div className="mapping-readiness-panel">
@@ -351,11 +316,25 @@ export function ImportWorkflowSection({
                       <button
                         className="button-primary"
                         type="button"
-                        onClick={onConfirmMapping}
-                        disabled={isBusy || mappingConfirmed}
+                        onClick={
+                          isQuickInspect || mappingConfirmed
+                            ? onBuildRecording
+                            : onConfirmMapping
+                        }
+                        disabled={
+                          isQuickInspect || mappingConfirmed
+                            ? buildControlsLocked
+                            : isBusy
+                        }
                       >
-                        <CheckCircle2 size={16} />
-                        {mappingConfirmed ? t("mappingConfirmed") : t("continueMapping")}
+                        {isQuickInspect || mappingConfirmed ? (
+                          <Play size={16} />
+                        ) : (
+                          <CheckCircle2 size={16} />
+                        )}
+                        {isQuickInspect || mappingConfirmed
+                          ? t("generateVisualization")
+                          : t("continueMapping")}
                       </button>
                     ) : mappingReadiness.state === "review" ? (
                       <button
@@ -433,6 +412,48 @@ export function ImportWorkflowSection({
               </div>
               {showAdvancedMapping && (
                 <div className="mapping-advanced-panel">
+              {canShowProjectMappingTools && (
+                <div className="mapping-template-toolbar inline-panel">
+                  <div className="inline-panel-title">
+                    <strong>{t("mappingTemplates")}</strong>
+                    <span>{t("mappingTemplatesSubtitle")}</span>
+                  </div>
+                  <div className="inline-actions">
+                    <select
+                      aria-label={t("mappingTemplates")}
+                      value={selectedMappingTemplateId}
+                      onChange={(event) => onSelectedMappingTemplateChange(event.target.value)}
+                    >
+                      <option value="">{t("automaticMapping")}</option>
+                      {mappingTemplates.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name} ({item.source_family})
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={onApplyMappingTemplate}
+                      disabled={!source || !selectedMappingTemplateId || isBusy}
+                    >
+                      {t("applyMappingTemplate")}
+                    </button>
+                    <input
+                      aria-label={t("mappingTemplateName")}
+                      value={mappingTemplateName}
+                      onChange={(event) => onMappingTemplateNameChange(event.target.value)}
+                      placeholder={t("mappingTemplateName")}
+                    />
+                    <button
+                      onClick={onCreateMappingTemplate}
+                      disabled={!mapping || !mappingTemplateName.trim() || isBusy}
+                    >
+                      <Save size={16} />
+                      {t("saveAsMappingTemplate")}
+                    </button>
+                  </div>
+                  <InlineError error={errors.mappingToolbar} t={t} />
+                </div>
+              )}
               <div className="mapping-meta">
                 <span>{mapping.mapping.app_id}</span>
                 <span>
@@ -606,6 +627,7 @@ export function ImportWorkflowSection({
         </section>
       </div>
 
+      {mode === "project" && (
       <section className="card">
         <CardHeader
           icon={<Activity size={18} />}
@@ -674,22 +696,25 @@ export function ImportWorkflowSection({
           <EmptyState text={t("mappingDiffEmpty")} />
         )}
       </section>
+      )}
 
       <div className="two-column balanced">
         <section className="card">
           <CardHeader icon={<Play size={18} />} title={t("conversionJob")} />
           <div className="build-row">
-            <input
-              ref={outputNameRef}
-              aria-describedby={errors.build ? "build-error" : undefined}
-              aria-invalid={Boolean(errors.build)}
-              value={outputName}
-              onChange={(event) => onOutputNameChange(event.target.value)}
-              disabled={buildControlsLocked}
-            />
+            {!isQuickInspect && (
+              <input
+                ref={outputNameRef}
+                aria-describedby={errors.build ? "build-error" : undefined}
+                aria-invalid={Boolean(errors.build)}
+                value={outputName}
+                onChange={(event) => onOutputNameChange(event.target.value)}
+                disabled={buildControlsLocked}
+              />
+            )}
             <button
               className="button-primary"
-              disabled={buildControlsLocked || !mappingConfirmed}
+              disabled={buildControlsLocked || (!isQuickInspect && !mappingConfirmed)}
               onClick={onBuildRecording}
             >
               {isBuildSubmitting || buildJobActive ? (
@@ -701,7 +726,7 @@ export function ImportWorkflowSection({
                 ? t("buildSubmitting")
                 : buildJobActive
                   ? `${t("buildRunning")} ${buildPercent}%`
-                  : t("buildArtifacts")}
+                  : t("generateVisualization")}
             </button>
             <button
               disabled={!buildResult || buildControlsLocked}
@@ -711,6 +736,7 @@ export function ImportWorkflowSection({
               {t("openInRerun")}
             </button>
           </div>
+          {!isQuickInspect && (
           <div className="artifact-output-control">
             <label>
               <span>{t("artifactOutputPath")}</span>
@@ -730,7 +756,8 @@ export function ImportWorkflowSection({
               {t("selectArtifactFolder")}
             </button>
           </div>
-          <p className="field-hint">{t("artifactOutputPathHint")}</p>
+          )}
+          {!isQuickInspect && <p className="field-hint">{t("artifactOutputPathHint")}</p>}
           <details
             className="advanced-build-details"
             open={advancedBuildOpen}
@@ -741,6 +768,41 @@ export function ImportWorkflowSection({
               <span>{t("advancedBuildOptions")}</span>
             </summary>
             <div className="advanced-build-options">
+              {isQuickInspect && (
+                <>
+                  <label>
+                    <span>{t("outputName")}</span>
+                    <input
+                      ref={outputNameRef}
+                      aria-describedby={errors.build ? "build-error" : undefined}
+                      aria-invalid={Boolean(errors.build)}
+                      value={outputName}
+                      onChange={(event) => onOutputNameChange(event.target.value)}
+                      disabled={buildControlsLocked}
+                    />
+                  </label>
+                  <div className="artifact-output-control">
+                    <label>
+                      <span>{t("artifactOutputPath")}</span>
+                      <input
+                        placeholder={t("artifactOutputPathPlaceholder")}
+                        value={artifactOutputDir}
+                        onChange={(event) => onArtifactOutputDirChange(event.target.value)}
+                        disabled={buildControlsLocked}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={onChooseArtifactOutputFolder}
+                      disabled={buildControlsLocked}
+                    >
+                      <FolderOpen size={16} />
+                      {t("selectArtifactFolder")}
+                    </button>
+                  </div>
+                  <p className="field-hint">{t("artifactOutputPathHint")}</p>
+                </>
+              )}
               {sourceUsesMcapImporter && (
                 <label>
                   <span>{t("mcapDecoders")}</span>
@@ -833,9 +895,14 @@ export function ImportWorkflowSection({
             <>
               <ResultBanner
                 tone="success"
-                title={t("buildCompleted")}
-                text={t("buildCompletedHint")}
+                title={t("visualizationReady")}
+                text={t("visualizationReadyHint")}
               />
+              <details className="advanced-build-details">
+                <summary>
+                  <SlidersHorizontal size={16} />
+                  <span>{t("advancedDetails")}</span>
+                </summary>
               <dl className="artifact-list">
                 <div>
                   <dt>{t("recording")}</dt>
@@ -885,6 +952,7 @@ export function ImportWorkflowSection({
                   </dd>
                 </div>
               </dl>
+              </details>
             </>
           ) : !isBuildSubmitting && !buildJob ? (
             <EmptyState title={t("buildEmptyTitle")} text={t("buildEmpty")} />

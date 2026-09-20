@@ -24,6 +24,7 @@ from datascope_core.workspace import (
     Workspace,
 )
 from datascope_api.services import services
+from datascope_api.workflows import run_import_workflow
 
 
 logger = logging.getLogger("uvicorn.error.datascope")
@@ -90,6 +91,16 @@ class BuildRecordingRequest(BaseModel):
     project_id: str
     source_id: str
     mapping_id: str | None = None
+    template_id: str = "sensor_monitor"
+    output_name: str | None = None
+    output_dir: str | None = None
+    mcap_decoders: list[str] | None = None
+    rrd_optimize_profile: str = "none"
+    artifact_validation: str = "basic"
+    catalog_registration: dict[str, Any] | None = None
+
+
+class QuickInspectBuildRequest(BaseModel):
     template_id: str = "sensor_monitor"
     output_name: str | None = None
     output_dir: str | None = None
@@ -307,43 +318,107 @@ def create_app() -> FastAPI:
         project_id: str,
         payload: SourceImportWorkflowRequest,
     ) -> dict[str, Any]:
-        def run() -> dict[str, Any]:
-            workspace = _workspace()
-            added = workspace.add_source(
+        return _guard(
+            lambda: run_import_workflow(
+                _workspace(),
                 project_id,
-                payload.path,
+                path=payload.path,
                 storage_mode=payload.storage_mode,
                 import_options=payload.import_options,
+                template_id=payload.template_id,
             )
-            inspection = workspace.inspect_source(added["id"])
-            template_matches = workspace.suggest_templates(added["id"])
-            selected_template_id = (
-                payload.template_id
-                or (
-                    str(template_matches[0]["template_id"])
-                    if template_matches
-                    else "sensor_monitor"
-                )
-            )
-            spec = workspace.suggest_mapping(
-                added["id"],
-                template_id=selected_template_id,
-            )
-            saved_mapping = workspace.save_mapping(project_id, added["id"], spec)
-            mapping_preview = workspace.mapping_preview(added["id"], spec)
-            return {
-                "source": inspection["source"],
-                "streams": inspection["streams"],
-                "template_matches": template_matches,
-                "template_id": selected_template_id,
-                "mapping": {"mapping": mapping_preview["mapping"]},
-                "saved_mapping": saved_mapping,
-                "preview": mapping_preview["preview"],
-                "schema_profile": mapping_preview["schema_profile"],
-                "validation": mapping_preview["validation"],
-            }
+        )
 
-        return _guard(run)
+    @app.post("/api/quick-inspect")
+    def start_quick_inspect(payload: SourceImportWorkflowRequest) -> dict[str, Any]:
+        return _guard(
+            lambda: services.quick_inspect().start(
+                path=payload.path,
+                storage_mode=payload.storage_mode,
+                import_options=payload.import_options,
+                template_id=payload.template_id,
+            )
+        )
+
+    @app.post("/api/quick-inspect/{session_id}/mapping")
+    def save_quick_inspect_mapping(
+        session_id: str,
+        payload: MappingCreate,
+    ) -> dict[str, Any]:
+        return _guard(
+            lambda: services.quick_inspect().save_mapping(
+                session_id,
+                mapping=payload.mapping,
+                confirmed=payload.confirmed,
+            )
+        )
+
+    @app.post("/api/quick-inspect/{session_id}/mapping/validate")
+    def validate_quick_inspect_mapping(
+        session_id: str,
+        payload: MappingCreate,
+    ) -> dict[str, Any]:
+        return _guard(
+            lambda: services.quick_inspect().validate_mapping(
+                session_id,
+                mapping=payload.mapping,
+            )
+        )
+
+    @app.post("/api/quick-inspect/{session_id}/mapping/confirm")
+    def confirm_quick_inspect_mapping(
+        session_id: str,
+        payload: MappingCreate,
+    ) -> dict[str, Any]:
+        return _guard(
+            lambda: services.quick_inspect().confirm_mapping(
+                session_id,
+                mapping=payload.mapping,
+            )
+        )
+
+    @app.post("/api/quick-inspect/{session_id}/templates/{template_id}/suggest")
+    def suggest_quick_inspect_mapping(
+        session_id: str,
+        template_id: str,
+    ) -> dict[str, Any]:
+        return _guard(
+            lambda: services.quick_inspect().suggest_template_mapping(
+                session_id,
+                template_id=template_id,
+            )
+        )
+
+    @app.post("/api/quick-inspect/{session_id}/build")
+    def build_quick_inspect(
+        session_id: str,
+        payload: QuickInspectBuildRequest,
+    ) -> dict[str, Any]:
+        def build() -> dict[str, Any]:
+            catalog_registration = dict(payload.catalog_registration or {})
+            if catalog_registration.get("enabled") and catalog_registration.get("managed_local"):
+                if not rerun_features().get("catalog"):
+                    raise ValueError(
+                        "Rerun Catalog registration requires rerun-sdk 0.33+ "
+                        "on a supported platform."
+                    )
+                catalog_registration["server_url"] = services.ensure_local_catalog_server()
+            return services.quick_inspect().build(
+                session_id,
+                output_name=payload.output_name,
+                template_id=payload.template_id,
+                output_dir=payload.output_dir,
+                mcap_decoders=payload.mcap_decoders,
+                rrd_optimize_profile=payload.rrd_optimize_profile,
+                artifact_validation=payload.artifact_validation,
+                catalog_registration=catalog_registration or payload.catalog_registration,
+            )
+
+        return _guard(build)
+
+    @app.delete("/api/quick-inspect/{session_id}")
+    def delete_quick_inspect(session_id: str) -> dict[str, str]:
+        return _guard(lambda: services.quick_inspect().clear(session_id))
 
     @app.post("/api/projects/{project_id}/estimates/source-import")
     def estimate_source_import(

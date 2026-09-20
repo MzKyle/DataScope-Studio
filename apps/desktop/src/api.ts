@@ -29,6 +29,7 @@ import type {
   StreamInfo,
   BatchResult,
   BatchSummary,
+  BuildResult,
   TemplateMatch,
   TemplateRegistryItem
 } from "./types";
@@ -50,7 +51,7 @@ type JobListOptions = {
   limit?: number;
 };
 
-type ImportWorkflowResult = {
+export type ImportWorkflowResult = {
   source: Source;
   streams: StreamInfo[];
   template_matches: TemplateMatch[];
@@ -61,6 +62,15 @@ type ImportWorkflowResult = {
   schema_profile: SchemaProfile;
   validation: MappingValidation;
 };
+
+export type QuickInspectResult = ImportWorkflowResult & {
+  session_id: string;
+};
+
+export type QuickInspectTemplateResult = Pick<
+  ImportWorkflowResult,
+  "template_id" | "mapping" | "saved_mapping" | "preview" | "schema_profile" | "validation"
+>;
 
 export type ApiStatus = {
   status: string;
@@ -284,6 +294,76 @@ export const api = {
         import_options: importOptions,
         template_id: templateId || null
       })
+    }),
+  quickInspect: (
+    path: string,
+    storageMode: "copy" | "reference" = "copy",
+    importOptions: Record<string, unknown> = {},
+    templateId?: string
+  ) =>
+    request<QuickInspectResult>("/api/quick-inspect", {
+      method: "POST",
+      body: JSON.stringify({
+        path,
+        storage_mode: storageMode,
+        import_options: importOptions,
+        template_id: templateId || null
+      })
+    }),
+  saveQuickInspectMapping: (
+    sessionId: string,
+    mapping: MappingPayload["mapping"],
+    confirmed = false
+  ) =>
+    request<{ id: string; path: string }>(`/api/quick-inspect/${sessionId}/mapping`, {
+      method: "POST",
+      body: JSON.stringify({ mapping, confirmed })
+    }),
+  validateQuickInspectMapping: (sessionId: string, mapping: MappingPayload["mapping"]) =>
+    request<MappingValidation>(`/api/quick-inspect/${sessionId}/mapping/validate`, {
+      method: "POST",
+      body: JSON.stringify({ mapping })
+    }),
+  confirmQuickInspectMapping: (sessionId: string, mapping?: MappingPayload["mapping"]) =>
+    request<{ mapping: { id: string; path: string }; validation: MappingValidation }>(
+      `/api/quick-inspect/${sessionId}/mapping/confirm`,
+      {
+        method: "POST",
+        body: JSON.stringify({ mapping: mapping ?? null })
+      }
+    ),
+  suggestQuickInspectTemplate: (sessionId: string, templateId: string) =>
+    request<QuickInspectTemplateResult>(
+      `/api/quick-inspect/${sessionId}/templates/${encodeURIComponent(templateId)}/suggest`,
+      { method: "POST" }
+    ),
+  buildQuickInspect: (
+    sessionId: string,
+    outputName: string,
+    templateId: string,
+    outputDir?: string,
+    options?: {
+      mcap_decoders?: string[] | null;
+      rrd_optimize_profile?: string;
+      artifact_validation?: string;
+      catalog_registration?: Record<string, unknown> | null;
+    }
+  ) =>
+    request<BuildResult>(`/api/quick-inspect/${sessionId}/build`, {
+      method: "POST",
+      body: JSON.stringify({
+        template_id: templateId,
+        output_name: outputName,
+        output_dir: outputDir || null,
+        mcap_decoders: options?.mcap_decoders ?? null,
+        rrd_optimize_profile: options?.rrd_optimize_profile ?? "none",
+        artifact_validation: options?.artifact_validation ?? "basic",
+        catalog_registration: options?.catalog_registration ?? null
+      })
+    }),
+  clearQuickInspect: (sessionId: string) =>
+    request<{ deleted: string }>(`/api/quick-inspect/${sessionId}`, {
+      method: "DELETE"
     }),
   estimateSourceImport: (
     projectId: string,
