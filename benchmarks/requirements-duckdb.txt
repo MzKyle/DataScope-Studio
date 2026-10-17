@@ -1,0 +1,3 @@
+-r requirements.txt
+# Optional independent PoC only, never a production dependency.
+duckdb>=1.4,<2

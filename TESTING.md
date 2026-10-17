@@ -1,5 +1,17 @@
 # DataScope Studio 测试验收方法
 
+Query Storage Benchmark 是独立的 opt-in 工作负载，普通 `python -m pytest -q`
+不会生成 Benchmark 数据。验证测量工具本身可执行
+`python -m pytest -q benchmarks/test_benchmark.py`（仅微型数据集）；运行真实规模
+测量请按 [benchmarks/README.md](benchmarks/README.md) 使用 Benchmark CLI。
+Benchmark 的 `psutil` 依赖独立定义在 `benchmarks/requirements.txt`，不属于 core 依赖。
+Phase C 四后端对照使用 `benchmarks/backend_comparison.py`；同一 opt-in 测试命令
+还验证 typed SQLite 的四种索引、SQL 下推、字典状态、2^53 以上整数、七组配置的结果等价、恢复运行和异常清理。
+Smoke/Small/Medium 的正式测量依然不会由普通 pytest 自动触发。
+Phase C2a 的生产 Custom Query 语义回归由普通 pytest 收集；只读新旧路径性能对照通过
+`benchmarks/custom_query_pushdown.py --baseline <retained-report.json>` 单独运行。
+数值/文本 residual filter 与 SQL LIMIT 的边界、Unicode 子串匹配和 API 组合查询均有覆盖。
+
 本文档定义 DataScope Studio 前端与后端的测试验收标准。默认每次功能验收先执行 PR 快速门；发布前再执行 Release 严格门和安装包冒烟。
 
 ## 1. 验收分层

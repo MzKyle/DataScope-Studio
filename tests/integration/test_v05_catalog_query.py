@@ -170,6 +170,16 @@ def test_api_recording_patch_query_and_export(tmp_path: Path, monkeypatch) -> No
     )
     assert custom_response.status_code == 200
     assert len(custom_response.json()["rows"]) == 2
+    combined_response = client.post(
+        f"/api/projects/{project['id']}/query/custom",
+        json={"recording_ids": [result["recording_id"]], "semantic_types": ["scalar", "scalar_group"],
+              "filters": {"key": " BATTERY ", "entity_path": "battery", "time_start": 0.1,
+                          "time_end": 0.3, "operator": "lt", "value": "0.925"}, "limit": 1},
+    )
+    assert combined_response.status_code == 200
+    assert [(row["time"], row["value"]) for row in combined_response.json()["rows"]] == [(0.2, 0.92)]
+    invalid_limit = client.post(f"/api/projects/{project['id']}/query/custom", json={"limit": 0})
+    assert invalid_limit.status_code == 422
 
 
 def test_cli_recordings_tag_query_and_export(tmp_path: Path, monkeypatch) -> None:

@@ -1,0 +1,689 @@
+{
+  "run_id": "benchmark_c2a_20261017_024630_17ee87cc",
+  "started_at": "2026-10-17T02:46:30.146521+00:00",
+  "status": "succeeded",
+  "environment": {
+    "platform": "Windows-10-10.0.26300-SP0",
+    "python": "3.11.5 (tags/v3.11.5:cce6ba9, Aug 24 2023, 14:38:34) [MSC v.1936 64 bit (AMD64)]",
+    "cpu": "13th Gen Intel(R) Core(TM) i9-13900HX",
+    "logical_cpus": 32,
+    "physical_cpus": 24,
+    "memory_gb": 16.90710016,
+    "available_memory_gb_at_start": 6.058344448,
+    "datascope_version": "0.4.0",
+    "git_commit": "3b3840bd3e7dd66c90bcfdadfb8704158a2fdfac",
+    "git_dirty": true,
+    "benchmark_code_sha256": "909f12ed03097ff81c9b4b19c047aadd9bcec2af81c7b917a379f3f07cfd80d7",
+    "packages": {
+      "datascope-core": "0.4.0",
+      "pandas": "2.3.3",
+      "numpy": "2.4.6",
+      "rerun-sdk": "0.33.1",
+      "psutil": "7.2.2",
+      "pyarrow": "25.0.1"
+    },
+    "sqlite_version": "3.42.0",
+    "production_files_sha256": {
+      "query.py": "df76274e26b08b2ba94f7d81d2365ebb314ca1a1662cdc3d93dcd868c57303bd",
+      "query_sql.py": "d7bee9ab4da970e089322a341900be5159e13b48c220b3b68678b5f95db7dd60",
+      "workspace_query.py": "9b224b0809a94dc24c39edb9eb1cc545c1a6d3331e21ecf5eedb5dd4c40df0c8"
+    }
+  },
+  "settings": {
+    "query_runs": 5,
+    "warmups": 1,
+    "query_limit": 1000
+  },
+  "backends": {
+    "legacy": {
+      "status": "succeeded",
+      "environment": {
+        "platform": "Windows-10-10.0.26300-SP0",
+        "python": "3.11.5 (tags/v3.11.5:cce6ba9, Aug 24 2023, 14:38:34) [MSC v.1936 64 bit (AMD64)]",
+        "cpu": "13th Gen Intel(R) Core(TM) i9-13900HX",
+        "logical_cpus": 32,
+        "physical_cpus": 24,
+        "memory_gb": 16.90710016,
+        "available_memory_gb_at_start": 5.965500416,
+        "datascope_version": "0.4.0",
+        "git_commit": "3b3840bd3e7dd66c90bcfdadfb8704158a2fdfac",
+        "git_dirty": true,
+        "benchmark_code_sha256": "909f12ed03097ff81c9b4b19c047aadd9bcec2af81c7b917a379f3f07cfd80d7",
+        "packages": {
+          "datascope-core": "0.4.0",
+          "pandas": "2.3.3",
+          "numpy": "2.4.6",
+          "rerun-sdk": "0.33.1",
+          "psutil": "7.2.2",
+          "pyarrow": "25.0.1"
+        },
+        "sqlite_version": "3.42.0",
+        "production_files_sha256": {
+          "query.py": "df76274e26b08b2ba94f7d81d2365ebb314ca1a1662cdc3d93dcd868c57303bd",
+          "query_sql.py": "d7bee9ab4da970e089322a341900be5159e13b48c220b3b68678b5f95db7dd60",
+          "workspace_query.py": "9b224b0809a94dc24c39edb9eb1cc545c1a6d3331e21ecf5eedb5dd4c40df0c8"
+        }
+      },
+      "queries": {
+        "custom_scalar_key": {
+          "runs": 5,
+          "min_ms": 2185.10360000073,
+          "mean_ms": 2218.396760000178,
+          "median_ms": 2206.6201999996338,
+          "p95_ms": 2268.7734000001,
+          "max_ms": 2268.7734000001,
+          "samples_ms": [
+            2268.7734000001,
+            2226.180700000441,
+            2205.305899999985,
+            2185.10360000073,
+            2206.6201999996338
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "46c2eb62584b69d497eabb785a12c5a6cddd33add3200e11fcb9f5165d27e9f6",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256"
+        },
+        "custom_time_range": {
+          "runs": 5,
+          "min_ms": 5186.880900000688,
+          "mean_ms": 5228.973220000262,
+          "median_ms": 5238.173800000368,
+          "p95_ms": 5275.928899999599,
+          "max_ms": 5275.928899999599,
+          "samples_ms": [
+            5199.7039000007135,
+            5238.173800000368,
+            5275.928899999599,
+            5186.880900000688,
+            5244.178599999941
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 352,
+          "result_sha256": "84fb12baeb70fb4ca980a58d6bad6a2ef9429a608ec1de1b1324cde96a601040",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256"
+        },
+        "custom_numeric_threshold": {
+          "runs": 5,
+          "min_ms": 5203.970100000333,
+          "mean_ms": 5235.967259999961,
+          "median_ms": 5241.624299999785,
+          "p95_ms": 5267.79709999937,
+          "max_ms": 5267.79709999937,
+          "samples_ms": [
+            5250.858100000187,
+            5203.970100000333,
+            5241.624299999785,
+            5267.79709999937,
+            5215.586700000131
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "9548477a8017eea9a3c4aaf6e35c78e16570f73ce3715bc9c6e1c09633553950",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256"
+        }
+      },
+      "diagnostics": {
+        "custom_scalar_key": {
+          "fetched_rows": 30976,
+          "json_decodes": 30976,
+          "sql": "\n                select qr.*\n                from query_rows qr\n                join recordings r on r.id = qr.recording_id\n                where r.project_id = 'project_a0a4c340d428' and qr.recording_id in ('recording_28bc90294793') and qr.semantic_type in ('scalar','scalar_group')\n                order by qr.recording_id, qr.time, qr.entity_path, qr.key\n                \n                ",
+          "query_plan": [
+            [
+              6,
+              0,
+              0,
+              "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+            ],
+            [
+              14,
+              0,
+              0,
+              "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)"
+            ],
+            [
+              56,
+              0,
+              0,
+              "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+            ]
+          ],
+          "scope": "separate untimed pass; fetched rows are Python-consumed rows, not SQLite scanned rows"
+        },
+        "custom_time_range": {
+          "fetched_rows": 960000,
+          "json_decodes": 960000,
+          "sql": "\n                select qr.*\n                from query_rows qr\n                join recordings r on r.id = qr.recording_id\n                where r.project_id = 'project_a0a4c340d428' and qr.recording_id in ('recording_28bc90294793')\n                order by qr.recording_id, qr.time, qr.entity_path, qr.key\n                \n                ",
+          "query_plan": [
+            [
+              6,
+              0,
+              0,
+              "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+            ],
+            [
+              14,
+              0,
+              0,
+              "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=?)"
+            ],
+            [
+              37,
+              0,
+              0,
+              "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+            ]
+          ],
+          "scope": "separate untimed pass; fetched rows are Python-consumed rows, not SQLite scanned rows"
+        },
+        "custom_numeric_threshold": {
+          "fetched_rows": 909293,
+          "json_decodes": 909293,
+          "sql": "\n                select qr.*\n                from query_rows qr\n                join recordings r on r.id = qr.recording_id\n                where r.project_id = 'project_a0a4c340d428' and qr.recording_id in ('recording_28bc90294793') and qr.semantic_type in ('scalar','scalar_group')\n                order by qr.recording_id, qr.time, qr.entity_path, qr.key\n                \n                ",
+          "query_plan": [
+            [
+              6,
+              0,
+              0,
+              "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+            ],
+            [
+              14,
+              0,
+              0,
+              "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)"
+            ],
+            [
+              56,
+              0,
+              0,
+              "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+            ]
+          ],
+          "scope": "separate untimed pass; fetched rows are Python-consumed rows, not SQLite scanned rows"
+        }
+      },
+      "memory": {
+        "method": "psutil process RSS polling; includes native allocations",
+        "sample_interval_ms": 10.0,
+        "peak_rss_mb": 135.032832,
+        "os_peak_rss_mb": 135.094272,
+        "rss_before_mb": 97.394688,
+        "rss_after_mb": 117.170176,
+        "stages": {
+          "query/legacy/custom_scalar_key": {
+            "elapsed_ms": 13508.866899999703,
+            "rss_before_mb": 97.501184,
+            "rss_after_mb": 115.441664,
+            "peak_rss_mb": 117.49376
+          },
+          "query/legacy/custom_time_range": {
+            "elapsed_ms": 31369.095099999868,
+            "rss_before_mb": 115.441664,
+            "rss_after_mb": 130.207744,
+            "peak_rss_mb": 132.25984
+          },
+          "query/legacy/custom_numeric_threshold": {
+            "elapsed_ms": 31464.425799999844,
+            "rss_before_mb": 130.207744,
+            "rss_after_mb": 117.174272,
+            "peak_rss_mb": 135.032832
+          }
+        },
+        "scope": "this process; child processes and system page cache are excluded"
+      }
+    },
+    "pushdown": {
+      "status": "succeeded",
+      "environment": {
+        "platform": "Windows-10-10.0.26300-SP0",
+        "python": "3.11.5 (tags/v3.11.5:cce6ba9, Aug 24 2023, 14:38:34) [MSC v.1936 64 bit (AMD64)]",
+        "cpu": "13th Gen Intel(R) Core(TM) i9-13900HX",
+        "logical_cpus": 32,
+        "physical_cpus": 24,
+        "memory_gb": 16.90710016,
+        "available_memory_gb_at_start": 5.952782336,
+        "datascope_version": "0.4.0",
+        "git_commit": "3b3840bd3e7dd66c90bcfdadfb8704158a2fdfac",
+        "git_dirty": true,
+        "benchmark_code_sha256": "909f12ed03097ff81c9b4b19c047aadd9bcec2af81c7b917a379f3f07cfd80d7",
+        "packages": {
+          "datascope-core": "0.4.0",
+          "pandas": "2.3.3",
+          "numpy": "2.4.6",
+          "rerun-sdk": "0.33.1",
+          "psutil": "7.2.2",
+          "pyarrow": "25.0.1"
+        },
+        "sqlite_version": "3.42.0",
+        "production_files_sha256": {
+          "query.py": "df76274e26b08b2ba94f7d81d2365ebb314ca1a1662cdc3d93dcd868c57303bd",
+          "query_sql.py": "d7bee9ab4da970e089322a341900be5159e13b48c220b3b68678b5f95db7dd60",
+          "workspace_query.py": "9b224b0809a94dc24c39edb9eb1cc545c1a6d3331e21ecf5eedb5dd4c40df0c8"
+        }
+      },
+      "queries": {
+        "custom_scalar_key": {
+          "runs": 5,
+          "min_ms": 304.8985999994329,
+          "mean_ms": 308.3331799996813,
+          "median_ms": 306.76429999948596,
+          "p95_ms": 313.8607000000775,
+          "max_ms": 313.8607000000775,
+          "samples_ms": [
+            313.8607000000775,
+            310.506599999826,
+            306.76429999948596,
+            305.6356999995842,
+            304.8985999994329
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "46c2eb62584b69d497eabb785a12c5a6cddd33add3200e11fcb9f5165d27e9f6",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256"
+        },
+        "custom_time_range": {
+          "runs": 5,
+          "min_ms": 105.94820000005711,
+          "mean_ms": 107.36078000009002,
+          "median_ms": 107.35529999965365,
+          "p95_ms": 108.32479999953648,
+          "max_ms": 108.32479999953648,
+          "samples_ms": [
+            105.94820000005711,
+            108.32479999953648,
+            107.9174000005878,
+            107.25820000061503,
+            107.35529999965365
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 352,
+          "result_sha256": "84fb12baeb70fb4ca980a58d6bad6a2ef9429a608ec1de1b1324cde96a601040",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256"
+        },
+        "custom_numeric_threshold": {
+          "runs": 5,
+          "min_ms": 414.3640000002051,
+          "mean_ms": 416.18541999996523,
+          "median_ms": 415.5458000004728,
+          "p95_ms": 418.2563000003938,
+          "max_ms": 418.2563000003938,
+          "samples_ms": [
+            418.2563000003938,
+            415.5458000004728,
+            418.1070999993608,
+            414.3640000002051,
+            414.6538999993936
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "9548477a8017eea9a3c4aaf6e35c78e16570f73ce3715bc9c6e1c09633553950",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256"
+        }
+      },
+      "diagnostics": {
+        "custom_scalar_key": {
+          "fetched_rows": 1000,
+          "json_decodes": 1000,
+          "sql": "\n                select qr.*\n                from query_rows qr\n                join recordings r on r.id = qr.recording_id\n                where r.project_id = 'project_a0a4c340d428' and qr.recording_id in ('recording_28bc90294793') and qr.semantic_type in ('scalar','scalar_group') and instr(datascope_lower(qr.key), 'scalar_000') > 0\n                order by qr.recording_id, qr.time, qr.entity_path, qr.key\n                limit 1000\n                ",
+          "query_plan": [
+            [
+              7,
+              0,
+              0,
+              "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+            ],
+            [
+              15,
+              0,
+              0,
+              "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)"
+            ],
+            [
+              67,
+              0,
+              0,
+              "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+            ]
+          ],
+          "scope": "separate untimed pass; fetched rows are Python-consumed rows, not SQLite scanned rows"
+        },
+        "custom_time_range": {
+          "fetched_rows": 352,
+          "json_decodes": 352,
+          "sql": "\n                select qr.*\n                from query_rows qr\n                join recordings r on r.id = qr.recording_id\n                where r.project_id = 'project_a0a4c340d428' and qr.recording_id in ('recording_28bc90294793') and qr.time >= 134.995 and qr.time <= 135.045\n                order by qr.recording_id, qr.time, qr.entity_path, qr.key\n                limit 1000\n                ",
+          "query_plan": [
+            [
+              7,
+              0,
+              0,
+              "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+            ],
+            [
+              15,
+              0,
+              0,
+              "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=?)"
+            ],
+            [
+              50,
+              0,
+              0,
+              "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+            ]
+          ],
+          "scope": "separate untimed pass; fetched rows are Python-consumed rows, not SQLite scanned rows"
+        },
+        "custom_numeric_threshold": {
+          "fetched_rows": 29333,
+          "json_decodes": 29333,
+          "sql": "\n                select qr.*\n                from query_rows qr\n                join recordings r on r.id = qr.recording_id\n                where r.project_id = 'project_a0a4c340d428' and qr.recording_id in ('recording_28bc90294793') and qr.semantic_type in ('scalar','scalar_group') and instr(datascope_lower(qr.key), 'battery') > 0\n                order by qr.recording_id, qr.time, qr.entity_path, qr.key\n                \n                ",
+          "query_plan": [
+            [
+              6,
+              0,
+              0,
+              "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+            ],
+            [
+              14,
+              0,
+              0,
+              "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)"
+            ],
+            [
+              60,
+              0,
+              0,
+              "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+            ]
+          ],
+          "scope": "separate untimed pass; fetched rows are Python-consumed rows, not SQLite scanned rows"
+        }
+      },
+      "memory": {
+        "method": "psutil process RSS polling; includes native allocations",
+        "sample_interval_ms": 10.0,
+        "peak_rss_mb": 134.71744,
+        "os_peak_rss_mb": 134.770688,
+        "rss_before_mb": 97.30048,
+        "rss_after_mb": 116.514816,
+        "stages": {
+          "query/pushdown/custom_scalar_key": {
+            "elapsed_ms": 1860.9231999998883,
+            "rss_before_mb": 97.406976,
+            "rss_after_mb": 114.147328,
+            "peak_rss_mb": 114.147328
+          },
+          "query/pushdown/custom_time_range": {
+            "elapsed_ms": 651.0559999996985,
+            "rss_before_mb": 114.147328,
+            "rss_after_mb": 129.163264,
+            "peak_rss_mb": 129.163264
+          },
+          "query/pushdown/custom_numeric_threshold": {
+            "elapsed_ms": 2512.317699999585,
+            "rss_before_mb": 129.163264,
+            "rss_after_mb": 116.518912,
+            "peak_rss_mb": 134.71744
+          }
+        },
+        "scope": "this process; child processes and system page cache are excluded"
+      }
+    }
+  },
+  "input": {
+    "baseline": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\baselines\\2026-10-06\\smoke.json",
+    "baseline_sha256": "12a1ce78f7910891d0450b8ce010d89016ff15c2b3bb4b46a953d0883683b629",
+    "workspace": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\benchmark_20261006_031650_baseline_smoke_fixed_c509c566\\workspace",
+    "database": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\benchmark_20261006_031650_baseline_smoke_fixed_c509c566\\workspace\\metadata.sqlite",
+    "database_sha256": "d2c9ce135b7d2c5005645dd648ed7fe79f1bc54ed96abd0a44b118138ec5744a",
+    "database_bytes": 255119360,
+    "schema": [
+      [
+        "index",
+        "idx_batch_items_batch_status",
+        "CREATE INDEX idx_batch_items_batch_status\n          on batch_items(batch_id, status, created_at)"
+      ],
+      [
+        "index",
+        "idx_batch_jobs_project_status",
+        "CREATE INDEX idx_batch_jobs_project_status\n          on batch_jobs(project_id, status, created_at)"
+      ],
+      [
+        "index",
+        "idx_diagnostic_exports_project_created",
+        "CREATE INDEX idx_diagnostic_exports_project_created\n          on diagnostic_exports(project_id, created_at)"
+      ],
+      [
+        "index",
+        "idx_jobs_project_status_created",
+        "CREATE INDEX idx_jobs_project_status_created\n          on jobs(project_id, status, created_at)"
+      ],
+      [
+        "index",
+        "idx_jobs_status_created",
+        "CREATE INDEX idx_jobs_status_created\n          on jobs(status, created_at)"
+      ],
+      [
+        "index",
+        "idx_query_rows_key",
+        "CREATE INDEX idx_query_rows_key\n          on query_rows(key)"
+      ],
+      [
+        "index",
+        "idx_query_rows_recording",
+        "CREATE INDEX idx_query_rows_recording\n          on query_rows(recording_id)"
+      ],
+      [
+        "index",
+        "idx_query_rows_recording_semantic_key",
+        "CREATE INDEX idx_query_rows_recording_semantic_key\n          on query_rows(recording_id, semantic_type, key, entity_path, time)"
+      ],
+      [
+        "index",
+        "idx_sources_project_storage",
+        "CREATE INDEX idx_sources_project_storage\n          on sources(project_id, storage_mode, created_at)"
+      ],
+      [
+        "index",
+        "sqlite_autoindex_batch_items_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_batch_jobs_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_diagnostic_exports_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_jobs_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_mapping_template_registry_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_mappings_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_plugins_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_projects_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_query_exports_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_recordings_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_schema_profiles_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_sources_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_streams_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_template_registry_1",
+        null
+      ],
+      [
+        "table",
+        "batch_items",
+        "CREATE TABLE batch_items (\n              id text primary key,\n              batch_id text not null,\n              source_path text not null,\n              source_id text,\n              recording_id text,\n              status text not null,\n              error_message text,\n              attempt integer not null default 1,\n              cancel_requested_at text,\n              created_at text not null,\n              updated_at text not null,\n              foreign key(batch_id) references batch_jobs(id),\n              foreign key(source_id) references sources(id),\n              foreign key(recording_id) references recordings(id)\n            )"
+      ],
+      [
+        "table",
+        "batch_jobs",
+        "CREATE TABLE batch_jobs (\n              id text primary key,\n              project_id text not null,\n              job_id text,\n              status text not null,\n              template_id text not null default 'sensor_monitor',\n              output_prefix text not null default 'batch_run',\n              storage_mode text not null default 'copy',\n              patterns_json text not null default '[]',\n              total integer not null,\n              succeeded integer not null,\n              failed integer not null,\n              cancelled integer not null default 0,\n              created_at text not null,\n              updated_at text not null,\n              foreign key(project_id) references projects(id),\n              foreign key(job_id) references jobs(id)\n            )"
+      ],
+      [
+        "table",
+        "diagnostic_exports",
+        "CREATE TABLE diagnostic_exports (\n              id text primary key,\n              project_id text not null,\n              recording_ids_json text not null default '[]',\n              thresholds_json text not null default '{}',\n              summary_json text not null default '{}',\n              path text not null,\n              format text not null,\n              created_at text not null,\n              foreign key(project_id) references projects(id)\n            )"
+      ],
+      [
+        "table",
+        "jobs",
+        "CREATE TABLE jobs (\n              id text primary key,\n              project_id text not null,\n              type text not null,\n              status text not null,\n              progress real not null,\n              stage text not null default 'queued',\n              log_path text,\n              error_message text,\n              payload_json text not null default '{}',\n              result_json text,\n              error_json text,\n              attempt integer not null default 1,\n              retry_of_job_id text,\n              resource_type text,\n              resource_id text,\n              worker_pid integer,\n              worker_token text,\n              heartbeat_at text,\n              started_at text,\n              finished_at text,\n              cancel_requested_at text,\n              created_at text not null,\n              updated_at text not null,\n              foreign key(project_id) references projects(id),\n              foreign key(retry_of_job_id) references jobs(id)\n            )"
+      ],
+      [
+        "table",
+        "mapping_template_registry",
+        "CREATE TABLE mapping_template_registry (\n              id text primary key,\n              name text not null,\n              version text not null,\n              source_family text not null,\n              visual_template_id text not null,\n              path text not null,\n              config_json text not null,\n              enabled integer not null default 1,\n              installed_at text not null,\n              updated_at text not null\n            )"
+      ],
+      [
+        "table",
+        "mappings",
+        "CREATE TABLE mappings (\n              id text primary key,\n              project_id text not null,\n              source_id text not null,\n              stream_id text,\n              entity_path text,\n              archetype text,\n              config_json text not null,\n              user_confirmed integer not null default 0,\n              path text not null,\n              created_at text not null,\n              updated_at text not null,\n              foreign key(project_id) references projects(id),\n              foreign key(source_id) references sources(id)\n            )"
+      ],
+      [
+        "table",
+        "plugins",
+        "CREATE TABLE plugins (\n              id text primary key,\n              name text not null,\n              version text not null,\n              path text not null,\n              status text not null,\n              manifest_json text not null,\n              installed_at text not null,\n              updated_at text not null\n            )"
+      ],
+      [
+        "table",
+        "projects",
+        "CREATE TABLE projects (\n              id text primary key,\n              name text not null,\n              description text not null default '',\n              workspace_path text not null,\n              created_at text not null,\n              updated_at text not null\n            )"
+      ],
+      [
+        "table",
+        "query_exports",
+        "CREATE TABLE query_exports (\n              id text primary key,\n              project_id text not null,\n              recording_id text,\n              path text not null,\n              format text not null,\n              created_at text not null,\n              foreign key(project_id) references projects(id)\n            )"
+      ],
+      [
+        "table",
+        "query_rows",
+        "CREATE TABLE query_rows (\n              recording_id text not null,\n              source_id text not null,\n              time real,\n              entity_path text not null,\n              semantic_type text not null,\n              key text not null,\n              value_json text not null,\n              foreign key(recording_id) references recordings(id),\n              foreign key(source_id) references sources(id)\n            )"
+      ],
+      [
+        "table",
+        "recordings",
+        "CREATE TABLE recordings (\n              id text primary key,\n              project_id text not null,\n              source_id text,\n              app_id text not null,\n              path text not null,\n              blueprint_id text,\n              blueprint_path text,\n              run_name text not null,\n              tags_json text not null default '[]',\n              params_json text not null default '{}',\n              created_at text not null,\n              foreign key(project_id) references projects(id),\n              foreign key(source_id) references sources(id)\n            )"
+      ],
+      [
+        "table",
+        "schema_profiles",
+        "CREATE TABLE schema_profiles (\n              checksum text primary key,\n              source_type text not null,\n              profile_json text not null,\n              created_at text not null,\n              updated_at text not null\n            )"
+      ],
+      [
+        "table",
+        "sources",
+        "CREATE TABLE sources (\n              id text primary key,\n              project_id text not null,\n              type text not null,\n              uri text not null,\n              checksum text not null,\n              size_bytes integer not null,\n              status text not null,\n              metadata_json text not null default '{}',\n              storage_mode text not null default 'copy',\n              original_uri text,\n              created_at text not null,\n              updated_at text not null,\n              foreign key(project_id) references projects(id)\n            )"
+      ],
+      [
+        "table",
+        "streams",
+        "CREATE TABLE streams (\n              id text not null,\n              source_id text not null,\n              name text not null,\n              semantic_type text not null,\n              fields_json text not null,\n              time_key text,\n              sample_rate real,\n              start_time real,\n              end_time real,\n              confidence real not null,\n              metadata_json text not null default '{}',\n              primary key(id, source_id),\n              foreign key(source_id) references sources(id)\n            )"
+      ],
+      [
+        "table",
+        "template_registry",
+        "CREATE TABLE template_registry (\n              id text primary key,\n              name text not null,\n              version text not null,\n              app_id text not null,\n              source text not null,\n              path text,\n              manifest_json text not null,\n              enabled integer not null default 1,\n              installed_at text not null,\n              updated_at text not null\n            )"
+      ]
+    ],
+    "schema_version": 3,
+    "source": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\benchmark_20261006_031650_baseline_smoke_fixed_c509c566\\robot.csv",
+    "source_sha256": "f6d328637d65ddf5d2f5277e507e4142515f96f085559897634601d77d8db895",
+    "source_bytes": 9445783,
+    "dataset": {
+      "rows": 30000,
+      "frequency_hz": 200.0,
+      "scalar_fields": 30,
+      "state_fields": 1,
+      "seed": 20261006,
+      "duration_seconds": 150.0,
+      "last_timestamp_seconds": 149.995,
+      "total_columns": 33,
+      "expected_query_rows": 960000
+    },
+    "primary_query_rows": 960000,
+    "recording_id": "recording_28bc90294793",
+    "project_id": "project_a0a4c340d428"
+  },
+  "comparison": {
+    "custom_scalar_key": {
+      "p95_speedup": 7.228599821511708,
+      "exact_parity": true
+    },
+    "custom_time_range": {
+      "p95_speedup": 48.70471858726879,
+      "exact_parity": true
+    },
+    "custom_numeric_threshold": {
+      "p95_speedup": 12.594662889702821,
+      "exact_parity": true
+    }
+  },
+  "acceptance": {
+    "gate": "all three P95 <= 1000 ms",
+    "passed": true,
+    "scope": "Custom Query only; not typed storage or diagnostics gates"
+  },
+  "read_only_verification": "source/catalog SHA256, bytes, schema, version and cardinality unchanged",
+  "cleanup": {
+    "status": "removed_owned_run_directory",
+    "path": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\benchmark_c2a_20261017_024630_17ee87cc"
+  }
+}

@@ -1,0 +1,1215 @@
+{
+  "format_version": 1,
+  "environment": {
+    "platform": "Windows-10-10.0.26300-SP0",
+    "python": "3.11.5 (tags/v3.11.5:cce6ba9, Aug 24 2023, 14:38:34) [MSC v.1936 64 bit (AMD64)]",
+    "cpu": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+    "logical_cpus": 32,
+    "physical_cpus": 24,
+    "memory_gb": 16.90710016,
+    "datascope_version": "0.4.0",
+    "git_commit": "3b3840bd3e7dd66c90bcfdadfb8704158a2fdfac",
+    "git_dirty": true,
+    "benchmark_code_sha256": "06a1abe0e440f016eac82521d8b5ee36cb538294da8edceb7e4abdee83afec95",
+    "packages": {
+      "datascope-core": "0.4.0",
+      "pandas": "2.3.3",
+      "numpy": "2.4.6",
+      "rerun-sdk": "0.33.1",
+      "psutil": "7.2.2",
+      "pyarrow": "25.0.1"
+    },
+    "sqlite_version": "3.42.0"
+  },
+  "dataset": {
+    "rows": 30000,
+    "frequency_hz": 200.0,
+    "scalar_fields": 30,
+    "state_fields": 1,
+    "seed": 20261006,
+    "duration_seconds": 150.0,
+    "last_timestamp_seconds": 149.995,
+    "total_columns": 33,
+    "expected_query_rows": 960000,
+    "generation_ms": 382.9144000001179,
+    "source_size_bytes": 9445783,
+    "source_size_mb": 9.445783,
+    "source_path": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\benchmark_20261006_015545_baseline_smoke_41538061\\robot.csv"
+  },
+  "source_checksum": "f6d328637d65ddf5d2f5277e507e4142515f96f085559897634601d77d8db895",
+  "settings": {
+    "query_runs": 5,
+    "warmups": 1,
+    "query_limit": 1000,
+    "index_samples": 10000,
+    "diagnostics": true,
+    "compare_all": true
+  },
+  "index_comparison": {
+    "source_samples": 10000,
+    "query_rows": 320000,
+    "sample_selection": "first half + last half; complete samples from the primary index",
+    "method": "one committed INSERT SELECT in each fresh catalog, fixed variant order",
+    "limitations": "warm source pages; bounded sample; one insert trial per variant; no parsing",
+    "variants": {
+      "all": {
+        "active_indexes": [
+          "idx_query_rows_recording",
+          "idx_query_rows_key",
+          "idx_query_rows_recording_semantic_key"
+        ],
+        "insert_ms": 3689.721299999974,
+        "sqlite_size_mb": 82.39104,
+        "object_size_bytes": null,
+        "queries": {
+          "find_errors": {
+            "runs": 5,
+            "min_ms": 87.23359999999047,
+            "mean_ms": 129.31690000000344,
+            "median_ms": 134.74759999985508,
+            "p95_ms": 162.22970000012538,
+            "max_ms": 162.22970000012538,
+            "samples_ms": [
+              162.22970000012538,
+              135.99070000009306,
+              126.38289999995322,
+              87.23359999999047,
+              134.74759999985508
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 1000,
+            "result_sha256": "dd3ec5222678e1b9ed0c1f3c2ad5a151f401bf09836d724fd5e6ecf1fe36d9d8"
+          },
+          "low_battery": {
+            "runs": 5,
+            "min_ms": 334.1917000000194,
+            "mean_ms": 399.06966000003194,
+            "median_ms": 396.33729999991374,
+            "p95_ms": 454.48650000003,
+            "max_ms": 454.48650000003,
+            "samples_ms": [
+              334.1917000000194,
+              396.33729999991374,
+              427.35050000010233,
+              382.98230000009426,
+              454.48650000003
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 1000,
+            "result_sha256": "479595e59b450a9784d1326e738f7cb1560bb3a32739693a03c7328eb2f9f57a"
+          },
+          "state_duration": {
+            "runs": 5,
+            "min_ms": 116.50259999987611,
+            "mean_ms": 172.84347999998317,
+            "median_ms": 121.00189999978284,
+            "p95_ms": 316.7024000001675,
+            "max_ms": 316.7024000001675,
+            "samples_ms": [
+              120.81069999999272,
+              189.19980000009673,
+              116.50259999987611,
+              121.00189999978284,
+              316.7024000001675
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 1000,
+            "result_sha256": "db194c02a6d398c74ed6eec7dabad3ca7b664a3fc273658bb089bce9fa469e41"
+          },
+          "time_sync": {
+            "runs": 5,
+            "min_ms": 69.39959999999701,
+            "mean_ms": 99.86644000000524,
+            "median_ms": 104.89260000008471,
+            "p95_ms": 134.94379999997363,
+            "max_ms": 134.94379999997363,
+            "samples_ms": [
+              119.03819999997722,
+              104.89260000008471,
+              134.94379999997363,
+              71.05799999999363,
+              69.39959999999701
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 0,
+            "result_sha256": "1522a28197b5b8451e1afe16567b25c80f75050de7f318857e826737db3ee492"
+          },
+          "custom_scalar_key": {
+            "runs": 5,
+            "min_ms": 2097.971300000154,
+            "mean_ms": 2391.81092000008,
+            "median_ms": 2414.5739000000503,
+            "p95_ms": 2640.8324999999877,
+            "max_ms": 2640.8324999999877,
+            "samples_ms": [
+              2604.663900000105,
+              2201.0130000001027,
+              2414.5739000000503,
+              2640.8324999999877,
+              2097.971300000154
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 1000,
+            "result_sha256": "b07d2ecb4b24694114d31ed47e8f35f70e0303afd93b4d3086b16298b70f74ab"
+          },
+          "custom_time_range": {
+            "runs": 5,
+            "min_ms": 4979.781199999934,
+            "mean_ms": 5410.7663799999955,
+            "median_ms": 5407.961799999839,
+            "p95_ms": 5897.8572000000895,
+            "max_ms": 5897.8572000000895,
+            "samples_ms": [
+              5897.8572000000895,
+              5342.939000000115,
+              5407.961799999839,
+              4979.781199999934,
+              5425.2927
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 352,
+            "result_sha256": "656175714ff2807432e4924e67fe2f7983882fed08d323ff3a42c41b853a5f02"
+          },
+          "custom_numeric_threshold": {
+            "runs": 5,
+            "min_ms": 5707.669299999907,
+            "mean_ms": 6119.381539999904,
+            "median_ms": 6088.866199999984,
+            "p95_ms": 6471.07589999996,
+            "max_ms": 6471.07589999996,
+            "samples_ms": [
+              5707.669299999907,
+              6088.866199999984,
+              6249.909299999899,
+              6079.38699999977,
+              6471.07589999996
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 1000,
+            "result_sha256": "904741efacf52b226e3e632e7c48e36543f80832d31879a6f7746b19aba47ad9"
+          }
+        },
+        "query_plans": {
+          "find_errors": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ],
+          "low_battery": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ],
+          "state_duration": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ],
+          "time_sync": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=?)",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ],
+          "custom_scalar_key": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ],
+          "custom_time_range": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=?)",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ],
+          "custom_numeric_threshold": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ]
+        }
+      },
+      "none": {
+        "active_indexes": [],
+        "insert_ms": 943.0039999997462,
+        "sqlite_size_mb": 35.647488,
+        "object_size_bytes": null,
+        "queries": {
+          "find_errors": {
+            "runs": 5,
+            "min_ms": 113.86769999990065,
+            "mean_ms": 158.26125999992655,
+            "median_ms": 129.88799999993716,
+            "p95_ms": 261.0197999997581,
+            "max_ms": 261.0197999997581,
+            "samples_ms": [
+              118.05379999987053,
+              261.0197999997581,
+              129.88799999993716,
+              113.86769999990065,
+              168.4770000001663
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 1000,
+            "result_sha256": "dd3ec5222678e1b9ed0c1f3c2ad5a151f401bf09836d724fd5e6ecf1fe36d9d8"
+          },
+          "low_battery": {
+            "runs": 5,
+            "min_ms": 306.5593000001172,
+            "mean_ms": 375.78175999997256,
+            "median_ms": 402.55329999990863,
+            "p95_ms": 432.4280999999246,
+            "max_ms": 432.4280999999246,
+            "samples_ms": [
+              402.55329999990863,
+              411.84900000007474,
+              432.4280999999246,
+              325.51909999983764,
+              306.5593000001172
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 1000,
+            "result_sha256": "479595e59b450a9784d1326e738f7cb1560bb3a32739693a03c7328eb2f9f57a"
+          },
+          "state_duration": {
+            "runs": 5,
+            "min_ms": 146.74749999994674,
+            "mean_ms": 235.81090000006952,
+            "median_ms": 237.30840000007447,
+            "p95_ms": 339.5424999998795,
+            "max_ms": 339.5424999998795,
+            "samples_ms": [
+              146.74749999994674,
+              190.95430000015767,
+              237.30840000007447,
+              264.5018000002892,
+              339.5424999998795
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 1000,
+            "result_sha256": "db194c02a6d398c74ed6eec7dabad3ca7b664a3fc273658bb089bce9fa469e41"
+          },
+          "time_sync": {
+            "runs": 5,
+            "min_ms": 79.95750000009139,
+            "mean_ms": 121.46573999998509,
+            "median_ms": 90.30320000010761,
+            "p95_ms": 189.57629999977144,
+            "max_ms": 189.57629999977144,
+            "samples_ms": [
+              86.4756999999372,
+              189.57629999977144,
+              161.0160000000178,
+              79.95750000009139,
+              90.30320000010761
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 0,
+            "result_sha256": "1522a28197b5b8451e1afe16567b25c80f75050de7f318857e826737db3ee492"
+          },
+          "custom_scalar_key": {
+            "runs": 5,
+            "min_ms": 669.2788000000292,
+            "mean_ms": 839.714819999972,
+            "median_ms": 849.3133000001762,
+            "p95_ms": 1070.3663999997843,
+            "max_ms": 1070.3663999997843,
+            "samples_ms": [
+              912.109099999725,
+              1070.3663999997843,
+              849.3133000001762,
+              669.2788000000292,
+              697.506500000145
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 1000,
+            "result_sha256": "b07d2ecb4b24694114d31ed47e8f35f70e0303afd93b4d3086b16298b70f74ab"
+          },
+          "custom_time_range": {
+            "runs": 5,
+            "min_ms": 3873.2123999998294,
+            "mean_ms": 4088.1764800000383,
+            "median_ms": 4055.184400000144,
+            "p95_ms": 4376.231900000221,
+            "max_ms": 4376.231900000221,
+            "samples_ms": [
+              4055.184400000144,
+              3972.6408999999876,
+              4376.231900000221,
+              4163.61280000001,
+              3873.2123999998294
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 352,
+            "result_sha256": "656175714ff2807432e4924e67fe2f7983882fed08d323ff3a42c41b853a5f02"
+          },
+          "custom_numeric_threshold": {
+            "runs": 5,
+            "min_ms": 3654.957100000047,
+            "mean_ms": 4178.903739999805,
+            "median_ms": 4188.756299999568,
+            "p95_ms": 4481.321899999784,
+            "max_ms": 4481.321899999784,
+            "samples_ms": [
+              4188.756299999568,
+              3654.957100000047,
+              4427.031100000022,
+              4481.321899999784,
+              4142.452299999604
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 1000,
+            "result_sha256": "904741efacf52b226e3e632e7c48e36543f80832d31879a6f7746b19aba47ad9"
+          }
+        },
+        "query_plans": {
+          "find_errors": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SCAN qr",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ],
+          "low_battery": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SCAN qr",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ],
+          "state_duration": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SCAN qr",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ],
+          "time_sync": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SCAN qr",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ],
+          "custom_scalar_key": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SCAN qr",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ],
+          "custom_time_range": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SCAN qr",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ],
+          "custom_numeric_threshold": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SCAN qr",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ]
+        },
+        "deferred_index_build_ms": {
+          "idx_query_rows_recording": 453.64880000033736,
+          "idx_query_rows_key": 246.87870000025214,
+          "idx_query_rows_recording_semantic_key": 1290.1968000001034
+        },
+        "insert_plus_deferred_build_ms": 2933.728300000439
+      },
+      "without_idx_query_rows_recording": {
+        "active_indexes": [
+          "idx_query_rows_key",
+          "idx_query_rows_recording_semantic_key"
+        ],
+        "insert_ms": 2905.774500000007,
+        "sqlite_size_mb": 71.016448,
+        "object_size_bytes": null,
+        "queries": {
+          "find_errors": {
+            "runs": 5,
+            "min_ms": 88.88250000018161,
+            "mean_ms": 129.28114000005735,
+            "median_ms": 106.71150000007401,
+            "p95_ms": 203.25529999990977,
+            "max_ms": 203.25529999990977,
+            "samples_ms": [
+              88.88250000018161,
+              203.25529999990977,
+              150.26690000013332,
+              106.71150000007401,
+              97.28949999998804
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 1000,
+            "result_sha256": "dd3ec5222678e1b9ed0c1f3c2ad5a151f401bf09836d724fd5e6ecf1fe36d9d8"
+          },
+          "low_battery": {
+            "runs": 5,
+            "min_ms": 285.2413999999044,
+            "mean_ms": 423.22049999993396,
+            "median_ms": 385.0595999997495,
+            "p95_ms": 586.7555999998331,
+            "max_ms": 586.7555999998331,
+            "samples_ms": [
+              586.7555999998331,
+              285.2413999999044,
+              546.9866000003094,
+              385.0595999997495,
+              312.0592999998735
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 1000,
+            "result_sha256": "479595e59b450a9784d1326e738f7cb1560bb3a32739693a03c7328eb2f9f57a"
+          },
+          "state_duration": {
+            "runs": 5,
+            "min_ms": 107.81279999991966,
+            "mean_ms": 171.11187999989852,
+            "median_ms": 169.9920999999449,
+            "p95_ms": 221.55759999986913,
+            "max_ms": 221.55759999986913,
+            "samples_ms": [
+              136.61439999987124,
+              221.55759999986913,
+              107.81279999991966,
+              169.9920999999449,
+              219.58249999988766
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 1000,
+            "result_sha256": "db194c02a6d398c74ed6eec7dabad3ca7b664a3fc273658bb089bce9fa469e41"
+          },
+          "time_sync": {
+            "runs": 5,
+            "min_ms": 77.07449999998062,
+            "mean_ms": 124.56183999984205,
+            "median_ms": 103.31040000028224,
+            "p95_ms": 195.55259999970076,
+            "max_ms": 195.55259999970076,
+            "samples_ms": [
+              93.86419999964346,
+              103.31040000028224,
+              195.55259999970076,
+              153.00749999960317,
+              77.07449999998062
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 0,
+            "result_sha256": "1522a28197b5b8451e1afe16567b25c80f75050de7f318857e826737db3ee492"
+          },
+          "custom_scalar_key": {
+            "runs": 5,
+            "min_ms": 2119.6749999999156,
+            "mean_ms": 2543.8926800000445,
+            "median_ms": 2506.9570999999087,
+            "p95_ms": 2892.7182000002176,
+            "max_ms": 2892.7182000002176,
+            "samples_ms": [
+              2892.7182000002176,
+              2337.204400000246,
+              2506.9570999999087,
+              2862.9086999999345,
+              2119.6749999999156
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 1000,
+            "result_sha256": "b07d2ecb4b24694114d31ed47e8f35f70e0303afd93b4d3086b16298b70f74ab"
+          },
+          "custom_time_range": {
+            "runs": 5,
+            "min_ms": 5695.423499999833,
+            "mean_ms": 5989.122379999935,
+            "median_ms": 5979.933600000095,
+            "p95_ms": 6445.144499999969,
+            "max_ms": 6445.144499999969,
+            "samples_ms": [
+              5979.933600000095,
+              5841.853699999774,
+              5983.256600000004,
+              6445.144499999969,
+              5695.423499999833
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 352,
+            "result_sha256": "656175714ff2807432e4924e67fe2f7983882fed08d323ff3a42c41b853a5f02"
+          },
+          "custom_numeric_threshold": {
+            "runs": 5,
+            "min_ms": 5634.242099999938,
+            "mean_ms": 5784.860060000028,
+            "median_ms": 5727.349700000104,
+            "p95_ms": 6056.189700000232,
+            "max_ms": 6056.189700000232,
+            "samples_ms": [
+              5699.66629999999,
+              5806.852499999877,
+              6056.189700000232,
+              5727.349700000104,
+              5634.242099999938
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 1000,
+            "result_sha256": "904741efacf52b226e3e632e7c48e36543f80832d31879a6f7746b19aba47ad9"
+          }
+        },
+        "query_plans": {
+          "find_errors": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ],
+          "low_battery": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ],
+          "state_duration": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ],
+          "time_sync": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=?)",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ],
+          "custom_scalar_key": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ],
+          "custom_time_range": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=?)",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ],
+          "custom_numeric_threshold": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ]
+        }
+      },
+      "without_idx_query_rows_key": {
+        "active_indexes": [
+          "idx_query_rows_recording",
+          "idx_query_rows_recording_semantic_key"
+        ],
+        "insert_ms": 3212.8954999998314,
+        "sqlite_size_mb": 75.698176,
+        "object_size_bytes": null,
+        "queries": {
+          "find_errors": {
+            "runs": 5,
+            "min_ms": 97.13809999993828,
+            "mean_ms": 111.4881399999831,
+            "median_ms": 111.25410000022384,
+            "p95_ms": 129.6010999999453,
+            "max_ms": 129.6010999999453,
+            "samples_ms": [
+              117.06199999980527,
+              97.13809999993828,
+              102.38540000000285,
+              129.6010999999453,
+              111.25410000022384
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 1000,
+            "result_sha256": "dd3ec5222678e1b9ed0c1f3c2ad5a151f401bf09836d724fd5e6ecf1fe36d9d8"
+          },
+          "low_battery": {
+            "runs": 5,
+            "min_ms": 308.8796000001821,
+            "mean_ms": 394.9483200000941,
+            "median_ms": 398.39290000008987,
+            "p95_ms": 460.19909999995434,
+            "max_ms": 460.19909999995434,
+            "samples_ms": [
+              308.8796000001821,
+              392.04160000008414,
+              398.39290000008987,
+              460.19909999995434,
+              415.22840000016004
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 1000,
+            "result_sha256": "479595e59b450a9784d1326e738f7cb1560bb3a32739693a03c7328eb2f9f57a"
+          },
+          "state_duration": {
+            "runs": 5,
+            "min_ms": 102.34889999992447,
+            "mean_ms": 148.7421999999242,
+            "median_ms": 134.96529999974882,
+            "p95_ms": 215.9020999997665,
+            "max_ms": 215.9020999997665,
+            "samples_ms": [
+              130.0255000001016,
+              134.96529999974882,
+              102.34889999992447,
+              215.9020999997665,
+              160.46920000007958
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 1000,
+            "result_sha256": "db194c02a6d398c74ed6eec7dabad3ca7b664a3fc273658bb089bce9fa469e41"
+          },
+          "time_sync": {
+            "runs": 5,
+            "min_ms": 78.59509999980219,
+            "mean_ms": 122.39595999999437,
+            "median_ms": 97.5456999999551,
+            "p95_ms": 180.7730000000447,
+            "max_ms": 180.7730000000447,
+            "samples_ms": [
+              180.7730000000447,
+              78.59509999980219,
+              86.43720000009125,
+              168.62880000007863,
+              97.5456999999551
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 0,
+            "result_sha256": "1522a28197b5b8451e1afe16567b25c80f75050de7f318857e826737db3ee492"
+          },
+          "custom_scalar_key": {
+            "runs": 5,
+            "min_ms": 2445.04760000018,
+            "mean_ms": 2644.88166000001,
+            "median_ms": 2618.4845000002497,
+            "p95_ms": 2849.151500000062,
+            "max_ms": 2849.151500000062,
+            "samples_ms": [
+              2849.151500000062,
+              2774.6957999997903,
+              2618.4845000002497,
+              2445.04760000018,
+              2537.0288999997683
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 1000,
+            "result_sha256": "b07d2ecb4b24694114d31ed47e8f35f70e0303afd93b4d3086b16298b70f74ab"
+          },
+          "custom_time_range": {
+            "runs": 5,
+            "min_ms": 5862.68310000014,
+            "mean_ms": 6427.753880000182,
+            "median_ms": 6578.710400000091,
+            "p95_ms": 6606.261000000359,
+            "max_ms": 6606.261000000359,
+            "samples_ms": [
+              6600.2040000003035,
+              5862.68310000014,
+              6606.261000000359,
+              6578.710400000091,
+              6490.910900000017
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 352,
+            "result_sha256": "656175714ff2807432e4924e67fe2f7983882fed08d323ff3a42c41b853a5f02"
+          },
+          "custom_numeric_threshold": {
+            "runs": 5,
+            "min_ms": 4748.606800000289,
+            "mean_ms": 5478.262060000088,
+            "median_ms": 5622.051199999987,
+            "p95_ms": 6162.390599999981,
+            "max_ms": 6162.390599999981,
+            "samples_ms": [
+              5168.949599999905,
+              5689.312100000279,
+              6162.390599999981,
+              4748.606800000289,
+              5622.051199999987
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 1000,
+            "result_sha256": "904741efacf52b226e3e632e7c48e36543f80832d31879a6f7746b19aba47ad9"
+          }
+        },
+        "query_plans": {
+          "find_errors": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ],
+          "low_battery": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ],
+          "state_duration": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ],
+          "time_sync": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=?)",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ],
+          "custom_scalar_key": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ],
+          "custom_time_range": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=?)",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ],
+          "custom_numeric_threshold": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ]
+        }
+      },
+      "without_idx_query_rows_recording_semantic_key": {
+        "active_indexes": [
+          "idx_query_rows_recording",
+          "idx_query_rows_key"
+        ],
+        "insert_ms": 2395.062500000222,
+        "sqlite_size_mb": 53.714944,
+        "object_size_bytes": null,
+        "queries": {
+          "find_errors": {
+            "runs": 5,
+            "min_ms": 141.597400000137,
+            "mean_ms": 202.10529999994833,
+            "median_ms": 190.5467999999928,
+            "p95_ms": 266.61179999973683,
+            "max_ms": 266.61179999973683,
+            "samples_ms": [
+              141.597400000137,
+              243.96119999983057,
+              190.5467999999928,
+              266.61179999973683,
+              167.80930000004446
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 1000,
+            "result_sha256": "dd3ec5222678e1b9ed0c1f3c2ad5a151f401bf09836d724fd5e6ecf1fe36d9d8"
+          },
+          "low_battery": {
+            "runs": 5,
+            "min_ms": 288.024100000257,
+            "mean_ms": 418.7759799999185,
+            "median_ms": 418.04759999968155,
+            "p95_ms": 537.3610999999983,
+            "max_ms": 537.3610999999983,
+            "samples_ms": [
+              441.0649999999805,
+              418.04759999968155,
+              537.3610999999983,
+              288.024100000257,
+              409.3820999996751
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 1000,
+            "result_sha256": "479595e59b450a9784d1326e738f7cb1560bb3a32739693a03c7328eb2f9f57a"
+          },
+          "state_duration": {
+            "runs": 5,
+            "min_ms": 164.86099999974613,
+            "mean_ms": 222.87959999985105,
+            "median_ms": 213.20639999976265,
+            "p95_ms": 297.0452999998088,
+            "max_ms": 297.0452999998088,
+            "samples_ms": [
+              247.99260000008871,
+              297.0452999998088,
+              164.86099999974613,
+              191.292699999849,
+              213.20639999976265
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 1000,
+            "result_sha256": "db194c02a6d398c74ed6eec7dabad3ca7b664a3fc273658bb089bce9fa469e41"
+          },
+          "time_sync": {
+            "runs": 5,
+            "min_ms": 2.8519999996206025,
+            "mean_ms": 5.078719999892201,
+            "median_ms": 5.433399999674293,
+            "p95_ms": 7.502400000248599,
+            "max_ms": 7.502400000248599,
+            "samples_ms": [
+              2.8519999996206025,
+              6.061399999907735,
+              7.502400000248599,
+              3.544400000009773,
+              5.433399999674293
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 0,
+            "result_sha256": "1522a28197b5b8451e1afe16567b25c80f75050de7f318857e826737db3ee492"
+          },
+          "custom_scalar_key": {
+            "runs": 5,
+            "min_ms": 660.2846999999201,
+            "mean_ms": 760.6090599999334,
+            "median_ms": 760.2617000002283,
+            "p95_ms": 846.055499999693,
+            "max_ms": 846.055499999693,
+            "samples_ms": [
+              760.2617000002283,
+              846.055499999693,
+              796.0469999998168,
+              660.2846999999201,
+              740.3964000000087
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 1000,
+            "result_sha256": "b07d2ecb4b24694114d31ed47e8f35f70e0303afd93b4d3086b16298b70f74ab"
+          },
+          "custom_time_range": {
+            "runs": 5,
+            "min_ms": 3881.626800000049,
+            "mean_ms": 4301.77764,
+            "median_ms": 4086.2599000001865,
+            "p95_ms": 4914.728599999762,
+            "max_ms": 4914.728599999762,
+            "samples_ms": [
+              3986.6118999998434,
+              4914.728599999762,
+              3881.626800000049,
+              4639.66100000016,
+              4086.2599000001865
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 352,
+            "result_sha256": "656175714ff2807432e4924e67fe2f7983882fed08d323ff3a42c41b853a5f02"
+          },
+          "custom_numeric_threshold": {
+            "runs": 5,
+            "min_ms": 3340.8321000001706,
+            "mean_ms": 3608.526940000047,
+            "median_ms": 3655.866999999944,
+            "p95_ms": 3839.0955000004396,
+            "max_ms": 3839.0955000004396,
+            "samples_ms": [
+              3488.140399999793,
+              3839.0955000004396,
+              3340.8321000001706,
+              3718.6996999998883,
+              3655.866999999944
+            ],
+            "percentile_method": "nearest-rank",
+            "warmups": 1,
+            "result_rows": 1000,
+            "result_sha256": "904741efacf52b226e3e632e7c48e36543f80832d31879a6f7746b19aba47ad9"
+          }
+        },
+        "query_plans": {
+          "find_errors": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SEARCH qr USING INDEX idx_query_rows_recording (recording_id=?)",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ],
+          "low_battery": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SEARCH qr USING INDEX idx_query_rows_recording (recording_id=?)",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ],
+          "state_duration": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SEARCH qr USING INDEX idx_query_rows_recording (recording_id=?)",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ],
+          "time_sync": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SEARCH qr USING INDEX idx_query_rows_key (key=?)",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ],
+          "custom_scalar_key": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SEARCH qr USING INDEX idx_query_rows_recording (recording_id=?)",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ],
+          "custom_time_range": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SEARCH qr USING INDEX idx_query_rows_recording (recording_id=?)",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ],
+          "custom_numeric_threshold": [
+            "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+            "SEARCH qr USING INDEX idx_query_rows_recording (recording_id=?)",
+            "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+          ]
+        }
+      }
+    }
+  },
+  "status": "succeeded",
+  "run_id": "benchmark_20261006_015545_baseline_smoke_41538061__isolated_indexes",
+  "derived_from_run_id": "benchmark_20261006_015545_baseline_smoke_41538061",
+  "measurement_scope": "Extracted isolated fresh SQLite INSERT/query experiment. No insertion Mock is used here; main pipeline timing/RSS from this early run is excluded.",
+  "memory": {
+    "scope": "Only isolated experiment phase RSS; no overall run peak",
+    "stages": {
+      "indexes/all": {
+        "elapsed_ms": 4029.7221999999238,
+        "rss_before_mb": 203.321344,
+        "rss_after_mb": 164.532224,
+        "peak_rss_mb": 204.812288
+      },
+      "query/indexes/all/find_errors": {
+        "elapsed_ms": 775.093599999991,
+        "rss_before_mb": 167.1168,
+        "rss_after_mb": 180.1216,
+        "peak_rss_mb": 181.16608
+      },
+      "query/indexes/all/low_battery": {
+        "elapsed_ms": 2313.9533999999458,
+        "rss_before_mb": 182.280192,
+        "rss_after_mb": 171.229184,
+        "peak_rss_mb": 192.67584
+      },
+      "query/indexes/all/state_duration": {
+        "elapsed_ms": 1072.5781000001007,
+        "rss_before_mb": 174.55104,
+        "rss_after_mb": 164.88448,
+        "peak_rss_mb": 179.068928
+      },
+      "query/indexes/all/time_sync": {
+        "elapsed_ms": 568.5723999999936,
+        "rss_before_mb": 165.830656,
+        "rss_after_mb": 179.273728,
+        "peak_rss_mb": 179.273728
+      },
+      "query/indexes/all/custom_scalar_key": {
+        "elapsed_ms": 14429.303499999833,
+        "rss_before_mb": 181.489664,
+        "rss_after_mb": 182.341632,
+        "peak_rss_mb": 184.393728
+      },
+      "query/indexes/all/custom_time_range": {
+        "elapsed_ms": 32448.371099999804,
+        "rss_before_mb": 182.345728,
+        "rss_after_mb": 186.24512,
+        "peak_rss_mb": 188.25216
+      },
+      "query/indexes/all/custom_numeric_threshold": {
+        "elapsed_ms": 35887.36760000006,
+        "rss_before_mb": 171.528192,
+        "rss_after_mb": 185.126912,
+        "peak_rss_mb": 186.830848
+      },
+      "indexes/none": {
+        "elapsed_ms": 1424.433399999998,
+        "rss_before_mb": 164.790272,
+        "rss_after_mb": 169.005056,
+        "peak_rss_mb": 169.070592
+      },
+      "query/indexes/none/find_errors": {
+        "elapsed_ms": 1054.2973000001439,
+        "rss_before_mb": 170.246144,
+        "rss_after_mb": 182.530048,
+        "peak_rss_mb": 183.62368
+      },
+      "query/indexes/none/low_battery": {
+        "elapsed_ms": 2289.1805999997814,
+        "rss_before_mb": 184.119296,
+        "rss_after_mb": 171.409408,
+        "peak_rss_mb": 193.24928
+      },
+      "query/indexes/none/state_duration": {
+        "elapsed_ms": 1401.9139000001815,
+        "rss_before_mb": 174.583808,
+        "rss_after_mb": 169.562112,
+        "peak_rss_mb": 178.343936
+      },
+      "query/indexes/none/time_sync": {
+        "elapsed_ms": 763.5137000002032,
+        "rss_before_mb": 169.566208,
+        "rss_after_mb": 178.724864,
+        "peak_rss_mb": 178.724864
+      },
+      "query/indexes/none/custom_scalar_key": {
+        "elapsed_ms": 5267.309299999852,
+        "rss_before_mb": 181.317632,
+        "rss_after_mb": 180.92032,
+        "peak_rss_mb": 183.984128
+      },
+      "query/indexes/none/custom_time_range": {
+        "elapsed_ms": 24615.04190000005,
+        "rss_before_mb": 180.92032,
+        "rss_after_mb": 185.024512,
+        "peak_rss_mb": 187.027456
+      },
+      "query/indexes/none/custom_numeric_threshold": {
+        "elapsed_ms": 24897.65299999999,
+        "rss_before_mb": 185.18016,
+        "rss_after_mb": 185.737216,
+        "peak_rss_mb": 187.789312
+      },
+      "indexes/without_idx_query_rows_recording": {
+        "elapsed_ms": 3401.4710000001287,
+        "rss_before_mb": 164.057088,
+        "rss_after_mb": 163.557376,
+        "peak_rss_mb": 166.93248
+      },
+      "query/indexes/without_idx_query_rows_recording/find_errors": {
+        "elapsed_ms": 775.655800000095,
+        "rss_before_mb": 165.163008,
+        "rss_after_mb": 179.265536,
+        "peak_rss_mb": 180.518912
+      },
+      "query/indexes/without_idx_query_rows_recording/low_battery": {
+        "elapsed_ms": 2555.5223000001206,
+        "rss_before_mb": 181.69856,
+        "rss_after_mb": 170.123264,
+        "peak_rss_mb": 191.275008
+      },
+      "query/indexes/without_idx_query_rows_recording/state_duration": {
+        "elapsed_ms": 1049.7004999997444,
+        "rss_before_mb": 173.596672,
+        "rss_after_mb": 170.184704,
+        "peak_rss_mb": 177.610752
+      },
+      "query/indexes/without_idx_query_rows_recording/time_sync": {
+        "elapsed_ms": 742.5846999999521,
+        "rss_before_mb": 170.1888,
+        "rss_after_mb": 179.249152,
+        "peak_rss_mb": 179.249152
+      },
+      "query/indexes/without_idx_query_rows_recording/custom_scalar_key": {
+        "elapsed_ms": 15255.872300000192,
+        "rss_before_mb": 182.0672,
+        "rss_after_mb": 181.37088,
+        "peak_rss_mb": 184.451072
+      },
+      "query/indexes/without_idx_query_rows_recording/custom_time_range": {
+        "elapsed_ms": 35737.489500000265,
+        "rss_before_mb": 181.37088,
+        "rss_after_mb": 185.184256,
+        "peak_rss_mb": 187.183104
+      },
+      "query/indexes/without_idx_query_rows_recording/custom_numeric_threshold": {
+        "elapsed_ms": 34589.06289999959,
+        "rss_before_mb": 174.104576,
+        "rss_after_mb": 183.99232,
+        "peak_rss_mb": 186.044416
+      },
+      "indexes/without_idx_query_rows_key": {
+        "elapsed_ms": 3602.1678000001884,
+        "rss_before_mb": 164.610048,
+        "rss_after_mb": 167.194624,
+        "peak_rss_mb": 167.36256
+      },
+      "query/indexes/without_idx_query_rows_key/find_errors": {
+        "elapsed_ms": 678.8241999997808,
+        "rss_before_mb": 168.689664,
+        "rss_after_mb": 179.9168,
+        "peak_rss_mb": 181.149696
+      },
+      "query/indexes/without_idx_query_rows_key/low_battery": {
+        "elapsed_ms": 2312.6758000003065,
+        "rss_before_mb": 181.559296,
+        "rss_after_mb": 183.287808,
+        "peak_rss_mb": 191.516672
+      },
+      "query/indexes/without_idx_query_rows_key/state_duration": {
+        "elapsed_ms": 920.1095000003079,
+        "rss_before_mb": 183.476224,
+        "rss_after_mb": 169.967616,
+        "peak_rss_mb": 184.70912
+      },
+      "query/indexes/without_idx_query_rows_key/time_sync": {
+        "elapsed_ms": 766.7569000000185,
+        "rss_before_mb": 169.971712,
+        "rss_after_mb": 179.265536,
+        "peak_rss_mb": 179.265536
+      },
+      "query/indexes/without_idx_query_rows_key/custom_scalar_key": {
+        "elapsed_ms": 15862.9791999997,
+        "rss_before_mb": 182.378496,
+        "rss_after_mb": 181.211136,
+        "peak_rss_mb": 185.073664
+      },
+      "query/indexes/without_idx_query_rows_key/custom_time_range": {
+        "elapsed_ms": 37934.318799999804,
+        "rss_before_mb": 181.211136,
+        "rss_after_mb": 185.26208,
+        "peak_rss_mb": 187.293696
+      },
+      "query/indexes/without_idx_query_rows_key/custom_numeric_threshold": {
+        "elapsed_ms": 32715.41040000011,
+        "rss_before_mb": 184.17664,
+        "rss_after_mb": 185.864192,
+        "peak_rss_mb": 187.916288
+      },
+      "indexes/without_idx_query_rows_recording_semantic_key": {
+        "elapsed_ms": 2757.1474999999737,
+        "rss_before_mb": 183.74656,
+        "rss_after_mb": 163.38944,
+        "peak_rss_mb": 183.955456
+      },
+      "query/indexes/without_idx_query_rows_recording_semantic_key/find_errors": {
+        "elapsed_ms": 1173.0986000002304,
+        "rss_before_mb": 165.433344,
+        "rss_after_mb": 178.95424,
+        "peak_rss_mb": 180.043776
+      },
+      "query/indexes/without_idx_query_rows_recording_semantic_key/low_battery": {
+        "elapsed_ms": 2416.077800000039,
+        "rss_before_mb": 181.194752,
+        "rss_after_mb": 184.737792,
+        "peak_rss_mb": 191.156224
+      },
+      "query/indexes/without_idx_query_rows_recording_semantic_key/state_duration": {
+        "elapsed_ms": 1467.1533999999156,
+        "rss_before_mb": 185.102336,
+        "rss_after_mb": 169.508864,
+        "peak_rss_mb": 186.335232
+      },
+      "query/indexes/without_idx_query_rows_recording_semantic_key/time_sync": {
+        "elapsed_ms": 30.540100000052917,
+        "rss_before_mb": 169.51296,
+        "rss_after_mb": 169.558016,
+        "peak_rss_mb": 169.558016
+      },
+      "query/indexes/without_idx_query_rows_recording_semantic_key/custom_scalar_key": {
+        "elapsed_ms": 4630.010899999888,
+        "rss_before_mb": 169.73824,
+        "rss_after_mb": 177.225728,
+        "peak_rss_mb": 179.388416
+      },
+      "query/indexes/without_idx_query_rows_recording_semantic_key/custom_time_range": {
+        "elapsed_ms": 25627.920299999914,
+        "rss_before_mb": 177.483776,
+        "rss_after_mb": 184.107008,
+        "peak_rss_mb": 186.159104
+      },
+      "query/indexes/without_idx_query_rows_recording_semantic_key/custom_numeric_threshold": {
+        "elapsed_ms": 21694.276499999887,
+        "rss_before_mb": 184.967168,
+        "rss_after_mb": 185.024512,
+        "peak_rss_mb": 187.060224
+      }
+    }
+  }
+}

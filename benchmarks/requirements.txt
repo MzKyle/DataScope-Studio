@@ -1,0 +1,2 @@
+# Benchmark tooling only; core has no psutil dependency.
+psutil>=5.9,<8

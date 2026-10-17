@@ -1,0 +1,834 @@
+{
+  "format_version": 1,
+  "run_id": "duckdb_poc_20261006_033827_abd2b193",
+  "status": "succeeded",
+  "environment": {
+    "platform": "Windows-10-10.0.26300-SP0",
+    "python": "3.11.5 (tags/v3.11.5:cce6ba9, Aug 24 2023, 14:38:34) [MSC v.1936 64 bit (AMD64)]",
+    "cpu": "13th Gen Intel(R) Core(TM) i9-13900HX",
+    "logical_cpus": 32,
+    "physical_cpus": 24,
+    "memory_gb": 16.90710016,
+    "available_memory_gb_at_start": 6.087954432,
+    "datascope_version": "0.4.0",
+    "git_commit": "3b3840bd3e7dd66c90bcfdadfb8704158a2fdfac",
+    "git_dirty": true,
+    "benchmark_code_sha256": "f6b226409d3dcd56718c24cbf2b249948fb247a0d0071946f6b71dbde80da175",
+    "packages": {
+      "datascope-core": "0.4.0",
+      "pandas": "2.3.3",
+      "numpy": "2.4.6",
+      "rerun-sdk": "0.33.1",
+      "psutil": "7.2.2",
+      "pyarrow": "25.0.1"
+    },
+    "sqlite_version": "3.42.0",
+    "duckdb_version": "1.5.6"
+  },
+  "baseline_json": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\benchmark_20261006_031650_baseline_smoke_fixed_c509c566.json",
+  "source_checksum": "f6d328637d65ddf5d2f5277e507e4142515f96f085559897634601d77d8db895",
+  "dataset": {
+    "rows": 30000,
+    "frequency_hz": 200.0,
+    "scalar_fields": 30,
+    "state_fields": 1,
+    "seed": 20261006,
+    "duration_seconds": 150.0,
+    "last_timestamp_seconds": 149.995,
+    "total_columns": 33,
+    "expected_query_rows": 960000
+  },
+  "query_runs": 5,
+  "warmups": 1,
+  "query_limit": 1000,
+  "implementation_scope": "deterministic non-null CSV scalar/state samples; two recordings",
+  "not_covered": [
+    "diagnostics parity",
+    "time_sync",
+    "CV/ROS sample normalization",
+    "stream deletion",
+    "concurrent writers",
+    "schema evolution"
+  ],
+  "artifacts": null,
+  "duckdb_settings": {
+    "threads": 4,
+    "memory_limit": "1GB"
+  },
+  "duckdb_ingest_ms": 436.99070000002393,
+  "duckdb_size_mb": 3.42016,
+  "parquet_export_ms": 113.23209999954997,
+  "parquet_size_mb": 5.529324,
+  "csv_to_parquet_via_duckdb_ms": 550.2227999995739,
+  "normalized_sample_rows": [
+    30000,
+    1000
+  ],
+  "sqlite_primary_query_rows": 960000,
+  "sqlite_primary_size_mb": 246.792192,
+  "sqlite_primary_and_peer_live_size_mb": 255.11936,
+  "sqlite_index_build_ms": 35005.69149999956,
+  "sqlite_production_queries": {
+    "find_errors": {
+      "runs": 5,
+      "min_ms": 434.7395000004326,
+      "mean_ms": 511.2533800000165,
+      "median_ms": 486.6453000004185,
+      "p95_ms": 654.9143000002005,
+      "max_ms": 654.9143000002005,
+      "samples_ms": [
+        434.7395000004326,
+        497.20069999966654,
+        654.9143000002005,
+        482.7670999993643,
+        486.6453000004185
+      ],
+      "percentile_method": "nearest-rank",
+      "warmups": 1,
+      "result_rows": 1000,
+      "result_sha256": "f21fcddec77947efb45e18811da5894ef0377090125b21b39c249f12eb09ee62",
+      "distinct_result_hashes": 1,
+      "repeat_check": "exact_sha256"
+    },
+    "low_battery": {
+      "runs": 5,
+      "min_ms": 1544.1412000000128,
+      "mean_ms": 1651.7649999999776,
+      "median_ms": 1672.6404000000912,
+      "p95_ms": 1759.7233999995296,
+      "max_ms": 1759.7233999995296,
+      "samples_ms": [
+        1683.8886000005004,
+        1672.6404000000912,
+        1598.431399999754,
+        1759.7233999995296,
+        1544.1412000000128
+      ],
+      "percentile_method": "nearest-rank",
+      "warmups": 1,
+      "result_rows": 1000,
+      "result_sha256": "44cb433fe15479447e129c6d45ea67f234b474251fddd88ca34886c02426e861",
+      "distinct_result_hashes": 1,
+      "repeat_check": "exact_sha256"
+    },
+    "state_duration": {
+      "runs": 5,
+      "min_ms": 495.5906999994113,
+      "mean_ms": 579.6320399998876,
+      "median_ms": 580.4550000002564,
+      "p95_ms": 718.6112999997931,
+      "max_ms": 718.6112999997931,
+      "samples_ms": [
+        586.5499000001364,
+        718.6112999997931,
+        495.5906999994113,
+        516.953299999841,
+        580.4550000002564
+      ],
+      "percentile_method": "nearest-rank",
+      "warmups": 1,
+      "result_rows": 1000,
+      "result_sha256": "7aebd013a5df174faff72cd0ee9cf6ea2b6e61d209c9b21af13f24283a75e2fa",
+      "distinct_result_hashes": 1,
+      "repeat_check": "exact_sha256"
+    },
+    "custom_scalar_key": {
+      "runs": 5,
+      "min_ms": 5769.159299999956,
+      "mean_ms": 6560.471819999839,
+      "median_ms": 6912.475600000107,
+      "p95_ms": 7011.658499999612,
+      "max_ms": 7011.658499999612,
+      "samples_ms": [
+        6912.475600000107,
+        6951.52379999945,
+        7011.658499999612,
+        6157.541900000069,
+        5769.159299999956
+      ],
+      "percentile_method": "nearest-rank",
+      "warmups": 1,
+      "result_rows": 1000,
+      "result_sha256": "46c2eb62584b69d497eabb785a12c5a6cddd33add3200e11fcb9f5165d27e9f6",
+      "distinct_result_hashes": 1,
+      "repeat_check": "exact_sha256"
+    },
+    "custom_time_range": {
+      "runs": 5,
+      "min_ms": 16069.710400000076,
+      "mean_ms": 17151.14289999983,
+      "median_ms": 17396.735100000114,
+      "p95_ms": 17994.57419999999,
+      "max_ms": 17994.57419999999,
+      "samples_ms": [
+        17994.57419999999,
+        17396.735100000114,
+        16625.06469999971,
+        17669.630099999267,
+        16069.710400000076
+      ],
+      "percentile_method": "nearest-rank",
+      "warmups": 1,
+      "result_rows": 352,
+      "result_sha256": "84fb12baeb70fb4ca980a58d6bad6a2ef9429a608ec1de1b1324cde96a601040",
+      "distinct_result_hashes": 1,
+      "repeat_check": "exact_sha256"
+    },
+    "custom_numeric_threshold": {
+      "runs": 5,
+      "min_ms": 15438.574200000403,
+      "mean_ms": 17302.809040000102,
+      "median_ms": 17106.351899999936,
+      "p95_ms": 18608.61870000008,
+      "max_ms": 18608.61870000008,
+      "samples_ms": [
+        15438.574200000403,
+        17106.351899999936,
+        17014.998800000285,
+        18345.501599999807,
+        18608.61870000008
+      ],
+      "percentile_method": "nearest-rank",
+      "warmups": 1,
+      "result_rows": 1000,
+      "result_sha256": "9548477a8017eea9a3c4aaf6e35c78e16570f73ce3715bc9c6e1c09633553950",
+      "distinct_result_hashes": 1,
+      "repeat_check": "exact_sha256"
+    },
+    "compare": {
+      "runs": 5,
+      "min_ms": 2434.990800000378,
+      "mean_ms": 2992.610060000152,
+      "median_ms": 3018.9049000000523,
+      "p95_ms": 3420.0362999999925,
+      "max_ms": 3420.0362999999925,
+      "samples_ms": [
+        3328.56559999982,
+        3018.9049000000523,
+        2434.990800000378,
+        2760.552700000517,
+        3420.0362999999925
+      ],
+      "percentile_method": "nearest-rank",
+      "warmups": 1,
+      "result_rows": 4,
+      "result_sha256": "82116d147cf544494f65f58ea652f100e04dc538b67ac20bbfff113e29596e68",
+      "distinct_result_hashes": 1,
+      "repeat_check": "exact_sha256",
+      "metric_keys": [
+        "battery",
+        "temperature"
+      ],
+      "recording_source_rows": [
+        30000,
+        1000
+      ]
+    }
+  },
+  "duckdb_view_setup_ms": 186.2437999998292,
+  "logical_query_rows": 992000,
+  "queries": {
+    "sqlite_sql_pushdown": {
+      "find_errors": {
+        "runs": 5,
+        "min_ms": 155.61049999996612,
+        "mean_ms": 170.58043999986694,
+        "median_ms": 167.933599999742,
+        "p95_ms": 187.9030000000057,
+        "max_ms": 187.9030000000057,
+        "samples_ms": [
+          167.65179999947577,
+          155.61049999996612,
+          167.933599999742,
+          173.8033000001451,
+          187.9030000000057
+        ],
+        "percentile_method": "nearest-rank",
+        "warmups": 1,
+        "result_rows": 1000,
+        "result_sha256": "f21fcddec77947efb45e18811da5894ef0377090125b21b39c249f12eb09ee62",
+        "distinct_result_hashes": 1,
+        "repeat_check": "exact_sha256"
+      },
+      "low_battery": {
+        "runs": 5,
+        "min_ms": 710.8197999996264,
+        "mean_ms": 771.9635199997356,
+        "median_ms": 757.1362999997291,
+        "p95_ms": 853.9579999996931,
+        "max_ms": 853.9579999996931,
+        "samples_ms": [
+          789.727800000037,
+          757.1362999997291,
+          748.1756999995923,
+          853.9579999996931,
+          710.8197999996264
+        ],
+        "percentile_method": "nearest-rank",
+        "warmups": 1,
+        "result_rows": 1000,
+        "result_sha256": "44cb433fe15479447e129c6d45ea67f234b474251fddd88ca34886c02426e861",
+        "distinct_result_hashes": 1,
+        "repeat_check": "exact_sha256"
+      },
+      "custom_scalar_key": {
+        "runs": 5,
+        "min_ms": 563.1157999996503,
+        "mean_ms": 590.008780000062,
+        "median_ms": 599.5364000000336,
+        "p95_ms": 616.6092000003118,
+        "max_ms": 616.6092000003118,
+        "samples_ms": [
+          563.1157999996503,
+          603.9765000004991,
+          566.805999999815,
+          616.6092000003118,
+          599.5364000000336
+        ],
+        "percentile_method": "nearest-rank",
+        "warmups": 1,
+        "result_rows": 1000,
+        "result_sha256": "46c2eb62584b69d497eabb785a12c5a6cddd33add3200e11fcb9f5165d27e9f6",
+        "distinct_result_hashes": 1,
+        "repeat_check": "exact_sha256"
+      },
+      "custom_time_range": {
+        "runs": 5,
+        "min_ms": 228.18630000074336,
+        "mean_ms": 260.2087399998709,
+        "median_ms": 245.11819999952422,
+        "p95_ms": 334.99229999961244,
+        "max_ms": 334.99229999961244,
+        "samples_ms": [
+          259.87009999971633,
+          232.87679999975808,
+          245.11819999952422,
+          228.18630000074336,
+          334.99229999961244
+        ],
+        "percentile_method": "nearest-rank",
+        "warmups": 1,
+        "result_rows": 352,
+        "result_sha256": "84fb12baeb70fb4ca980a58d6bad6a2ef9429a608ec1de1b1324cde96a601040",
+        "distinct_result_hashes": 1,
+        "repeat_check": "exact_sha256"
+      },
+      "custom_numeric_threshold": {
+        "runs": 5,
+        "min_ms": 527.942300000177,
+        "mean_ms": 562.1550999998362,
+        "median_ms": 552.5331999997434,
+        "p95_ms": 614.0318999996452,
+        "max_ms": 614.0318999996452,
+        "samples_ms": [
+          547.1003000002383,
+          614.0318999996452,
+          569.1677999993772,
+          527.942300000177,
+          552.5331999997434
+        ],
+        "percentile_method": "nearest-rank",
+        "warmups": 1,
+        "result_rows": 1000,
+        "result_sha256": "9548477a8017eea9a3c4aaf6e35c78e16570f73ce3715bc9c6e1c09633553950",
+        "distinct_result_hashes": 1,
+        "repeat_check": "exact_sha256"
+      },
+      "state_duration": {
+        "runs": 5,
+        "min_ms": 240.69169999984297,
+        "mean_ms": 251.36767999993026,
+        "median_ms": 245.487499999399,
+        "p95_ms": 275.57009999964066,
+        "max_ms": 275.57009999964066,
+        "samples_ms": [
+          250.04660000013246,
+          245.487499999399,
+          240.69169999984297,
+          245.0425000006362,
+          275.57009999964066
+        ],
+        "percentile_method": "nearest-rank",
+        "warmups": 1,
+        "result_rows": 1000,
+        "result_sha256": "7aebd013a5df174faff72cd0ee9cf6ea2b6e61d209c9b21af13f24283a75e2fa",
+        "distinct_result_hashes": 1,
+        "repeat_check": "exact_sha256"
+      },
+      "compare": {
+        "runs": 5,
+        "min_ms": 559.1721000000689,
+        "mean_ms": 595.2651400002651,
+        "median_ms": 608.3415000002788,
+        "p95_ms": 614.7957000002862,
+        "max_ms": 614.7957000002862,
+        "samples_ms": [
+          608.3415000002788,
+          559.1721000000689,
+          611.9053000002168,
+          582.1111000004748,
+          614.7957000002862
+        ],
+        "percentile_method": "nearest-rank",
+        "warmups": 1,
+        "result_rows": 4,
+        "result_sha256": "5de01189bcc7e94b9840417402fb6415aa59c8114ec75756a41cfae017f74b51",
+        "distinct_result_hashes": 1,
+        "repeat_check": "validator_each_run"
+      }
+    },
+    "duckdb_table": {
+      "find_errors": {
+        "runs": 5,
+        "min_ms": 12.043800000355986,
+        "mean_ms": 13.337240000146267,
+        "median_ms": 12.862200000199664,
+        "p95_ms": 15.94550000027084,
+        "max_ms": 15.94550000027084,
+        "samples_ms": [
+          12.043800000355986,
+          15.94550000027084,
+          12.637400000130583,
+          13.197299999774259,
+          12.862200000199664
+        ],
+        "percentile_method": "nearest-rank",
+        "warmups": 1,
+        "result_rows": 1000,
+        "result_sha256": "f21fcddec77947efb45e18811da5894ef0377090125b21b39c249f12eb09ee62",
+        "distinct_result_hashes": 1,
+        "repeat_check": "exact_sha256"
+      },
+      "low_battery": {
+        "runs": 5,
+        "min_ms": 13.740100000177335,
+        "mean_ms": 15.846480000254815,
+        "median_ms": 15.319300000555813,
+        "p95_ms": 18.64670000031765,
+        "max_ms": 18.64670000031765,
+        "samples_ms": [
+          18.64670000031765,
+          13.740100000177335,
+          14.38380000035977,
+          15.319300000555813,
+          17.142499999863503
+        ],
+        "percentile_method": "nearest-rank",
+        "warmups": 1,
+        "result_rows": 1000,
+        "result_sha256": "44cb433fe15479447e129c6d45ea67f234b474251fddd88ca34886c02426e861",
+        "distinct_result_hashes": 1,
+        "repeat_check": "exact_sha256"
+      },
+      "custom_scalar_key": {
+        "runs": 5,
+        "min_ms": 14.164000000164378,
+        "mean_ms": 15.15501999983826,
+        "median_ms": 14.562200000000303,
+        "p95_ms": 17.309199999544944,
+        "max_ms": 17.309199999544944,
+        "samples_ms": [
+          14.164000000164378,
+          14.350999999805936,
+          15.388699999675737,
+          14.562200000000303,
+          17.309199999544944
+        ],
+        "percentile_method": "nearest-rank",
+        "warmups": 1,
+        "result_rows": 1000,
+        "result_sha256": "46c2eb62584b69d497eabb785a12c5a6cddd33add3200e11fcb9f5165d27e9f6",
+        "distinct_result_hashes": 1,
+        "repeat_check": "exact_sha256"
+      },
+      "custom_time_range": {
+        "runs": 5,
+        "min_ms": 14.000799999848823,
+        "mean_ms": 15.85637999996834,
+        "median_ms": 15.481399999771384,
+        "p95_ms": 18.66500000051019,
+        "max_ms": 18.66500000051019,
+        "samples_ms": [
+          15.481399999771384,
+          15.370600000096601,
+          14.000799999848823,
+          15.7640999996147,
+          18.66500000051019
+        ],
+        "percentile_method": "nearest-rank",
+        "warmups": 1,
+        "result_rows": 352,
+        "result_sha256": "84fb12baeb70fb4ca980a58d6bad6a2ef9429a608ec1de1b1324cde96a601040",
+        "distinct_result_hashes": 1,
+        "repeat_check": "exact_sha256"
+      },
+      "custom_numeric_threshold": {
+        "runs": 5,
+        "min_ms": 13.668499999766937,
+        "mean_ms": 15.276599999924656,
+        "median_ms": 14.811600000030012,
+        "p95_ms": 18.26859999982844,
+        "max_ms": 18.26859999982844,
+        "samples_ms": [
+          13.668499999766937,
+          18.26859999982844,
+          14.92320000033942,
+          14.811600000030012,
+          14.711099999658472
+        ],
+        "percentile_method": "nearest-rank",
+        "warmups": 1,
+        "result_rows": 1000,
+        "result_sha256": "9548477a8017eea9a3c4aaf6e35c78e16570f73ce3715bc9c6e1c09633553950",
+        "distinct_result_hashes": 1,
+        "repeat_check": "exact_sha256"
+      },
+      "state_duration": {
+        "runs": 5,
+        "min_ms": 28.881299999738985,
+        "mean_ms": 41.069400000014866,
+        "median_ms": 38.97450000022218,
+        "p95_ms": 50.06649999995716,
+        "max_ms": 50.06649999995716,
+        "samples_ms": [
+          28.881299999738985,
+          50.06649999995716,
+          38.97450000022218,
+          49.53060000025289,
+          37.89409999990312
+        ],
+        "percentile_method": "nearest-rank",
+        "warmups": 1,
+        "result_rows": 1000,
+        "result_sha256": "7aebd013a5df174faff72cd0ee9cf6ea2b6e61d209c9b21af13f24283a75e2fa",
+        "distinct_result_hashes": 1,
+        "repeat_check": "exact_sha256"
+      },
+      "compare": {
+        "runs": 5,
+        "min_ms": 31.86290000030567,
+        "mean_ms": 33.930160000272735,
+        "median_ms": 34.364900000582566,
+        "p95_ms": 35.99690000010014,
+        "max_ms": 35.99690000010014,
+        "samples_ms": [
+          35.34700000000157,
+          31.86290000030567,
+          35.99690000010014,
+          34.364900000582566,
+          32.07910000037373
+        ],
+        "percentile_method": "nearest-rank",
+        "warmups": 1,
+        "result_rows": 4,
+        "result_sha256": "87fad3f059567590e66ddc585722a3b04efb69eff66e0a6dc7d91b7ee965c5ad",
+        "distinct_result_hashes": 6,
+        "repeat_check": "validator_each_run"
+      }
+    },
+    "duckdb_parquet": {
+      "find_errors": {
+        "runs": 5,
+        "min_ms": 51.63829999946756,
+        "mean_ms": 55.038340000101016,
+        "median_ms": 55.691700000352284,
+        "p95_ms": 59.57810000018071,
+        "max_ms": 59.57810000018071,
+        "samples_ms": [
+          55.691700000352284,
+          52.18960000001971,
+          59.57810000018071,
+          56.09400000048481,
+          51.63829999946756
+        ],
+        "percentile_method": "nearest-rank",
+        "warmups": 1,
+        "result_rows": 1000,
+        "result_sha256": "f21fcddec77947efb45e18811da5894ef0377090125b21b39c249f12eb09ee62",
+        "distinct_result_hashes": 1,
+        "repeat_check": "exact_sha256"
+      },
+      "low_battery": {
+        "runs": 5,
+        "min_ms": 60.03619999955845,
+        "mean_ms": 69.22249999970518,
+        "median_ms": 64.60409999999683,
+        "p95_ms": 84.79039999929228,
+        "max_ms": 84.79039999929228,
+        "samples_ms": [
+          63.50209999982326,
+          60.03619999955845,
+          84.79039999929228,
+          73.17969999985507,
+          64.60409999999683
+        ],
+        "percentile_method": "nearest-rank",
+        "warmups": 1,
+        "result_rows": 1000,
+        "result_sha256": "44cb433fe15479447e129c6d45ea67f234b474251fddd88ca34886c02426e861",
+        "distinct_result_hashes": 1,
+        "repeat_check": "exact_sha256"
+      },
+      "custom_scalar_key": {
+        "runs": 5,
+        "min_ms": 57.670600000164995,
+        "mean_ms": 78.64286000003631,
+        "median_ms": 65.56799999998475,
+        "p95_ms": 112.51919999995152,
+        "max_ms": 112.51919999995152,
+        "samples_ms": [
+          65.4685999998037,
+          57.670600000164995,
+          112.51919999995152,
+          91.98790000027657,
+          65.56799999998475
+        ],
+        "percentile_method": "nearest-rank",
+        "warmups": 1,
+        "result_rows": 1000,
+        "result_sha256": "46c2eb62584b69d497eabb785a12c5a6cddd33add3200e11fcb9f5165d27e9f6",
+        "distinct_result_hashes": 1,
+        "repeat_check": "exact_sha256"
+      },
+      "custom_time_range": {
+        "runs": 5,
+        "min_ms": 69.56089999948745,
+        "mean_ms": 73.38441999982024,
+        "median_ms": 72.33869999981835,
+        "p95_ms": 80.5529999997816,
+        "max_ms": 80.5529999997816,
+        "samples_ms": [
+          71.78690000000643,
+          69.56089999948745,
+          80.5529999997816,
+          72.68260000000737,
+          72.33869999981835
+        ],
+        "percentile_method": "nearest-rank",
+        "warmups": 1,
+        "result_rows": 352,
+        "result_sha256": "84fb12baeb70fb4ca980a58d6bad6a2ef9429a608ec1de1b1324cde96a601040",
+        "distinct_result_hashes": 1,
+        "repeat_check": "exact_sha256"
+      },
+      "custom_numeric_threshold": {
+        "runs": 5,
+        "min_ms": 50.473799999963376,
+        "mean_ms": 56.53306000021985,
+        "median_ms": 57.7026000000842,
+        "p95_ms": 59.3988000000536,
+        "max_ms": 59.3988000000536,
+        "samples_ms": [
+          59.375000000727596,
+          50.473799999963376,
+          55.71510000027047,
+          57.7026000000842,
+          59.3988000000536
+        ],
+        "percentile_method": "nearest-rank",
+        "warmups": 1,
+        "result_rows": 1000,
+        "result_sha256": "9548477a8017eea9a3c4aaf6e35c78e16570f73ce3715bc9c6e1c09633553950",
+        "distinct_result_hashes": 1,
+        "repeat_check": "exact_sha256"
+      },
+      "state_duration": {
+        "runs": 5,
+        "min_ms": 66.430599999876,
+        "mean_ms": 71.31009999975504,
+        "median_ms": 68.60640000013518,
+        "p95_ms": 79.72119999976712,
+        "max_ms": 79.72119999976712,
+        "samples_ms": [
+          73.40719999956491,
+          79.72119999976712,
+          68.60640000013518,
+          66.430599999876,
+          68.38509999943199
+        ],
+        "percentile_method": "nearest-rank",
+        "warmups": 1,
+        "result_rows": 1000,
+        "result_sha256": "7aebd013a5df174faff72cd0ee9cf6ea2b6e61d209c9b21af13f24283a75e2fa",
+        "distinct_result_hashes": 1,
+        "repeat_check": "exact_sha256"
+      },
+      "compare": {
+        "runs": 5,
+        "min_ms": 72.91080000049988,
+        "mean_ms": 88.2770200001687,
+        "median_ms": 82.07790000051318,
+        "p95_ms": 109.24569999951927,
+        "max_ms": 109.24569999951927,
+        "samples_ms": [
+          102.28110000025481,
+          109.24569999951927,
+          82.07790000051318,
+          72.91080000049988,
+          74.86960000005638
+        ],
+        "percentile_method": "nearest-rank",
+        "warmups": 1,
+        "result_rows": 4,
+        "result_sha256": "73d970480745c828569c7aec988380c22372cdeca39ebf14901454c6ecdae322",
+        "distinct_result_hashes": 5,
+        "repeat_check": "validator_each_run"
+      }
+    }
+  },
+  "memory": {
+    "method": "psutil process RSS polling; includes native allocations",
+    "sample_interval_ms": 10.0,
+    "peak_rss_mb": 180.699136,
+    "os_peak_rss_mb": 182.788096,
+    "rss_before_mb": 109.223936,
+    "rss_after_mb": 139.6736,
+    "stages": {
+      "sqlite_correctness_reference": {
+        "elapsed_ms": 30905.109100000118,
+        "rss_before_mb": 109.252608,
+        "rss_after_mb": 132.435968,
+        "peak_rss_mb": 168.075264
+      },
+      "duckdb_csv_ingest": {
+        "elapsed_ms": 436.93979999989097,
+        "rss_before_mb": 135.12704,
+        "rss_after_mb": 144.0768,
+        "peak_rss_mb": 180.699136
+      },
+      "parquet_export": {
+        "elapsed_ms": 113.20119999982126,
+        "rss_before_mb": 144.0768,
+        "rss_after_mb": 144.089088,
+        "peak_rss_mb": 164.274176
+      },
+      "query/sqlite_sql_pushdown/find_errors": {
+        "elapsed_ms": 1044.2877000004955,
+        "rss_before_mb": 146.833408,
+        "rss_after_mb": 149.426176,
+        "peak_rss_mb": 149.426176
+      },
+      "query/sqlite_sql_pushdown/low_battery": {
+        "elapsed_ms": 4645.695799999885,
+        "rss_before_mb": 149.426176,
+        "rss_after_mb": 149.430272,
+        "peak_rss_mb": 149.430272
+      },
+      "query/sqlite_sql_pushdown/custom_scalar_key": {
+        "elapsed_ms": 3571.7893999999433,
+        "rss_before_mb": 149.430272,
+        "rss_after_mb": 149.430272,
+        "peak_rss_mb": 149.430272
+      },
+      "query/sqlite_sql_pushdown/custom_time_range": {
+        "elapsed_ms": 1574.1537000003518,
+        "rss_before_mb": 149.430272,
+        "rss_after_mb": 149.430272,
+        "peak_rss_mb": 149.430272
+      },
+      "query/sqlite_sql_pushdown/custom_numeric_threshold": {
+        "elapsed_ms": 3335.5432999996992,
+        "rss_before_mb": 149.430272,
+        "rss_after_mb": 149.590016,
+        "peak_rss_mb": 149.590016
+      },
+      "query/sqlite_sql_pushdown/state_duration": {
+        "elapsed_ms": 1535.824199999297,
+        "rss_before_mb": 149.590016,
+        "rss_after_mb": 148.185088,
+        "peak_rss_mb": 153.94816
+      },
+      "query/sqlite_sql_pushdown/compare": {
+        "elapsed_ms": 3616.6753000006793,
+        "rss_before_mb": 148.185088,
+        "rss_after_mb": 146.870272,
+        "peak_rss_mb": 156.176384
+      },
+      "query/duckdb_table/find_errors": {
+        "elapsed_ms": 108.64069999934145,
+        "rss_before_mb": 146.870272,
+        "rss_after_mb": 148.803584,
+        "peak_rss_mb": 149.352448
+      },
+      "query/duckdb_table/low_battery": {
+        "elapsed_ms": 122.29829999978392,
+        "rss_before_mb": 148.803584,
+        "rss_after_mb": 148.426752,
+        "peak_rss_mb": 149.598208
+      },
+      "query/duckdb_table/custom_scalar_key": {
+        "elapsed_ms": 120.03079999976762,
+        "rss_before_mb": 148.426752,
+        "rss_after_mb": 148.803584,
+        "peak_rss_mb": 150.073344
+      },
+      "query/duckdb_table/custom_time_range": {
+        "elapsed_ms": 107.49980000036885,
+        "rss_before_mb": 148.803584,
+        "rss_after_mb": 147.480576,
+        "peak_rss_mb": 149.737472
+      },
+      "query/duckdb_table/custom_numeric_threshold": {
+        "elapsed_ms": 122.08379999992758,
+        "rss_before_mb": 147.480576,
+        "rss_after_mb": 148.729856,
+        "peak_rss_mb": 149.262336
+      },
+      "query/duckdb_table/state_duration": {
+        "elapsed_ms": 298.53600000024016,
+        "rss_before_mb": 148.729856,
+        "rss_after_mb": 151.556096,
+        "peak_rss_mb": 161.779712
+      },
+      "query/duckdb_table/compare": {
+        "elapsed_ms": 220.7449000006818,
+        "rss_before_mb": 151.556096,
+        "rss_after_mb": 150.122496,
+        "peak_rss_mb": 171.307008
+      },
+      "query/duckdb_parquet/find_errors": {
+        "elapsed_ms": 361.5465000002587,
+        "rss_before_mb": 150.122496,
+        "rss_after_mb": 155.262976,
+        "peak_rss_mb": 157.622272
+      },
+      "query/duckdb_parquet/low_battery": {
+        "elapsed_ms": 437.7523999992263,
+        "rss_before_mb": 155.262976,
+        "rss_after_mb": 151.597056,
+        "peak_rss_mb": 157.437952
+      },
+      "query/duckdb_parquet/custom_scalar_key": {
+        "elapsed_ms": 487.9695999998148,
+        "rss_before_mb": 151.597056,
+        "rss_after_mb": 154.43968,
+        "peak_rss_mb": 157.130752
+      },
+      "query/duckdb_parquet/custom_time_range": {
+        "elapsed_ms": 449.3898000000627,
+        "rss_before_mb": 154.43968,
+        "rss_after_mb": 152.928256,
+        "peak_rss_mb": 164.847616
+      },
+      "query/duckdb_parquet/custom_numeric_threshold": {
+        "elapsed_ms": 363.00740000024234,
+        "rss_before_mb": 152.928256,
+        "rss_after_mb": 159.301632,
+        "peak_rss_mb": 159.301632
+      },
+      "query/duckdb_parquet/state_duration": {
+        "elapsed_ms": 456.3636000002589,
+        "rss_before_mb": 159.301632,
+        "rss_after_mb": 153.260032,
+        "peak_rss_mb": 173.162496
+      },
+      "query/duckdb_parquet/compare": {
+        "elapsed_ms": 517.0133999999962,
+        "rss_before_mb": 153.260032,
+        "rss_after_mb": 154.546176,
+        "peak_rss_mb": 177.373184
+      }
+    },
+    "scope": "this process; child processes and system page cache are excluded"
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "recorded_at": "2026-10-17T02:24:01.896493+00:00",
+  "reason": "Earlier automatic approval review rejected old artifact deletion (blocked by policy); do not retry or bypass.",
+  "total_bytes": 34080977223,
+  "directories": [
+    {
+      "path": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\benchmark_20261006_015530_selfcheck_ce2f8611",
+      "relative_path": "benchmarks/results/.work/benchmark_20261006_015530_selfcheck_ce2f8611",
+      "bytes": 879615,
+      "status": "retained_for_manual_cleanup",
+      "automatic_delete_attempted_in_this_audit": false
+    },
+    {
+      "path": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\benchmark_20261006_015545_baseline_smoke_41538061",
+      "relative_path": "benchmarks/results/.work/benchmark_20261006_015545_baseline_smoke_41538061",
+      "bytes": 346607132,
+      "status": "retained_for_manual_cleanup",
+      "automatic_delete_attempted_in_this_audit": false
+    },
+    {
+      "path": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\benchmark_20261006_022940_baseline_small_index_e0812417",
+      "relative_path": "benchmarks/results/.work/benchmark_20261006_022940_baseline_small_index_e0812417",
+      "bytes": 2668984146,
+      "status": "retained_for_manual_cleanup",
+      "automatic_delete_attempted_in_this_audit": false
+    },
+    {
+      "path": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\benchmark_20261006_024955_baseline_small_index_fixed_295b46c4",
+      "relative_path": "benchmarks/results/.work/benchmark_20261006_024955_baseline_small_index_fixed_295b46c4",
+      "bytes": 2668671963,
+      "status": "retained_for_manual_cleanup",
+      "automatic_delete_attempted_in_this_audit": false
+    },
+    {
+      "path": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\benchmark_20261006_031650_baseline_smoke_fixed_c509c566",
+      "relative_path": "benchmarks/results/.work/benchmark_20261006_031650_baseline_smoke_fixed_c509c566",
+      "bytes": 361804413,
+      "status": "retained_for_manual_cleanup",
+      "automatic_delete_attempted_in_this_audit": false
+    },
+    {
+      "path": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\benchmark_phase_c_20261007_143434_75780e48",
+      "relative_path": "benchmarks/results/.work/benchmark_phase_c_20261007_143434_75780e48",
+      "bytes": 180091,
+      "status": "retained_for_manual_cleanup",
+      "automatic_delete_attempted_in_this_audit": false
+    },
+    {
+      "path": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\benchmark_phase_c_20261007_145014_b79b78cf",
+      "relative_path": "benchmarks/results/.work/benchmark_phase_c_20261007_145014_b79b78cf",
+      "bytes": 27735713511,
+      "status": "retained_for_manual_cleanup",
+      "automatic_delete_attempted_in_this_audit": false
+    },
+    {
+      "path": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\benchmark_phase_c_20261017_020703_29cfbc6b",
+      "relative_path": "benchmarks/results/.work/benchmark_phase_c_20261017_020703_29cfbc6b",
+      "bytes": 298136352,
+      "status": "retained_for_manual_cleanup",
+      "automatic_delete_attempted_in_this_audit": false
+    }
+  ]
+}

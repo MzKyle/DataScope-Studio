@@ -1,0 +1,1355 @@
+{
+  "format_version": 1,
+  "run_id": "benchmark_phase_c_20261007_145014_b79b78cf",
+  "started_at": "2026-10-07T14:50:14.751136+00:00",
+  "status": "running",
+  "environment": {
+    "platform": "Windows-10-10.0.26300-SP0",
+    "python": "3.11.5 (tags/v3.11.5:cce6ba9, Aug 24 2023, 14:38:34) [MSC v.1936 64 bit (AMD64)]",
+    "cpu": "13th Gen Intel(R) Core(TM) i9-13900HX",
+    "logical_cpus": 32,
+    "physical_cpus": 24,
+    "memory_gb": 16.90710016,
+    "available_memory_gb_at_start": 4.749914112,
+    "datascope_version": "0.4.0",
+    "git_commit": "3b3840bd3e7dd66c90bcfdadfb8704158a2fdfac",
+    "git_dirty": true,
+    "benchmark_code_sha256": "6595767c8bed0b7004119bbf859a40b18cc80864a90b3f43b93ff16ed259a7ec",
+    "packages": {
+      "datascope-core": "0.4.0",
+      "pandas": "2.3.3",
+      "numpy": "2.4.6",
+      "rerun-sdk": "0.33.1",
+      "psutil": "7.2.2",
+      "pyarrow": "25.0.1"
+    },
+    "sqlite_version": "3.42.0"
+  },
+  "settings": {
+    "query_runs": 5,
+    "warmups": 1,
+    "query_limit": 1000,
+    "threads": 4,
+    "memory_limit": "1GB"
+  },
+  "backends": {
+    "legacy_sqlite_eav": {
+      "backend": "legacy_sqlite_eav",
+      "status": "succeeded",
+      "environment": {
+        "platform": "Windows-10-10.0.26300-SP0",
+        "python": "3.11.5 (tags/v3.11.5:cce6ba9, Aug 24 2023, 14:38:34) [MSC v.1936 64 bit (AMD64)]",
+        "cpu": "13th Gen Intel(R) Core(TM) i9-13900HX",
+        "logical_cpus": 32,
+        "physical_cpus": 24,
+        "memory_gb": 16.90710016,
+        "available_memory_gb_at_start": 4.696526848,
+        "datascope_version": "0.4.0",
+        "git_commit": "3b3840bd3e7dd66c90bcfdadfb8704158a2fdfac",
+        "git_dirty": true,
+        "benchmark_code_sha256": "6595767c8bed0b7004119bbf859a40b18cc80864a90b3f43b93ff16ed259a7ec",
+        "packages": {
+          "datascope-core": "0.4.0",
+          "pandas": "2.3.3",
+          "numpy": "2.4.6",
+          "rerun-sdk": "0.33.1",
+          "psutil": "7.2.2",
+          "pyarrow": "25.0.1"
+        },
+        "sqlite_version": "3.42.0"
+      },
+      "source_checksums": [
+        "57137c2e55637d502233428049ba1085e836e69e0213fb9b088b67f8644e5329",
+        "147c3a941b56a9220e530dae073c93573b3f4347ea79966cd287fa1cdb6c14cb"
+      ],
+      "query_limit": 1000,
+      "logical_sample_count": 3001000,
+      "logical_query_rows": 96032000,
+      "query_connection": "persistent within this isolated backend worker",
+      "preparation": {
+        "schema_ms": 12.41190000291681,
+        "load_ms": 308817.386499999,
+        "sql_insert_ms": 113411.76520007139,
+        "index_ms": 352140.96959999733,
+        "individual_index_ms": {
+          "idx_query_rows_recording": 54426.753499996266,
+          "idx_query_rows_key": 54267.87250000052,
+          "idx_query_rows_recording_semantic_key": 219329.12660000147
+        },
+        "checkpoint_ms": 5.093199994007591,
+        "total_preparation_ms": 660975.8672000025,
+        "physical_sample_rows": 96032000,
+        "storage_bytes": 23610019840,
+        "secondary_indexes": [
+          [
+            "idx_query_rows_recording",
+            "recording_id"
+          ],
+          [
+            "idx_query_rows_key",
+            "key"
+          ],
+          [
+            "idx_query_rows_recording_semantic_key",
+            "recording_id, semantic_type, key, entity_path, time"
+          ]
+        ],
+        "storage_scope": "EAV sample rows, all three existing indexes, same small dictionaries; excludes production workspace metadata",
+        "layout": "production query_rows schema; indexes built after CSV ingestion, not the production build pipeline",
+        "sqlite_pragmas": {
+          "journal_mode": "wal",
+          "synchronous": 2,
+          "cache_size": -65536,
+          "temp_store": 1
+        },
+        "storage_mb": 23610.01984,
+        "storage_amplification": 24.853188533353933
+      },
+      "sql": {
+        "find_errors": "SELECT recording_id, time, entity_path, key, value_json FROM query_rows WHERE recording_id = 'recording_aba34a5289f2' AND semantic_type = 'state' AND key IN (SELECT key FROM field_dictionary WHERE recording_key = 1 AND kind = 'text') AND value_json IN ('\"error\"','\"warning\"') ORDER BY recording_id, time, entity_path, key LIMIT 1000",
+        "low_battery": "SELECT recording_id, time, entity_path, key, value_json FROM query_rows WHERE recording_id = 'recording_aba34a5289f2' AND semantic_type IN ('scalar', 'scalar_group') AND key IN (SELECT key FROM field_dictionary WHERE recording_key = 1 AND instr(lower(key || ' ' || entity_path), 'battery') > 0) AND CAST(value_json AS DOUBLE) < .2 ORDER BY recording_id, time, entity_path, key LIMIT 1000",
+        "custom_scalar_key": "SELECT recording_id, time, entity_path, key, value_json FROM query_rows WHERE recording_id = 'recording_aba34a5289f2' AND semantic_type IN ('scalar', 'scalar_group') AND key IN (SELECT key FROM field_dictionary WHERE recording_key = 1 AND instr(lower(key), 'scalar_000') > 0) ORDER BY recording_id, time, entity_path, key LIMIT 1000",
+        "custom_time_range": "select recording_id, \"time\", entity_path, key, value_json from query_rows where recording_id = 'recording_aba34a5289f2' and \"time\" >= 13499.995 and \"time\" <= 13500.045 order by recording_id, \"time\", entity_path, key limit 1000",
+        "custom_numeric_threshold": "SELECT recording_id, time, entity_path, key, value_json FROM query_rows WHERE recording_id = 'recording_aba34a5289f2' AND semantic_type IN ('scalar', 'scalar_group') AND key IN (SELECT key FROM field_dictionary WHERE recording_key = 1 AND instr(lower(key), 'battery') > 0) AND CAST(value_json AS DOUBLE) < .1 ORDER BY recording_id, time, entity_path, key LIMIT 1000",
+        "state_duration": "SELECT * FROM (SELECT * FROM (WITH candidates AS (SELECT time, value_json FROM query_rows WHERE recording_id = 'recording_aba34a5289f2' AND key = 'robot_state' AND entity_path = '/states/robot_state' AND semantic_type = 'state' ORDER BY time LIMIT 1001), durations AS (SELECT time, value_json, coalesce(lead(time) OVER (ORDER BY time), time) - time duration FROM candidates) SELECT 'recording_aba34a5289f2' recording_id, time, '/states/robot_state' entity_path, 'robot_state' key, value_json, duration FROM durations ORDER BY time LIMIT 1000)) ORDER BY recording_id, entity_path, key, time LIMIT 1000",
+        "compare": "SELECT * FROM (SELECT * FROM (WITH aggregated AS (SELECT count(*) count, min(CAST(value_json AS DOUBLE)) minimum, max(CAST(value_json AS DOUBLE)) maximum, avg(CAST(value_json AS DOUBLE)) mean, max(time) last_time FROM query_rows WHERE recording_id = 'recording_aba34a5289f2' AND key = 'temperature' AND entity_path = '/metrics/temperature' AND semantic_type = 'scalar') SELECT 'recording_aba34a5289f2' recording_id, NULL time, '/metrics/temperature' entity_path, 'temperature' key, count, minimum, maximum, mean, (SELECT CAST(value_json AS DOUBLE) FROM query_rows WHERE recording_id = 'recording_aba34a5289f2' AND key = 'temperature' AND entity_path = '/metrics/temperature' AND semantic_type = 'scalar' AND time = last_time LIMIT 1) latest FROM aggregated) UNION ALL SELECT * FROM (WITH aggregated AS (SELECT count(*) count, min(CAST(value_json AS DOUBLE)) minimum, max(CAST(value_json AS DOUBLE)) maximum, avg(CAST(value_json AS DOUBLE)) mean, max(time) last_time FROM query_rows WHERE recording_id = 'recording_aba34a5289f2' AND key = 'battery' AND entity_path = '/metrics/battery' AND semantic_type = 'scalar') SELECT 'recording_aba34a5289f2' recording_id, NULL time, '/metrics/battery' entity_path, 'battery' key, count, minimum, maximum, mean, (SELECT CAST(value_json AS DOUBLE) FROM query_rows WHERE recording_id = 'recording_aba34a5289f2' AND key = 'battery' AND entity_path = '/metrics/battery' AND semantic_type = 'scalar' AND time = last_time LIMIT 1) latest FROM aggregated) UNION ALL SELECT * FROM (WITH aggregated AS (SELECT count(*) count, min(CAST(value_json AS DOUBLE)) minimum, max(CAST(value_json AS DOUBLE)) maximum, avg(CAST(value_json AS DOUBLE)) mean, max(time) last_time FROM query_rows WHERE recording_id = 'recording_f350519f96a0' AND key = 'temperature' AND entity_path = '/metrics/temperature' AND semantic_type = 'scalar') SELECT 'recording_f350519f96a0' recording_id, NULL time, '/metrics/temperature' entity_path, 'temperature' key, count, minimum, maximum, mean, (SELECT CAST(value_json AS DOUBLE) FROM query_rows WHERE recording_id = 'recording_f350519f96a0' AND key = 'temperature' AND entity_path = '/metrics/temperature' AND semantic_type = 'scalar' AND time = last_time LIMIT 1) latest FROM aggregated) UNION ALL SELECT * FROM (WITH aggregated AS (SELECT count(*) count, min(CAST(value_json AS DOUBLE)) minimum, max(CAST(value_json AS DOUBLE)) maximum, avg(CAST(value_json AS DOUBLE)) mean, max(time) last_time FROM query_rows WHERE recording_id = 'recording_f350519f96a0' AND key = 'battery' AND entity_path = '/metrics/battery' AND semantic_type = 'scalar') SELECT 'recording_f350519f96a0' recording_id, NULL time, '/metrics/battery' entity_path, 'battery' key, count, minimum, maximum, mean, (SELECT CAST(value_json AS DOUBLE) FROM query_rows WHERE recording_id = 'recording_f350519f96a0' AND key = 'battery' AND entity_path = '/metrics/battery' AND semantic_type = 'scalar' AND time = last_time LIMIT 1) latest FROM aggregated)) ORDER BY recording_id, entity_path, key LIMIT 1000"
+      },
+      "query_plans": {
+        "find_errors": [
+          "SEARCH query_rows USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=? AND key=?)",
+          "LIST SUBQUERY 1",
+          "SEARCH field_dictionary USING INDEX sqlite_autoindex_field_dictionary_1 (recording_key=?)",
+          "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+        ],
+        "low_battery": [
+          "SEARCH query_rows USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=? AND key=?)",
+          "LIST SUBQUERY 1",
+          "SEARCH field_dictionary USING INDEX sqlite_autoindex_field_dictionary_1 (recording_key=?)",
+          "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+        ],
+        "custom_scalar_key": [
+          "SEARCH query_rows USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=? AND key=?)",
+          "LIST SUBQUERY 1",
+          "SEARCH field_dictionary USING COVERING INDEX sqlite_autoindex_field_dictionary_1 (recording_key=?)",
+          "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+        ],
+        "custom_time_range": [
+          "SEARCH query_rows USING INDEX idx_query_rows_recording_semantic_key (ANY(recording_id) AND ANY(semantic_type) AND ANY(key) AND ANY(entity_path) AND time>? AND time<?)",
+          "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+        ],
+        "custom_numeric_threshold": [
+          "SEARCH query_rows USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=? AND key=?)",
+          "LIST SUBQUERY 1",
+          "SEARCH field_dictionary USING COVERING INDEX sqlite_autoindex_field_dictionary_1 (recording_key=?)",
+          "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+        ],
+        "state_duration": [
+          "CO-ROUTINE (subquery-3)",
+          "CO-ROUTINE durations",
+          "CO-ROUTINE (subquery-6)",
+          "CO-ROUTINE candidates",
+          "SEARCH query_rows USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=? AND key=? AND entity_path=?)",
+          "SCAN candidates",
+          "USE TEMP B-TREE FOR ORDER BY",
+          "SCAN (subquery-6)",
+          "SCAN durations",
+          "USE TEMP B-TREE FOR ORDER BY",
+          "SCAN (subquery-3)",
+          "USE TEMP B-TREE FOR ORDER BY"
+        ],
+        "compare": [
+          "MERGE (UNION ALL)",
+          "LEFT",
+          "MERGE (UNION ALL)",
+          "LEFT",
+          "CO-ROUTINE aggregated",
+          "SEARCH query_rows USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=? AND key=? AND entity_path=?)",
+          "SCAN aggregated",
+          "CORRELATED SCALAR SUBQUERY 2",
+          "SEARCH query_rows USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=? AND key=? AND entity_path=? AND time=?)",
+          "USE TEMP B-TREE FOR ORDER BY",
+          "RIGHT",
+          "CO-ROUTINE aggregated",
+          "SEARCH query_rows USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=? AND key=? AND entity_path=?)",
+          "SCAN aggregated",
+          "CORRELATED SCALAR SUBQUERY 6",
+          "SEARCH query_rows USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=? AND key=? AND entity_path=? AND time=?)",
+          "USE TEMP B-TREE FOR ORDER BY",
+          "RIGHT",
+          "MERGE (UNION ALL)",
+          "LEFT",
+          "CO-ROUTINE aggregated",
+          "SEARCH query_rows USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=? AND key=? AND entity_path=?)",
+          "SCAN aggregated",
+          "CORRELATED SCALAR SUBQUERY 10",
+          "SEARCH query_rows USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=? AND key=? AND entity_path=? AND time=?)",
+          "USE TEMP B-TREE FOR ORDER BY",
+          "RIGHT",
+          "CO-ROUTINE aggregated",
+          "SEARCH query_rows USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=? AND key=? AND entity_path=?)",
+          "SCAN aggregated",
+          "CORRELATED SCALAR SUBQUERY 14",
+          "SEARCH query_rows USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=? AND key=? AND entity_path=? AND time=?)",
+          "USE TEMP B-TREE FOR ORDER BY"
+        ]
+      },
+      "queries": {
+        "find_errors": {
+          "runs": 5,
+          "min_ms": 13512.891300000774,
+          "mean_ms": 13548.103600001195,
+          "median_ms": 13528.026600004523,
+          "p95_ms": 13639.244700003474,
+          "max_ms": 13639.244700003474,
+          "samples_ms": [
+            13639.244700003474,
+            13535.736999998335,
+            13524.618399998872,
+            13512.891300000774,
+            13528.026600004523
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "53bfe7cec52abf863d9fb364983be571b9138792fb238d3297a72b7422d05138",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256"
+        },
+        "low_battery": {
+          "runs": 5,
+          "min_ms": 12304.055699998571,
+          "mean_ms": 12350.911800000176,
+          "median_ms": 12319.123499997659,
+          "p95_ms": 12470.617500002845,
+          "max_ms": 12470.617500002845,
+          "samples_ms": [
+            12470.617500002845,
+            12351.216600000043,
+            12309.545700001763,
+            12319.123499997659,
+            12304.055699998571
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "6eead00bb6721440010bc9f2d0a3564f29d01206ae36d7c9a41cdee59f03e65a",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256"
+        },
+        "state_duration": {
+          "runs": 5,
+          "min_ms": 3.6593000040738843,
+          "mean_ms": 3.7437600025441498,
+          "median_ms": 3.7081000045873225,
+          "p95_ms": 3.864999998768326,
+          "max_ms": 3.864999998768326,
+          "samples_ms": [
+            3.864999998768326,
+            3.7081000045873225,
+            3.6593000040738843,
+            3.679300003568642,
+            3.8071000017225742
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "256243801d7ae3373ac77b6ba6a1081e8ccfe7e505cdddad68c2dccea406f0b9",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256"
+        },
+        "custom_scalar_key": {
+          "runs": 5,
+          "min_ms": 12374.664800001483,
+          "mean_ms": 12465.200459999323,
+          "median_ms": 12497.422699998424,
+          "p95_ms": 12514.226999999664,
+          "max_ms": 12514.226999999664,
+          "samples_ms": [
+            12374.664800001483,
+            12514.226999999664,
+            12497.422699998424,
+            12505.37169999734,
+            12434.316099999705
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "0a5152d693a1eeb05df02316f213d39a0c3f51ded27ef732ac546a40a500f7bf",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256"
+        },
+        "custom_time_range": {
+          "runs": 5,
+          "min_ms": 1.2846000026911497,
+          "mean_ms": 1.3437399989925325,
+          "median_ms": 1.3384999983827583,
+          "p95_ms": 1.4671999961137772,
+          "max_ms": 1.4671999961137772,
+          "samples_ms": [
+            1.4671999961137772,
+            1.3417000009212643,
+            1.286699996853713,
+            1.2846000026911497,
+            1.3384999983827583
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 352,
+          "result_sha256": "9fc84096a8279c41c8b2dc63fa2c67523ae159877eddd6b9c8908be4f319bdfc",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256"
+        },
+        "custom_numeric_threshold": {
+          "runs": 5,
+          "min_ms": 12206.948500002909,
+          "mean_ms": 12353.37201999937,
+          "median_ms": 12384.696099994471,
+          "p95_ms": 12525.921899999958,
+          "max_ms": 12525.921899999958,
+          "samples_ms": [
+            12206.948500002909,
+            12235.04320000211,
+            12525.921899999958,
+            12384.696099994471,
+            12414.2503999974
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "66421c91548bab824836ac99b28318b620c300a11a4e325d273e3264caf970c2",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256"
+        },
+        "compare": {
+          "runs": 5,
+          "min_ms": 25269.019299994397,
+          "mean_ms": 25473.86097999697,
+          "median_ms": 25498.788799995964,
+          "p95_ms": 25654.2502999946,
+          "max_ms": 25654.2502999946,
+          "samples_ms": [
+            25512.896300002467,
+            25498.788799995964,
+            25654.2502999946,
+            25269.019299994397,
+            25434.350199997425
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 4,
+          "result_sha256": "369c6ee40a00a7d12ef0312182c22cf80bd5fe9717fea3639f4ffee01a02cfef",
+          "distinct_result_hashes": 1,
+          "repeat_check": "validator_each_run"
+        }
+      },
+      "memory": {
+        "method": "psutil process RSS polling; includes native allocations",
+        "sample_interval_ms": 10.0,
+        "peak_rss_mb": 276.803584,
+        "os_peak_rss_mb": 276.82816,
+        "rss_before_mb": 112.267264,
+        "rss_after_mb": 115.789824,
+        "stages": {
+          "insert": {
+            "elapsed_ms": 308817.31829999626,
+            "rss_before_mb": 113.086464,
+            "rss_after_mb": 207.888384,
+            "peak_rss_mb": 213.13536
+          },
+          "indexes": {
+            "elapsed_ms": 352140.95060000545,
+            "rss_before_mb": 207.888384,
+            "rss_after_mb": 209.768448,
+            "peak_rss_mb": 276.803584
+          },
+          "checkpoint": {
+            "elapsed_ms": 5.081700001028366,
+            "rss_before_mb": 209.768448,
+            "rss_after_mb": 209.772544,
+            "peak_rss_mb": 209.772544
+          },
+          "query/legacy_sqlite_eav/find_errors": {
+            "elapsed_ms": 81516.78399999946,
+            "rss_before_mb": 115.331072,
+            "rss_after_mb": 188.526592,
+            "peak_rss_mb": 188.526592
+          },
+          "query/legacy_sqlite_eav/low_battery": {
+            "elapsed_ms": 74107.60239999945,
+            "rss_before_mb": 188.526592,
+            "rss_after_mb": 188.776448,
+            "peak_rss_mb": 188.776448
+          },
+          "query/legacy_sqlite_eav/state_duration": {
+            "elapsed_ms": 54.84180000348715,
+            "rss_before_mb": 188.776448,
+            "rss_after_mb": 189.648896,
+            "peak_rss_mb": 189.648896
+          },
+          "query/legacy_sqlite_eav/custom_scalar_key": {
+            "elapsed_ms": 74683.32470000314,
+            "rss_before_mb": 189.648896,
+            "rss_after_mb": 189.628416,
+            "peak_rss_mb": 189.648896
+          },
+          "query/legacy_sqlite_eav/custom_time_range": {
+            "elapsed_ms": 33.610099999350496,
+            "rss_before_mb": 189.628416,
+            "rss_after_mb": 189.677568,
+            "peak_rss_mb": 189.677568
+          },
+          "query/legacy_sqlite_eav/custom_numeric_threshold": {
+            "elapsed_ms": 74050.68980000215,
+            "rss_before_mb": 189.677568,
+            "rss_after_mb": 189.677568,
+            "peak_rss_mb": 189.677568
+          },
+          "query/legacy_sqlite_eav/compare": {
+            "elapsed_ms": 152934.63239999983,
+            "rss_before_mb": 189.677568,
+            "rss_after_mb": 189.652992,
+            "peak_rss_mb": 189.70624
+          }
+        },
+        "scope": "this process; child processes and system page cache are excluded"
+      }
+    },
+    "sqlite_typed_none": {
+      "backend": "sqlite_typed_none",
+      "status": "succeeded",
+      "environment": {
+        "platform": "Windows-10-10.0.26300-SP0",
+        "python": "3.11.5 (tags/v3.11.5:cce6ba9, Aug 24 2023, 14:38:34) [MSC v.1936 64 bit (AMD64)]",
+        "cpu": "13th Gen Intel(R) Core(TM) i9-13900HX",
+        "logical_cpus": 32,
+        "physical_cpus": 24,
+        "memory_gb": 16.90710016,
+        "available_memory_gb_at_start": 5.00094976,
+        "datascope_version": "0.4.0",
+        "git_commit": "3b3840bd3e7dd66c90bcfdadfb8704158a2fdfac",
+        "git_dirty": true,
+        "benchmark_code_sha256": "6595767c8bed0b7004119bbf859a40b18cc80864a90b3f43b93ff16ed259a7ec",
+        "packages": {
+          "datascope-core": "0.4.0",
+          "pandas": "2.3.3",
+          "numpy": "2.4.6",
+          "rerun-sdk": "0.33.1",
+          "psutil": "7.2.2",
+          "pyarrow": "25.0.1"
+        },
+        "sqlite_version": "3.42.0"
+      },
+      "source_checksums": [
+        "57137c2e55637d502233428049ba1085e836e69e0213fb9b088b67f8644e5329",
+        "147c3a941b56a9220e530dae073c93573b3f4347ea79966cd287fa1cdb6c14cb"
+      ],
+      "query_limit": 1000,
+      "logical_sample_count": 3001000,
+      "logical_query_rows": 96032000,
+      "query_connection": "persistent within this isolated backend worker",
+      "preparation": {
+        "schema_ms": 36.67889999633189,
+        "load_ms": 35781.486500003666,
+        "sql_insert_ms": 8132.908099971246,
+        "index_ms": 470.60939999937546,
+        "checkpoint_ms": 64.11559999833116,
+        "total_preparation_ms": 36352.89249999914,
+        "physical_sample_rows": 6002000,
+        "numeric_sample_rows": 3001000,
+        "state_sample_rows": 3001000,
+        "secondary_indexes": [],
+        "sqlite_pragmas": {
+          "journal_mode": "wal",
+          "synchronous": 2,
+          "cache_size": -65536,
+          "temp_store": 1,
+          "page_size": 4096
+        },
+        "storage_bytes": 938565632,
+        "storage_scope": "numeric/state sample tables plus recording/field/state dictionaries and declared indexes",
+        "layout": "wide numeric and dictionary-encoded state samples; no value_json or per-field persisted expansion",
+        "storage_mb": 938.565632,
+        "storage_amplification": 0.9879851334772317
+      },
+      "sql": {
+        "find_errors": "SELECT * FROM (SELECT 'recording_aba34a5289f2' recording_id, time, '/states/robot_state' entity_path, 'robot_state' AS \"key\", NULL number, (SELECT value FROM state_dictionary WHERE value_id = \"robot_state\") text_value FROM state_samples WHERE recording_key = 1 AND 'state' IN ('state') AND \"robot_state\" IN (SELECT value_id FROM state_dictionary WHERE (instr(lower(value), 'error') > 0 OR instr(lower(value), 'warn') > 0 OR instr(lower(value), 'fault') > 0))) ORDER BY recording_id, time, entity_path, \"key\" LIMIT 1000",
+        "low_battery": "SELECT * FROM (SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/battery' entity_path, 'battery' AS \"key\", \"battery\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND 'scalar' IN ('scalar','scalar_group') AND \"battery\" < 0.2) ORDER BY recording_id, time, entity_path, \"key\" LIMIT 1000",
+        "custom_scalar_key": "SELECT * FROM (SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_000' entity_path, 'scalar_000' AS \"key\", \"scalar_000\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND 'scalar' IN ('scalar','scalar_group') AND instr(lower('scalar_000'), lower('scalar_000')) > 0) ORDER BY recording_id, time, entity_path, \"key\" LIMIT 1000",
+        "custom_time_range": "SELECT * FROM (SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/position/position_x' entity_path, 'position_x' AS \"key\", \"position_x\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/position/position_y' entity_path, 'position_y' AS \"key\", \"position_y\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/position/position_z' entity_path, 'position_z' AS \"key\", \"position_z\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/velocity/velocity_x' entity_path, 'velocity_x' AS \"key\", \"velocity_x\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/velocity/velocity_y' entity_path, 'velocity_y' AS \"key\", \"velocity_y\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/velocity/velocity_z' entity_path, 'velocity_z' AS \"key\", \"velocity_z\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/temperature' entity_path, 'temperature' AS \"key\", \"temperature\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/battery' entity_path, 'battery' AS \"key\", \"battery\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/current' entity_path, 'current' AS \"key\", \"current\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/voltage' entity_path, 'voltage' AS \"key\", \"voltage\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_000' entity_path, 'scalar_000' AS \"key\", \"scalar_000\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_001' entity_path, 'scalar_001' AS \"key\", \"scalar_001\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_002' entity_path, 'scalar_002' AS \"key\", \"scalar_002\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_003' entity_path, 'scalar_003' AS \"key\", \"scalar_003\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_004' entity_path, 'scalar_004' AS \"key\", \"scalar_004\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_005' entity_path, 'scalar_005' AS \"key\", \"scalar_005\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_006' entity_path, 'scalar_006' AS \"key\", \"scalar_006\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_007' entity_path, 'scalar_007' AS \"key\", \"scalar_007\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_008' entity_path, 'scalar_008' AS \"key\", \"scalar_008\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_009' entity_path, 'scalar_009' AS \"key\", \"scalar_009\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_010' entity_path, 'scalar_010' AS \"key\", \"scalar_010\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_011' entity_path, 'scalar_011' AS \"key\", \"scalar_011\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_012' entity_path, 'scalar_012' AS \"key\", \"scalar_012\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_013' entity_path, 'scalar_013' AS \"key\", \"scalar_013\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_014' entity_path, 'scalar_014' AS \"key\", \"scalar_014\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_015' entity_path, 'scalar_015' AS \"key\", \"scalar_015\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_016' entity_path, 'scalar_016' AS \"key\", \"scalar_016\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_017' entity_path, 'scalar_017' AS \"key\", \"scalar_017\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_018' entity_path, 'scalar_018' AS \"key\", \"scalar_018\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_019' entity_path, 'scalar_019' AS \"key\", \"scalar_019\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/error_code' entity_path, 'error_code' AS \"key\", \"error_code\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/states/robot_state' entity_path, 'robot_state' AS \"key\", NULL number, (SELECT value FROM state_dictionary WHERE value_id = \"robot_state\") text_value FROM state_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045) ORDER BY recording_id, time, entity_path, \"key\" LIMIT 1000",
+        "custom_numeric_threshold": "SELECT * FROM (SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/battery' entity_path, 'battery' AS \"key\", \"battery\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND 'scalar' IN ('scalar','scalar_group') AND instr(lower('battery'), lower('battery')) > 0 AND \"battery\" < 0.1) ORDER BY recording_id, time, entity_path, \"key\" LIMIT 1000",
+        "state_duration": "SELECT * FROM (SELECT * FROM (WITH candidates AS (SELECT time, \"robot_state\" state_code FROM state_samples WHERE recording_key = 1 ORDER BY time LIMIT 1001), durations AS (SELECT time, state_code, coalesce(lead(time) OVER (ORDER BY time), time) - time duration FROM candidates) SELECT 'recording_aba34a5289f2' recording_id, time, '/states/robot_state' entity_path, 'robot_state' AS \"key\", NULL number, (SELECT value FROM state_dictionary WHERE value_id = state_code) text_value, duration FROM durations ORDER BY time LIMIT 1000)) ORDER BY recording_id, entity_path, \"key\", time LIMIT 1000",
+        "compare": "SELECT * FROM (SELECT * FROM (WITH aggregated AS (SELECT count(*) count, min(\"temperature\") minimum, max(\"temperature\") maximum, avg(\"temperature\") mean, max(time) last_time FROM numeric_samples WHERE recording_key = 1) SELECT 'recording_aba34a5289f2' recording_id, NULL AS \"time\", '/metrics/temperature' entity_path, 'temperature' AS \"key\", count, minimum, maximum, mean, (SELECT \"temperature\" FROM numeric_samples WHERE recording_key = 1 AND time = last_time LIMIT 1) latest FROM aggregated) UNION ALL SELECT * FROM (WITH aggregated AS (SELECT count(*) count, min(\"battery\") minimum, max(\"battery\") maximum, avg(\"battery\") mean, max(time) last_time FROM numeric_samples WHERE recording_key = 1) SELECT 'recording_aba34a5289f2' recording_id, NULL AS \"time\", '/metrics/battery' entity_path, 'battery' AS \"key\", count, minimum, maximum, mean, (SELECT \"battery\" FROM numeric_samples WHERE recording_key = 1 AND time = last_time LIMIT 1) latest FROM aggregated) UNION ALL SELECT * FROM (WITH aggregated AS (SELECT count(*) count, min(\"temperature\") minimum, max(\"temperature\") maximum, avg(\"temperature\") mean, max(time) last_time FROM numeric_samples WHERE recording_key = 2) SELECT 'recording_f350519f96a0' recording_id, NULL AS \"time\", '/metrics/temperature' entity_path, 'temperature' AS \"key\", count, minimum, maximum, mean, (SELECT \"temperature\" FROM numeric_samples WHERE recording_key = 2 AND time = last_time LIMIT 1) latest FROM aggregated) UNION ALL SELECT * FROM (WITH aggregated AS (SELECT count(*) count, min(\"battery\") minimum, max(\"battery\") maximum, avg(\"battery\") mean, max(time) last_time FROM numeric_samples WHERE recording_key = 2) SELECT 'recording_f350519f96a0' recording_id, NULL AS \"time\", '/metrics/battery' entity_path, 'battery' AS \"key\", count, minimum, maximum, mean, (SELECT \"battery\" FROM numeric_samples WHERE recording_key = 2 AND time = last_time LIMIT 1) latest FROM aggregated)) ORDER BY recording_id, entity_path, \"key\" LIMIT 1000"
+      },
+      "query_plans": {
+        "find_errors": [
+          "SCAN state_samples",
+          "LIST SUBQUERY 2",
+          "SCAN state_dictionary",
+          "CORRELATED SCALAR SUBQUERY 1",
+          "SEARCH state_dictionary USING INTEGER PRIMARY KEY (rowid=?)",
+          "USE TEMP B-TREE FOR ORDER BY"
+        ],
+        "low_battery": [
+          "SCAN numeric_samples",
+          "USE TEMP B-TREE FOR ORDER BY"
+        ],
+        "custom_scalar_key": [
+          "SCAN numeric_samples",
+          "USE TEMP B-TREE FOR ORDER BY"
+        ],
+        "custom_time_range": [
+          "CO-ROUTINE (subquery-33)",
+          "COMPOUND QUERY",
+          "LEFT-MOST SUBQUERY",
+          "SCAN numeric_samples",
+          "UNION ALL",
+          "SCAN numeric_samples",
+          "UNION ALL",
+          "SCAN numeric_samples",
+          "UNION ALL",
+          "SCAN numeric_samples",
+          "UNION ALL",
+          "SCAN numeric_samples",
+          "UNION ALL",
+          "SCAN numeric_samples",
+          "UNION ALL",
+          "SCAN numeric_samples",
+          "UNION ALL",
+          "SCAN numeric_samples",
+          "UNION ALL",
+          "SCAN numeric_samples",
+          "UNION ALL",
+          "SCAN numeric_samples",
+          "UNION ALL",
+          "SCAN numeric_samples",
+          "UNION ALL",
+          "SCAN numeric_samples",
+          "UNION ALL",
+          "SCAN numeric_samples",
+          "UNION ALL",
+          "SCAN numeric_samples",
+          "UNION ALL",
+          "SCAN numeric_samples",
+          "UNION ALL",
+          "SCAN numeric_samples",
+          "UNION ALL",
+          "SCAN numeric_samples",
+          "UNION ALL",
+          "SCAN numeric_samples",
+          "UNION ALL",
+          "SCAN numeric_samples",
+          "UNION ALL",
+          "SCAN numeric_samples",
+          "UNION ALL",
+          "SCAN numeric_samples",
+          "UNION ALL",
+          "SCAN numeric_samples",
+          "UNION ALL",
+          "SCAN numeric_samples",
+          "UNION ALL",
+          "SCAN numeric_samples",
+          "UNION ALL",
+          "SCAN numeric_samples",
+          "UNION ALL",
+          "SCAN numeric_samples",
+          "UNION ALL",
+          "SCAN numeric_samples",
+          "UNION ALL",
+          "SCAN numeric_samples",
+          "UNION ALL",
+          "SCAN numeric_samples",
+          "UNION ALL",
+          "SCAN numeric_samples",
+          "UNION ALL",
+          "SCAN numeric_samples",
+          "UNION ALL",
+          "SCAN state_samples",
+          "CORRELATED SCALAR SUBQUERY 32",
+          "SEARCH state_dictionary USING INTEGER PRIMARY KEY (rowid=?)",
+          "SCAN (subquery-33)",
+          "USE TEMP B-TREE FOR ORDER BY"
+        ],
+        "custom_numeric_threshold": [
+          "SCAN numeric_samples",
+          "USE TEMP B-TREE FOR ORDER BY"
+        ],
+        "state_duration": [
+          "CO-ROUTINE (subquery-4)",
+          "CO-ROUTINE durations",
+          "CO-ROUTINE (subquery-7)",
+          "CO-ROUTINE candidates",
+          "SCAN state_samples",
+          "USE TEMP B-TREE FOR ORDER BY",
+          "SCAN candidates",
+          "USE TEMP B-TREE FOR ORDER BY",
+          "SCAN (subquery-7)",
+          "SCAN durations",
+          "CORRELATED SCALAR SUBQUERY 3",
+          "SEARCH state_dictionary USING INTEGER PRIMARY KEY (rowid=?)",
+          "USE TEMP B-TREE FOR ORDER BY",
+          "SCAN (subquery-4)",
+          "USE TEMP B-TREE FOR ORDER BY"
+        ],
+        "compare": [
+          "MERGE (UNION ALL)",
+          "LEFT",
+          "MERGE (UNION ALL)",
+          "LEFT",
+          "CO-ROUTINE aggregated",
+          "SCAN numeric_samples",
+          "SCAN aggregated",
+          "CORRELATED SCALAR SUBQUERY 2",
+          "SCAN numeric_samples",
+          "USE TEMP B-TREE FOR ORDER BY",
+          "RIGHT",
+          "CO-ROUTINE aggregated",
+          "SCAN numeric_samples",
+          "SCAN aggregated",
+          "CORRELATED SCALAR SUBQUERY 6",
+          "SCAN numeric_samples",
+          "USE TEMP B-TREE FOR ORDER BY",
+          "RIGHT",
+          "MERGE (UNION ALL)",
+          "LEFT",
+          "CO-ROUTINE aggregated",
+          "SCAN numeric_samples",
+          "SCAN aggregated",
+          "CORRELATED SCALAR SUBQUERY 10",
+          "SCAN numeric_samples",
+          "USE TEMP B-TREE FOR ORDER BY",
+          "RIGHT",
+          "CO-ROUTINE aggregated",
+          "SCAN numeric_samples",
+          "SCAN aggregated",
+          "CORRELATED SCALAR SUBQUERY 14",
+          "SCAN numeric_samples",
+          "USE TEMP B-TREE FOR ORDER BY"
+        ]
+      },
+      "queries": {
+        "find_errors": {
+          "runs": 5,
+          "min_ms": 151.48329999647103,
+          "mean_ms": 153.58203999785474,
+          "median_ms": 152.57639999617822,
+          "p95_ms": 157.2297000020626,
+          "max_ms": 157.2297000020626,
+          "samples_ms": [
+            157.2297000020626,
+            152.57639999617822,
+            151.51479999622097,
+            151.48329999647103,
+            155.10599999834085
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "53bfe7cec52abf863d9fb364983be571b9138792fb238d3297a72b7422d05138",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256"
+        },
+        "low_battery": {
+          "runs": 5,
+          "min_ms": 579.9817000006442,
+          "mean_ms": 593.709440001112,
+          "median_ms": 586.8638000029023,
+          "p95_ms": 613.2148999968194,
+          "max_ms": 613.2148999968194,
+          "samples_ms": [
+            579.9817000006442,
+            602.0335000066552,
+            586.4532999985386,
+            613.2148999968194,
+            586.8638000029023
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "6eead00bb6721440010bc9f2d0a3564f29d01206ae36d7c9a41cdee59f03e65a",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256"
+        },
+        "state_duration": {
+          "runs": 5,
+          "min_ms": 113.72210000263294,
+          "mean_ms": 114.15281999943545,
+          "median_ms": 114.21179999888409,
+          "p95_ms": 114.648999995552,
+          "max_ms": 114.648999995552,
+          "samples_ms": [
+            114.21179999888409,
+            114.648999995552,
+            113.90229999960866,
+            114.27890000049956,
+            113.72210000263294
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "256243801d7ae3373ac77b6ba6a1081e8ccfe7e505cdddad68c2dccea406f0b9",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256"
+        },
+        "custom_scalar_key": {
+          "runs": 5,
+          "min_ms": 622.6659000021755,
+          "mean_ms": 625.4130400004215,
+          "median_ms": 625.0182000003406,
+          "p95_ms": 628.2901000013226,
+          "max_ms": 628.2901000013226,
+          "samples_ms": [
+            622.6659000021755,
+            626.9313999946462,
+            625.0182000003406,
+            624.1596000036225,
+            628.2901000013226
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "0a5152d693a1eeb05df02316f213d39a0c3f51ded27ef732ac546a40a500f7bf",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256"
+        },
+        "custom_time_range": {
+          "runs": 5,
+          "min_ms": 16839.33270000125,
+          "mean_ms": 16922.844420002366,
+          "median_ms": 16893.97490000556,
+          "p95_ms": 17002.92199999967,
+          "max_ms": 17002.92199999967,
+          "samples_ms": [
+            16893.97490000556,
+            16839.33270000125,
+            16880.819199999678,
+            17002.92199999967,
+            16997.17330000567
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 352,
+          "result_sha256": "9fc84096a8279c41c8b2dc63fa2c67523ae159877eddd6b9c8908be4f319bdfc",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256"
+        },
+        "custom_numeric_threshold": {
+          "runs": 5,
+          "min_ms": 566.978900002141,
+          "mean_ms": 568.6990000031074,
+          "median_ms": 568.85670000338,
+          "p95_ms": 570.138400005817,
+          "max_ms": 570.138400005817,
+          "samples_ms": [
+            568.85670000338,
+            570.138400005817,
+            567.4623000013526,
+            570.0587000028463,
+            566.978900002141
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "66421c91548bab824836ac99b28318b620c300a11a4e325d273e3264caf970c2",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256"
+        },
+        "compare": {
+          "runs": 5,
+          "min_ms": 4463.900399998238,
+          "mean_ms": 4512.7748800005065,
+          "median_ms": 4481.615700002294,
+          "p95_ms": 4588.297499998589,
+          "max_ms": 4588.297499998589,
+          "samples_ms": [
+            4481.615700002294,
+            4463.900399998238,
+            4476.341499997943,
+            4553.7193000054685,
+            4588.297499998589
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 4,
+          "result_sha256": "369c6ee40a00a7d12ef0312182c22cf80bd5fe9717fea3639f4ffee01a02cfef",
+          "distinct_result_hashes": 1,
+          "repeat_check": "validator_each_run"
+        }
+      },
+      "memory": {
+        "method": "psutil process RSS polling; includes native allocations",
+        "sample_interval_ms": 10.0,
+        "peak_rss_mb": 203.81696,
+        "os_peak_rss_mb": 203.81696,
+        "rss_before_mb": 112.29184,
+        "rss_after_mb": 123.14624,
+        "stages": {
+          "schema": {
+            "elapsed_ms": 19.906800000171643,
+            "rss_before_mb": 112.930816,
+            "rss_after_mb": 113.082368,
+            "peak_rss_mb": 113.082368
+          },
+          "insert": {
+            "elapsed_ms": 35781.47290000197,
+            "rss_before_mb": 113.082368,
+            "rss_after_mb": 200.175616,
+            "peak_rss_mb": 203.81696
+          },
+          "indexes": {
+            "elapsed_ms": 470.5943000008119,
+            "rss_before_mb": 200.175616,
+            "rss_after_mb": 200.187904,
+            "peak_rss_mb": 200.187904
+          },
+          "checkpoint": {
+            "elapsed_ms": 64.10239999968326,
+            "rss_before_mb": 200.187904,
+            "rss_after_mb": 200.192,
+            "peak_rss_mb": 200.192
+          },
+          "query/sqlite_typed_none/find_errors": {
+            "elapsed_ms": 991.0034999993513,
+            "rss_before_mb": 121.503744,
+            "rss_after_mb": 189.865984,
+            "peak_rss_mb": 189.865984
+          },
+          "query/sqlite_typed_none/low_battery": {
+            "elapsed_ms": 3578.4426999962307,
+            "rss_before_mb": 189.865984,
+            "rss_after_mb": 197.410816,
+            "peak_rss_mb": 197.410816
+          },
+          "query/sqlite_typed_none/state_duration": {
+            "elapsed_ms": 753.3722000007401,
+            "rss_before_mb": 197.410816,
+            "rss_after_mb": 197.541888,
+            "peak_rss_mb": 197.541888
+          },
+          "query/sqlite_typed_none/custom_scalar_key": {
+            "elapsed_ms": 3775.8986999979243,
+            "rss_before_mb": 197.541888,
+            "rss_after_mb": 197.541888,
+            "peak_rss_mb": 197.541888
+          },
+          "query/sqlite_typed_none/custom_time_range": {
+            "elapsed_ms": 101447.78750000114,
+            "rss_before_mb": 197.541888,
+            "rss_after_mb": 197.50912,
+            "peak_rss_mb": 197.57056
+          },
+          "query/sqlite_typed_none/custom_numeric_threshold": {
+            "elapsed_ms": 3439.0150000035646,
+            "rss_before_mb": 197.50912,
+            "rss_after_mb": 197.50912,
+            "peak_rss_mb": 197.50912
+          },
+          "query/sqlite_typed_none/compare": {
+            "elapsed_ms": 27027.283900002658,
+            "rss_before_mb": 197.50912,
+            "rss_after_mb": 197.513216,
+            "peak_rss_mb": 197.513216
+          }
+        },
+        "scope": "this process; child processes and system page cache are excluded"
+      }
+    },
+    "sqlite_typed_time": {
+      "backend": "sqlite_typed_time",
+      "status": "succeeded",
+      "environment": {
+        "platform": "Windows-10-10.0.26300-SP0",
+        "python": "3.11.5 (tags/v3.11.5:cce6ba9, Aug 24 2023, 14:38:34) [MSC v.1936 64 bit (AMD64)]",
+        "cpu": "13th Gen Intel(R) Core(TM) i9-13900HX",
+        "logical_cpus": 32,
+        "physical_cpus": 24,
+        "memory_gb": 16.90710016,
+        "available_memory_gb_at_start": 4.916998144,
+        "datascope_version": "0.4.0",
+        "git_commit": "3b3840bd3e7dd66c90bcfdadfb8704158a2fdfac",
+        "git_dirty": true,
+        "benchmark_code_sha256": "6595767c8bed0b7004119bbf859a40b18cc80864a90b3f43b93ff16ed259a7ec",
+        "packages": {
+          "datascope-core": "0.4.0",
+          "pandas": "2.3.3",
+          "numpy": "2.4.6",
+          "rerun-sdk": "0.33.1",
+          "psutil": "7.2.2",
+          "pyarrow": "25.0.1"
+        },
+        "sqlite_version": "3.42.0"
+      },
+      "source_checksums": [
+        "57137c2e55637d502233428049ba1085e836e69e0213fb9b088b67f8644e5329",
+        "147c3a941b56a9220e530dae073c93573b3f4347ea79966cd287fa1cdb6c14cb"
+      ],
+      "query_limit": 1000,
+      "logical_sample_count": 3001000,
+      "logical_query_rows": 96032000,
+      "query_connection": "persistent within this isolated backend worker",
+      "preparation": {
+        "schema_ms": 33.61149999545887,
+        "load_ms": 36055.97370000032,
+        "sql_insert_ms": 8256.38149993756,
+        "index_ms": 2686.9099999967148,
+        "checkpoint_ms": 64.68730000051437,
+        "total_preparation_ms": 38841.18529999978,
+        "physical_sample_rows": 6002000,
+        "numeric_sample_rows": 3001000,
+        "state_sample_rows": 3001000,
+        "secondary_indexes": [
+          [
+            "idx_numeric_time",
+            "numeric_samples",
+            "recording_key, time"
+          ],
+          [
+            "idx_state_time",
+            "state_samples",
+            "recording_key, time"
+          ]
+        ],
+        "sqlite_pragmas": {
+          "journal_mode": "wal",
+          "synchronous": 2,
+          "cache_size": -65536,
+          "temp_store": 1,
+          "page_size": 4096
+        },
+        "storage_bytes": 1046921216,
+        "storage_scope": "numeric/state sample tables plus recording/field/state dictionaries and declared indexes",
+        "layout": "wide numeric and dictionary-encoded state samples; no value_json or per-field persisted expansion",
+        "storage_mb": 1046.921216,
+        "storage_amplification": 1.1020461031860005
+      },
+      "sql": {
+        "find_errors": "SELECT * FROM (SELECT 'recording_aba34a5289f2' recording_id, time, '/states/robot_state' entity_path, 'robot_state' AS \"key\", NULL number, (SELECT value FROM state_dictionary WHERE value_id = \"robot_state\") text_value FROM state_samples WHERE recording_key = 1 AND 'state' IN ('state') AND \"robot_state\" IN (SELECT value_id FROM state_dictionary WHERE (instr(lower(value), 'error') > 0 OR instr(lower(value), 'warn') > 0 OR instr(lower(value), 'fault') > 0))) ORDER BY recording_id, time, entity_path, \"key\" LIMIT 1000",
+        "low_battery": "SELECT * FROM (SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/battery' entity_path, 'battery' AS \"key\", \"battery\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND 'scalar' IN ('scalar','scalar_group') AND \"battery\" < 0.2) ORDER BY recording_id, time, entity_path, \"key\" LIMIT 1000",
+        "custom_scalar_key": "SELECT * FROM (SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_000' entity_path, 'scalar_000' AS \"key\", \"scalar_000\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND 'scalar' IN ('scalar','scalar_group') AND instr(lower('scalar_000'), lower('scalar_000')) > 0) ORDER BY recording_id, time, entity_path, \"key\" LIMIT 1000",
+        "custom_time_range": "SELECT * FROM (SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/position/position_x' entity_path, 'position_x' AS \"key\", \"position_x\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/position/position_y' entity_path, 'position_y' AS \"key\", \"position_y\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/position/position_z' entity_path, 'position_z' AS \"key\", \"position_z\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/velocity/velocity_x' entity_path, 'velocity_x' AS \"key\", \"velocity_x\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/velocity/velocity_y' entity_path, 'velocity_y' AS \"key\", \"velocity_y\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/velocity/velocity_z' entity_path, 'velocity_z' AS \"key\", \"velocity_z\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/temperature' entity_path, 'temperature' AS \"key\", \"temperature\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/battery' entity_path, 'battery' AS \"key\", \"battery\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/current' entity_path, 'current' AS \"key\", \"current\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/voltage' entity_path, 'voltage' AS \"key\", \"voltage\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_000' entity_path, 'scalar_000' AS \"key\", \"scalar_000\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_001' entity_path, 'scalar_001' AS \"key\", \"scalar_001\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_002' entity_path, 'scalar_002' AS \"key\", \"scalar_002\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_003' entity_path, 'scalar_003' AS \"key\", \"scalar_003\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_004' entity_path, 'scalar_004' AS \"key\", \"scalar_004\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_005' entity_path, 'scalar_005' AS \"key\", \"scalar_005\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_006' entity_path, 'scalar_006' AS \"key\", \"scalar_006\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_007' entity_path, 'scalar_007' AS \"key\", \"scalar_007\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_008' entity_path, 'scalar_008' AS \"key\", \"scalar_008\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_009' entity_path, 'scalar_009' AS \"key\", \"scalar_009\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_010' entity_path, 'scalar_010' AS \"key\", \"scalar_010\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_011' entity_path, 'scalar_011' AS \"key\", \"scalar_011\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_012' entity_path, 'scalar_012' AS \"key\", \"scalar_012\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_013' entity_path, 'scalar_013' AS \"key\", \"scalar_013\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_014' entity_path, 'scalar_014' AS \"key\", \"scalar_014\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_015' entity_path, 'scalar_015' AS \"key\", \"scalar_015\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_016' entity_path, 'scalar_016' AS \"key\", \"scalar_016\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_017' entity_path, 'scalar_017' AS \"key\", \"scalar_017\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_018' entity_path, 'scalar_018' AS \"key\", \"scalar_018\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/scalar_019' entity_path, 'scalar_019' AS \"key\", \"scalar_019\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/error_code' entity_path, 'error_code' AS \"key\", \"error_code\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045 UNION ALL SELECT 'recording_aba34a5289f2' recording_id, time, '/states/robot_state' entity_path, 'robot_state' AS \"key\", NULL number, (SELECT value FROM state_dictionary WHERE value_id = \"robot_state\") text_value FROM state_samples WHERE recording_key = 1 AND time >= 13499.995 AND time <= 13500.045) ORDER BY recording_id, time, entity_path, \"key\" LIMIT 1000",
+        "custom_numeric_threshold": "SELECT * FROM (SELECT 'recording_aba34a5289f2' recording_id, time, '/metrics/battery' entity_path, 'battery' AS \"key\", \"battery\" number, NULL text_value FROM numeric_samples WHERE recording_key = 1 AND 'scalar' IN ('scalar','scalar_group') AND instr(lower('battery'), lower('battery')) > 0 AND \"battery\" < 0.1) ORDER BY recording_id, time, entity_path, \"key\" LIMIT 1000",
+        "state_duration": "SELECT * FROM (SELECT * FROM (WITH candidates AS (SELECT time, \"robot_state\" state_code FROM state_samples WHERE recording_key = 1 ORDER BY time LIMIT 1001), durations AS (SELECT time, state_code, coalesce(lead(time) OVER (ORDER BY time), time) - time duration FROM candidates) SELECT 'recording_aba34a5289f2' recording_id, time, '/states/robot_state' entity_path, 'robot_state' AS \"key\", NULL number, (SELECT value FROM state_dictionary WHERE value_id = state_code) text_value, duration FROM durations ORDER BY time LIMIT 1000)) ORDER BY recording_id, entity_path, \"key\", time LIMIT 1000",
+        "compare": "SELECT * FROM (SELECT * FROM (WITH aggregated AS (SELECT count(*) count, min(\"temperature\") minimum, max(\"temperature\") maximum, avg(\"temperature\") mean, max(time) last_time FROM numeric_samples WHERE recording_key = 1) SELECT 'recording_aba34a5289f2' recording_id, NULL AS \"time\", '/metrics/temperature' entity_path, 'temperature' AS \"key\", count, minimum, maximum, mean, (SELECT \"temperature\" FROM numeric_samples WHERE recording_key = 1 AND time = last_time LIMIT 1) latest FROM aggregated) UNION ALL SELECT * FROM (WITH aggregated AS (SELECT count(*) count, min(\"battery\") minimum, max(\"battery\") maximum, avg(\"battery\") mean, max(time) last_time FROM numeric_samples WHERE recording_key = 1) SELECT 'recording_aba34a5289f2' recording_id, NULL AS \"time\", '/metrics/battery' entity_path, 'battery' AS \"key\", count, minimum, maximum, mean, (SELECT \"battery\" FROM numeric_samples WHERE recording_key = 1 AND time = last_time LIMIT 1) latest FROM aggregated) UNION ALL SELECT * FROM (WITH aggregated AS (SELECT count(*) count, min(\"temperature\") minimum, max(\"temperature\") maximum, avg(\"temperature\") mean, max(time) last_time FROM numeric_samples WHERE recording_key = 2) SELECT 'recording_f350519f96a0' recording_id, NULL AS \"time\", '/metrics/temperature' entity_path, 'temperature' AS \"key\", count, minimum, maximum, mean, (SELECT \"temperature\" FROM numeric_samples WHERE recording_key = 2 AND time = last_time LIMIT 1) latest FROM aggregated) UNION ALL SELECT * FROM (WITH aggregated AS (SELECT count(*) count, min(\"battery\") minimum, max(\"battery\") maximum, avg(\"battery\") mean, max(time) last_time FROM numeric_samples WHERE recording_key = 2) SELECT 'recording_f350519f96a0' recording_id, NULL AS \"time\", '/metrics/battery' entity_path, 'battery' AS \"key\", count, minimum, maximum, mean, (SELECT \"battery\" FROM numeric_samples WHERE recording_key = 2 AND time = last_time LIMIT 1) latest FROM aggregated)) ORDER BY recording_id, entity_path, \"key\" LIMIT 1000"
+      },
+      "query_plans": {
+        "find_errors": [
+          "SEARCH state_samples USING INDEX idx_state_time (recording_key=?)",
+          "LIST SUBQUERY 2",
+          "SCAN state_dictionary",
+          "CORRELATED SCALAR SUBQUERY 1",
+          "SEARCH state_dictionary USING INTEGER PRIMARY KEY (rowid=?)",
+          "USE TEMP B-TREE FOR ORDER BY"
+        ],
+        "low_battery": [
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=?)",
+          "USE TEMP B-TREE FOR ORDER BY"
+        ],
+        "custom_scalar_key": [
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=?)",
+          "USE TEMP B-TREE FOR ORDER BY"
+        ],
+        "custom_time_range": [
+          "CO-ROUTINE (subquery-33)",
+          "COMPOUND QUERY",
+          "LEFT-MOST SUBQUERY",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time>? AND time<?)",
+          "UNION ALL",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time>? AND time<?)",
+          "UNION ALL",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time>? AND time<?)",
+          "UNION ALL",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time>? AND time<?)",
+          "UNION ALL",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time>? AND time<?)",
+          "UNION ALL",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time>? AND time<?)",
+          "UNION ALL",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time>? AND time<?)",
+          "UNION ALL",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time>? AND time<?)",
+          "UNION ALL",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time>? AND time<?)",
+          "UNION ALL",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time>? AND time<?)",
+          "UNION ALL",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time>? AND time<?)",
+          "UNION ALL",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time>? AND time<?)",
+          "UNION ALL",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time>? AND time<?)",
+          "UNION ALL",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time>? AND time<?)",
+          "UNION ALL",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time>? AND time<?)",
+          "UNION ALL",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time>? AND time<?)",
+          "UNION ALL",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time>? AND time<?)",
+          "UNION ALL",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time>? AND time<?)",
+          "UNION ALL",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time>? AND time<?)",
+          "UNION ALL",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time>? AND time<?)",
+          "UNION ALL",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time>? AND time<?)",
+          "UNION ALL",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time>? AND time<?)",
+          "UNION ALL",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time>? AND time<?)",
+          "UNION ALL",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time>? AND time<?)",
+          "UNION ALL",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time>? AND time<?)",
+          "UNION ALL",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time>? AND time<?)",
+          "UNION ALL",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time>? AND time<?)",
+          "UNION ALL",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time>? AND time<?)",
+          "UNION ALL",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time>? AND time<?)",
+          "UNION ALL",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time>? AND time<?)",
+          "UNION ALL",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time>? AND time<?)",
+          "UNION ALL",
+          "SEARCH state_samples USING INDEX idx_state_time (recording_key=? AND time>? AND time<?)",
+          "CORRELATED SCALAR SUBQUERY 32",
+          "SEARCH state_dictionary USING INTEGER PRIMARY KEY (rowid=?)",
+          "SCAN (subquery-33)",
+          "USE TEMP B-TREE FOR ORDER BY"
+        ],
+        "custom_numeric_threshold": [
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=?)",
+          "USE TEMP B-TREE FOR ORDER BY"
+        ],
+        "state_duration": [
+          "CO-ROUTINE (subquery-4)",
+          "CO-ROUTINE durations",
+          "CO-ROUTINE (subquery-7)",
+          "CO-ROUTINE candidates",
+          "SEARCH state_samples USING INDEX idx_state_time (recording_key=?)",
+          "SCAN candidates",
+          "USE TEMP B-TREE FOR ORDER BY",
+          "SCAN (subquery-7)",
+          "SCAN durations",
+          "CORRELATED SCALAR SUBQUERY 3",
+          "SEARCH state_dictionary USING INTEGER PRIMARY KEY (rowid=?)",
+          "USE TEMP B-TREE FOR ORDER BY",
+          "SCAN (subquery-4)",
+          "USE TEMP B-TREE FOR ORDER BY"
+        ],
+        "compare": [
+          "MERGE (UNION ALL)",
+          "LEFT",
+          "MERGE (UNION ALL)",
+          "LEFT",
+          "CO-ROUTINE aggregated",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=?)",
+          "SCAN aggregated",
+          "CORRELATED SCALAR SUBQUERY 2",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time=?)",
+          "USE TEMP B-TREE FOR ORDER BY",
+          "RIGHT",
+          "CO-ROUTINE aggregated",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=?)",
+          "SCAN aggregated",
+          "CORRELATED SCALAR SUBQUERY 6",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time=?)",
+          "USE TEMP B-TREE FOR ORDER BY",
+          "RIGHT",
+          "MERGE (UNION ALL)",
+          "LEFT",
+          "CO-ROUTINE aggregated",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=?)",
+          "SCAN aggregated",
+          "CORRELATED SCALAR SUBQUERY 10",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time=?)",
+          "USE TEMP B-TREE FOR ORDER BY",
+          "RIGHT",
+          "CO-ROUTINE aggregated",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=?)",
+          "SCAN aggregated",
+          "CORRELATED SCALAR SUBQUERY 14",
+          "SEARCH numeric_samples USING INDEX idx_numeric_time (recording_key=? AND time=?)",
+          "USE TEMP B-TREE FOR ORDER BY"
+        ]
+      },
+      "queries": {
+        "find_errors": {
+          "runs": 5,
+          "min_ms": 264.7090999962529,
+          "mean_ms": 271.7672200000379,
+          "median_ms": 267.39939999970375,
+          "p95_ms": 285.3553000022657,
+          "max_ms": 285.3553000022657,
+          "samples_ms": [
+            265.40730000124313,
+            264.7090999962529,
+            267.39939999970375,
+            275.9650000007241,
+            285.3553000022657
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "53bfe7cec52abf863d9fb364983be571b9138792fb238d3297a72b7422d05138",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256"
+        },
+        "low_battery": {
+          "runs": 5,
+          "min_ms": 648.0068000018946,
+          "mean_ms": 657.1252000008826,
+          "median_ms": 656.148200003372,
+          "p95_ms": 667.6922999977251,
+          "max_ms": 667.6922999977251,
+          "samples_ms": [
+            664.9638999952003,
+            667.6922999977251,
+            648.0068000018946,
+            656.148200003372,
+            648.814800006221
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "6eead00bb6721440010bc9f2d0a3564f29d01206ae36d7c9a41cdee59f03e65a",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256"
+        },
+        "state_duration": {
+          "runs": 5,
+          "min_ms": 3.4246000068378635,
+          "mean_ms": 3.6564200010616332,
+          "median_ms": 3.74290000036126,
+          "p95_ms": 3.760100000363309,
+          "max_ms": 3.760100000363309,
+          "samples_ms": [
+            3.760100000363309,
+            3.6089999994146638,
+            3.74549999833107,
+            3.4246000068378635,
+            3.74290000036126
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "256243801d7ae3373ac77b6ba6a1081e8ccfe7e505cdddad68c2dccea406f0b9",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256"
+        },
+        "custom_scalar_key": {
+          "runs": 5,
+          "min_ms": 188.65269999514567,
+          "mean_ms": 191.61605999979656,
+          "median_ms": 191.07840000651777,
+          "p95_ms": 193.7802999964333,
+          "max_ms": 193.7802999964333,
+          "samples_ms": [
+            191.07840000651777,
+            193.7802999964333,
+            193.6384000000544,
+            190.93050000083167,
+            188.65269999514567
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "0a5152d693a1eeb05df02316f213d39a0c3f51ded27ef732ac546a40a500f7bf",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256"
+        },
+        "custom_time_range": {
+          "runs": 5,
+          "min_ms": 1.0408000016468577,
+          "mean_ms": 1.0965800000121817,
+          "median_ms": 1.0557999994489364,
+          "p95_ms": 1.2711999952443875,
+          "max_ms": 1.2711999952443875,
+          "samples_ms": [
+            1.2711999952443875,
+            1.0601000030874275,
+            1.0550000006332994,
+            1.0408000016468577,
+            1.0557999994489364
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 352,
+          "result_sha256": "9fc84096a8279c41c8b2dc63fa2c67523ae159877eddd6b9c8908be4f319bdfc",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256"
+        },
+        "custom_numeric_threshold": {
+          "runs": 5,
+          "min_ms": 629.4440999990911,
+          "mean_ms": 634.9017000000458,
+          "median_ms": 635.8466999954544,
+          "p95_ms": 639.2133000044851,
+          "max_ms": 639.2133000044851,
+          "samples_ms": [
+            639.2133000044851,
+            629.4440999990911,
+            633.7369999964722,
+            635.8466999954544,
+            636.2674000047264
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "66421c91548bab824836ac99b28318b620c300a11a4e325d273e3264caf970c2",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256"
+        },
+        "compare": {
+          "runs": 5,
+          "min_ms": 1559.2082000002847,
+          "mean_ms": 1565.4481600009603,
+          "median_ms": 1566.1270999989938,
+          "p95_ms": 1569.3600000013248,
+          "max_ms": 1569.3600000013248,
+          "samples_ms": [
+            1565.9942000056617,
+            1566.1270999989938,
+            1559.2082000002847,
+            1569.3600000013248,
+            1566.5512999985367
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 4,
+          "result_sha256": "369c6ee40a00a7d12ef0312182c22cf80bd5fe9717fea3639f4ffee01a02cfef",
+          "distinct_result_hashes": 1,
+          "repeat_check": "validator_each_run"
+        }
+      },
+      "memory": {
+        "method": "psutil process RSS polling; includes native allocations",
+        "sample_interval_ms": 10.0,
+        "peak_rss_mb": 269.901824,
+        "os_peak_rss_mb": 269.90592,
+        "rss_before_mb": 112.336896,
+        "rss_after_mb": 124.059648,
+        "stages": {
+          "schema": {
+            "elapsed_ms": 12.66369999939343,
+            "rss_before_mb": 112.975872,
+            "rss_after_mb": 113.127424,
+            "peak_rss_mb": 113.127424
+          },
+          "insert": {
+            "elapsed_ms": 36055.95890000404,
+            "rss_before_mb": 113.127424,
+            "rss_after_mb": 202.432512,
+            "peak_rss_mb": 203.976704
+          },
+          "indexes": {
+            "elapsed_ms": 2686.8954000019585,
+            "rss_before_mb": 202.432512,
+            "rss_after_mb": 202.801152,
+            "peak_rss_mb": 269.901824
+          },
+          "checkpoint": {
+            "elapsed_ms": 64.67359999805922,
+            "rss_before_mb": 202.801152,
+            "rss_after_mb": 202.805248,
+            "peak_rss_mb": 202.805248
+          },
+          "query/sqlite_typed_time/find_errors": {
+            "elapsed_ms": 1668.5645999968983,
+            "rss_before_mb": 124.751872,
+            "rss_after_mb": 198.217728,
+            "peak_rss_mb": 198.217728
+          },
+          "query/sqlite_typed_time/low_battery": {
+            "elapsed_ms": 3960.649199994805,
+            "rss_before_mb": 198.217728,
+            "rss_after_mb": 198.22592,
+            "peak_rss_mb": 198.22592
+          },
+          "query/sqlite_typed_time/state_duration": {
+            "elapsed_ms": 49.201299996639136,
+            "rss_before_mb": 198.22592,
+            "rss_after_mb": 198.684672,
+            "peak_rss_mb": 198.684672
+          },
+          "query/sqlite_typed_time/custom_scalar_key": {
+            "elapsed_ms": 1204.8571999985143,
+            "rss_before_mb": 198.684672,
+            "rss_after_mb": 198.684672,
+            "peak_rss_mb": 198.684672
+          },
+          "query/sqlite_typed_time/custom_time_range": {
+            "elapsed_ms": 15.096799994353205,
+            "rss_before_mb": 198.684672,
+            "rss_after_mb": 198.766592,
+            "peak_rss_mb": 198.766592
+          },
+          "query/sqlite_typed_time/custom_numeric_threshold": {
+            "elapsed_ms": 3834.704500004591,
+            "rss_before_mb": 198.766592,
+            "rss_after_mb": 198.782976,
+            "peak_rss_mb": 198.782976
+          },
+          "query/sqlite_typed_time/compare": {
+            "elapsed_ms": 9410.930899997766,
+            "rss_before_mb": 198.782976,
+            "rss_after_mb": 198.713344,
+            "peak_rss_mb": 198.787072
+          }
+        },
+        "scope": "this process; child processes and system page cache are excluded"
+      }
+    }
+  },
+  "oracle_ms": 30929.20189999859,
+  "correctness_reference": {
+    "type": "bounded streaming independent CSV oracle",
+    "production_queries_checked": []
+  },
+  "dataset": {
+    "rows": 3000000,
+    "frequency_hz": 200.0,
+    "scalar_fields": 30,
+    "state_fields": 1,
+    "seed": 20261006,
+    "duration_seconds": 15000.0,
+    "last_timestamp_seconds": 14999.995,
+    "total_columns": 33,
+    "expected_query_rows": 96000000
+  },
+  "recordings": [
+    {
+      "recording_key": 1,
+      "recording_id": "recording_aba34a5289f2",
+      "source_id": "source_02c6fc109e76",
+      "csv_path": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\benchmark_phase_c_20261007_145014_b79b78cf\\input_1.csv",
+      "rows": 3000000,
+      "source_bytes": 949666455,
+      "checksum": "57137c2e55637d502233428049ba1085e836e69e0213fb9b088b67f8644e5329"
+    },
+    {
+      "recording_key": 2,
+      "recording_id": "recording_f350519f96a0",
+      "source_id": "source_9a11741e3cdf",
+      "csv_path": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\benchmark_phase_c_20261007_145014_b79b78cf\\input_2.csv",
+      "rows": 1000,
+      "source_bytes": 313054,
+      "checksum": "147c3a941b56a9220e530dae073c93573b3f4347ea79966cd287fa1cdb6c14cb"
+    }
+  ],
+  "logical_sample_count": 3001000,
+  "logical_query_rows": 96032000,
+  "source_size_mb": 949.979509,
+  "input_setup_ms": 81758.41599999694,
+  "golden_digests": {
+    "find_errors": "53bfe7cec52abf863d9fb364983be571b9138792fb238d3297a72b7422d05138",
+    "low_battery": "6eead00bb6721440010bc9f2d0a3564f29d01206ae36d7c9a41cdee59f03e65a",
+    "state_duration": "256243801d7ae3373ac77b6ba6a1081e8ccfe7e505cdddad68c2dccea406f0b9",
+    "custom_scalar_key": "0a5152d693a1eeb05df02316f213d39a0c3f51ded27ef732ac546a40a500f7bf",
+    "custom_time_range": "9fc84096a8279c41c8b2dc63fa2c67523ae159877eddd6b9c8908be4f319bdfc",
+    "custom_numeric_threshold": "66421c91548bab824836ac99b28318b620c300a11a4e325d273e3264caf970c2",
+    "compare": "369c6ee40a00a7d12ef0312182c22cf80bd5fe9717fea3639f4ffee01a02cfef"
+  }
+}

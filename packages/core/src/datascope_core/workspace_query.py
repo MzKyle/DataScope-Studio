@@ -16,6 +16,11 @@ from datascope_core.query import (
     run_query_template,
     run_query_template_stream,
 )
+from datascope_core.query_sql import (
+    CustomQueryPlan,
+    compile_custom_query,
+    register_custom_query_functions,
+)
 from datascope_core.workspace_utils import row_to_dict, source_info_from_row, utc_now
 
 
@@ -122,11 +127,14 @@ class WorkspaceQueryMixin:
         limit: int = 1000,
     ) -> dict[str, Any]:
         self.get_project(project_id)
+        plan = compile_custom_query(filters)
         return run_custom_query(
             self._iter_query_rows(
                 project_id,
                 recording_ids=recording_ids,
                 semantic_types=semantic_types,
+                custom_plan=plan,
+                custom_limit=plan.sql_limit(limit),
             ),
             filters,
             limit,
@@ -180,6 +188,8 @@ class WorkspaceQueryMixin:
         recording_ids: list[str] | None = None,
         semantic_types: list[str] | None = None,
         search_tokens: list[str] | None = None,
+        custom_plan: CustomQueryPlan | None = None,
+        custom_limit: int | None = None,
     ) -> Iterator[dict[str, Any]]:
         conditions, values = self._query_conditions(
             project_id,
@@ -189,6 +199,14 @@ class WorkspaceQueryMixin:
             search_tokens=search_tokens,
         )
         with self._connect() as conn:
+            limit_sql = ""
+            if custom_plan is not None:
+                register_custom_query_functions(conn, custom_plan)
+                conditions.extend(custom_plan.conditions)
+                values.extend(custom_plan.parameters)
+                if custom_limit is not None:
+                    limit_sql = "limit ?"
+                    values.append(custom_limit)
             cursor = conn.execute(
                 f"""
                 select qr.*
@@ -196,6 +214,7 @@ class WorkspaceQueryMixin:
                 join recordings r on r.id = qr.recording_id
                 where {' and '.join(conditions)}
                 order by qr.recording_id, qr.time, qr.entity_path, qr.key
+                {limit_sql}
                 """,
                 values,
             )

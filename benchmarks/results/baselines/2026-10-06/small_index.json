@@ -1,0 +1,558 @@
+{
+  "format_version": 1,
+  "run_id": "benchmark_20261006_024955_baseline_small_index_fixed_295b46c4",
+  "started_at": "2026-10-06T02:49:55.206406+00:00",
+  "mode": "index-only",
+  "status": "succeeded",
+  "environment": {
+    "platform": "Windows-10-10.0.26300-SP0",
+    "python": "3.11.5 (tags/v3.11.5:cce6ba9, Aug 24 2023, 14:38:34) [MSC v.1936 64 bit (AMD64)]",
+    "cpu": "13th Gen Intel(R) Core(TM) i9-13900HX",
+    "logical_cpus": 32,
+    "physical_cpus": 24,
+    "memory_gb": 16.90710016,
+    "available_memory_gb_at_start": 6.260723712,
+    "datascope_version": "0.4.0",
+    "git_commit": "3b3840bd3e7dd66c90bcfdadfb8704158a2fdfac",
+    "git_dirty": true,
+    "benchmark_code_sha256": "f6b226409d3dcd56718c24cbf2b249948fb247a0d0071946f6b71dbde80da175",
+    "packages": {
+      "datascope-core": "0.4.0",
+      "pandas": "2.3.3",
+      "numpy": "2.4.6",
+      "rerun-sdk": "0.33.1",
+      "psutil": "7.2.2",
+      "pyarrow": "25.0.1"
+    },
+    "sqlite_version": "3.42.0"
+  },
+  "settings": {
+    "query_runs": 3,
+    "warmups": 1,
+    "query_limit": 1000,
+    "index_samples": 10000,
+    "diagnostics": false,
+    "compare_all": false
+  },
+  "artifacts": {
+    "dataset": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\benchmark_20261006_024955_baseline_small_index_fixed_295b46c4\\robot.csv",
+    "workspace": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\benchmark_20261006_024955_baseline_small_index_fixed_295b46c4\\workspace"
+  },
+  "dataset": {
+    "rows": 300000,
+    "frequency_hz": 200.0,
+    "scalar_fields": 30,
+    "state_fields": 1,
+    "seed": 20261006,
+    "duration_seconds": 1500.0,
+    "last_timestamp_seconds": 1499.995,
+    "total_columns": 33,
+    "expected_query_rows": 9600000,
+    "generation_ms": 6522.280999999566,
+    "source_size_bytes": 94672760,
+    "source_size_mb": 94.67276,
+    "source_path": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\benchmark_20261006_024955_baseline_small_index_fixed_295b46c4\\robot.csv"
+  },
+  "pipeline": {
+    "import_ms": 239.45269999967422,
+    "schema_profile_ms": 8679.492399999617,
+    "inspect_total_ms": 10087.704399999893,
+    "inspect_ms": 1408.212000000276,
+    "mapping_suggest_ms": 7.928099999844562,
+    "mapping_validate_ms": 7.10479999997915,
+    "mapping_save_ms": 47.42210000040359,
+    "query_insert_ms": 129296.81430000441,
+    "query_index_ms": 281445.6854,
+    "recording_build_ms": null,
+    "rerun_artifact_ms": null,
+    "recording_other_ms": null
+  },
+  "storage": {
+    "query_rows": 9600000,
+    "total_query_rows": 9600000,
+    "row_amplification_ratio": 32.0,
+    "sqlite_size_bytes": 2470486016,
+    "sqlite_size_mb": 2470.486016,
+    "sqlite_sidecars_size_mb": 4.849664,
+    "storage_amplification_ratio": 26.095003631456397,
+    "checkpoint": [
+      0,
+      0,
+      0
+    ],
+    "sqlite_pragmas": {
+      "journal_mode": "wal",
+      "synchronous": 2,
+      "page_size": 4096,
+      "cache_size": -2000,
+      "temp_store": 0,
+      "user_version": 3
+    },
+    "indexes": [
+      {
+        "name": "idx_query_rows_recording",
+        "sql": "CREATE INDEX idx_query_rows_recording\n          on query_rows(recording_id)"
+      },
+      {
+        "name": "idx_query_rows_key",
+        "sql": "CREATE INDEX idx_query_rows_key\n          on query_rows(key)"
+      },
+      {
+        "name": "idx_query_rows_recording_semantic_key",
+        "sql": "CREATE INDEX idx_query_rows_recording_semantic_key\n          on query_rows(recording_id, semantic_type, key, entity_path, time)"
+      }
+    ],
+    "object_size_bytes": null,
+    "size_scope": "checkpointed whole catalog, including metadata and all three indexes",
+    "rrd_size_mb": null,
+    "rbl_size_mb": null
+  },
+  "source_checksum": "81fbed270f445e4d1b4bf0a7c81409b92dc25a1f4e2ef3ad25382cfa3c36a2e3",
+  "query_plans": {
+    "find_errors": [
+      "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+      "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)",
+      "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+    ],
+    "low_battery": [
+      "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+      "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)",
+      "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+    ],
+    "state_duration": [
+      "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+      "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)",
+      "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+    ],
+    "time_sync": [
+      "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+      "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=?)",
+      "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+    ],
+    "custom_scalar_key": [
+      "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+      "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)",
+      "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+    ],
+    "custom_time_range": [
+      "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+      "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=?)",
+      "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+    ],
+    "custom_numeric_threshold": [
+      "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)",
+      "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)",
+      "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+    ]
+  },
+  "peer": {
+    "dataset": {
+      "rows": 1000,
+      "frequency_hz": 200.0,
+      "scalar_fields": 30,
+      "state_fields": 1,
+      "seed": 20261006,
+      "duration_seconds": 5.0,
+      "last_timestamp_seconds": 4.995,
+      "total_columns": 33,
+      "expected_query_rows": 32000,
+      "generation_ms": 35.952500000348664,
+      "source_size_bytes": 313054,
+      "source_size_mb": 0.313054,
+      "source_path": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\benchmark_20261006_024955_baseline_small_index_fixed_295b46c4\\peer.csv"
+    },
+    "pipeline": {
+      "import_ms": 25.652199999967706,
+      "schema_profile_ms": 12412.127800000235,
+      "inspect_total_ms": 12503.761699999814,
+      "inspect_ms": 91.63389999957872,
+      "mapping_suggest_ms": 14.405200000510376,
+      "mapping_validate_ms": 14.079499999752443,
+      "mapping_save_ms": 91.33310000015626,
+      "query_insert_ms": 571.2000999992597,
+      "query_index_ms": 1567.829300000085,
+      "recording_build_ms": null,
+      "rerun_artifact_ms": null,
+      "recording_other_ms": null
+    },
+    "storage": {
+      "query_rows": 32000,
+      "total_query_rows": 9632000,
+      "row_amplification_ratio": 32.0,
+      "sqlite_size_bytes": 2478944256,
+      "sqlite_size_mb": 2478.944256,
+      "sqlite_sidecars_size_mb": 4.849664,
+      "storage_amplification_ratio": 7918.583554274981,
+      "checkpoint": [
+        0,
+        0,
+        0
+      ],
+      "sqlite_pragmas": {
+        "journal_mode": "wal",
+        "synchronous": 2,
+        "page_size": 4096,
+        "cache_size": -2000,
+        "temp_store": 0,
+        "user_version": 3
+      },
+      "indexes": [
+        {
+          "name": "idx_query_rows_recording",
+          "sql": "CREATE INDEX idx_query_rows_recording\n          on query_rows(recording_id)"
+        },
+        {
+          "name": "idx_query_rows_key",
+          "sql": "CREATE INDEX idx_query_rows_key\n          on query_rows(key)"
+        },
+        {
+          "name": "idx_query_rows_recording_semantic_key",
+          "sql": "CREATE INDEX idx_query_rows_recording_semantic_key\n          on query_rows(recording_id, semantic_type, key, entity_path, time)"
+        }
+      ],
+      "object_size_bytes": null,
+      "size_scope": "checkpointed whole catalog, including metadata and all three indexes",
+      "rrd_size_mb": null,
+      "rbl_size_mb": null
+    }
+  },
+  "queries": {
+    "find_errors": {
+      "runs": 3,
+      "min_ms": 5010.30560000072,
+      "mean_ms": 5258.1805666668515,
+      "median_ms": 5252.336800000194,
+      "p95_ms": 5511.899299999641,
+      "max_ms": 5511.899299999641,
+      "samples_ms": [
+        5511.899299999641,
+        5010.30560000072,
+        5252.336800000194
+      ],
+      "percentile_method": "nearest-rank",
+      "warmups": 1,
+      "result_rows": 1000,
+      "result_sha256": "af81b8c0613082892b99f3462e58255993d627f85f06450254bc21f70d00cccc",
+      "distinct_result_hashes": 1,
+      "repeat_check": "exact_sha256"
+    },
+    "low_battery": {
+      "runs": 3,
+      "min_ms": 17045.830500000193,
+      "mean_ms": 18228.08780000014,
+      "median_ms": 18465.42049999971,
+      "p95_ms": 19173.012400000516,
+      "max_ms": 19173.012400000516,
+      "samples_ms": [
+        19173.012400000516,
+        18465.42049999971,
+        17045.830500000193
+      ],
+      "percentile_method": "nearest-rank",
+      "warmups": 1,
+      "result_rows": 1000,
+      "result_sha256": "5577b69d322b3ea7f44e14d6cd08f443f8d41380a235ff67018afa35dc3cc7fe",
+      "distinct_result_hashes": 1,
+      "repeat_check": "exact_sha256"
+    },
+    "state_duration": {
+      "runs": 3,
+      "min_ms": 7084.930500000155,
+      "mean_ms": 7365.10870000014,
+      "median_ms": 7300.275300000067,
+      "p95_ms": 7710.120300000199,
+      "max_ms": 7710.120300000199,
+      "samples_ms": [
+        7300.275300000067,
+        7084.930500000155,
+        7710.120300000199
+      ],
+      "percentile_method": "nearest-rank",
+      "warmups": 1,
+      "result_rows": 1000,
+      "result_sha256": "73ab7033d6882b45bc286da01b021720e516508f82749db546e96bb2538e5b65",
+      "distinct_result_hashes": 1,
+      "repeat_check": "exact_sha256"
+    },
+    "custom_scalar_key": {
+      "runs": 3,
+      "min_ms": 58370.05880000015,
+      "mean_ms": 65303.61236666673,
+      "median_ms": 62037.40790000029,
+      "p95_ms": 75503.37039999977,
+      "max_ms": 75503.37039999977,
+      "samples_ms": [
+        62037.40790000029,
+        58370.05880000015,
+        75503.37039999977
+      ],
+      "percentile_method": "nearest-rank",
+      "warmups": 1,
+      "result_rows": 1000,
+      "result_sha256": "5af58804b1be498572e3292ef5c8f33aaa31b782ee34d8cc28806030f73c3909",
+      "distinct_result_hashes": 1,
+      "repeat_check": "exact_sha256"
+    },
+    "custom_time_range": {
+      "runs": 3,
+      "min_ms": 53997.65610000031,
+      "mean_ms": 56006.36549999975,
+      "median_ms": 54039.25309999977,
+      "p95_ms": 59982.18729999917,
+      "max_ms": 59982.18729999917,
+      "samples_ms": [
+        59982.18729999917,
+        53997.65610000031,
+        54039.25309999977
+      ],
+      "percentile_method": "nearest-rank",
+      "warmups": 1,
+      "result_rows": 352,
+      "result_sha256": "0b630e4948d2fdbf8530062eae74193bf6f741084e6bfbe9fab29ec89d461bc4",
+      "distinct_result_hashes": 1,
+      "repeat_check": "exact_sha256"
+    },
+    "custom_numeric_threshold": {
+      "runs": 3,
+      "min_ms": 53295.976899999914,
+      "mean_ms": 148256.31343333347,
+      "median_ms": 191358.33410000033,
+      "p95_ms": 200114.62930000015,
+      "max_ms": 200114.62930000015,
+      "samples_ms": [
+        53295.976899999914,
+        191358.33410000033,
+        200114.62930000015
+      ],
+      "percentile_method": "nearest-rank",
+      "warmups": 1,
+      "result_rows": 1000,
+      "result_sha256": "4cf35d6dd7a12f3dd9325d9d354e0816c7465696deb0c91ce21aa691dfc09586",
+      "distinct_result_hashes": 1,
+      "repeat_check": "exact_sha256"
+    },
+    "compare": {
+      "runs": 3,
+      "min_ms": 26003.44109999969,
+      "mean_ms": 26701.056533333332,
+      "median_ms": 26700.568500000372,
+      "p95_ms": 27399.159999999938,
+      "max_ms": 27399.159999999938,
+      "samples_ms": [
+        26700.568500000372,
+        27399.159999999938,
+        26003.44109999969
+      ],
+      "percentile_method": "nearest-rank",
+      "warmups": 1,
+      "result_rows": 4,
+      "result_sha256": "32eca579996163fb70f1fa21d6628af5a794f05e40ea849d14e1d04060856064",
+      "distinct_result_hashes": 1,
+      "repeat_check": "exact_sha256",
+      "metric_keys": [
+        "battery",
+        "temperature"
+      ],
+      "recording_source_rows": [
+        300000,
+        1000
+      ]
+    },
+    "time_sync_csv": {
+      "runs": 3,
+      "min_ms": 3093.5439000004408,
+      "mean_ms": 3181.308166666895,
+      "median_ms": 3099.5254999997996,
+      "p95_ms": 3350.8551000004445,
+      "max_ms": 3350.8551000004445,
+      "samples_ms": [
+        3350.8551000004445,
+        3093.5439000004408,
+        3099.5254999997996
+      ],
+      "percentile_method": "nearest-rank",
+      "warmups": 1,
+      "result_rows": 0,
+      "result_sha256": "1522a28197b5b8451e1afe16567b25c80f75050de7f318857e826737db3ee492",
+      "distinct_result_hashes": 1,
+      "repeat_check": "exact_sha256",
+      "coverage": "empty CSV path; no topic summaries, not a sensor-sync workload"
+    },
+    "time_sync": {
+      "runs": 3,
+      "min_ms": 6.25190000027942,
+      "mean_ms": 10.277133333147503,
+      "median_ms": 12.09759999983362,
+      "p95_ms": 12.481899999329471,
+      "max_ms": 12.481899999329471,
+      "samples_ms": [
+        6.25190000027942,
+        12.09759999983362,
+        12.481899999329471
+      ],
+      "percentile_method": "nearest-rank",
+      "warmups": 1,
+      "result_rows": 1,
+      "result_sha256": "f4098c6a47575a179e534ba8f9fc60ac3ba84fa7839b59a0407d21b3f2b93248",
+      "distinct_result_hashes": 1,
+      "repeat_check": "exact_sha256",
+      "coverage": "two real inspected MCAP topics; four metadata index rows; no RRD build",
+      "coverage_limitation": "MCAP inspect exposes a shared file-wide range; current index/template returns zero delta despite the generated 20 ms topic offset. This measures metadata query execution, not correctness of sensor synchronization; per-topic range support is a follow-up."
+    }
+  },
+  "time_sync_fixture": {
+    "query": {
+      "runs": 3,
+      "min_ms": 6.25190000027942,
+      "mean_ms": 10.277133333147503,
+      "median_ms": 12.09759999983362,
+      "p95_ms": 12.481899999329471,
+      "max_ms": 12.481899999329471,
+      "samples_ms": [
+        6.25190000027942,
+        12.09759999983362,
+        12.481899999329471
+      ],
+      "percentile_method": "nearest-rank",
+      "warmups": 1,
+      "result_rows": 1,
+      "result_sha256": "f4098c6a47575a179e534ba8f9fc60ac3ba84fa7839b59a0407d21b3f2b93248",
+      "distinct_result_hashes": 1,
+      "repeat_check": "exact_sha256",
+      "coverage": "two real inspected MCAP topics; four metadata index rows; no RRD build",
+      "coverage_limitation": "MCAP inspect exposes a shared file-wide range; current index/template returns zero delta despite the generated 20 ms topic offset. This measures metadata query execution, not correctness of sensor synchronization; per-topic range support is a follow-up."
+    },
+    "source_size_bytes": 871,
+    "topics": 2,
+    "messages": 4,
+    "query_rows": 4,
+    "known_topic_offset_ms": 20,
+    "current_reported_delta": 0,
+    "artifact_build": "not performed; metadata fixture"
+  },
+  "memory": {
+    "method": "psutil process RSS polling; includes native allocations",
+    "sample_interval_ms": 10.0,
+    "peak_rss_mb": 603.906048,
+    "os_peak_rss_mb": 606.441472,
+    "rss_before_mb": 98.131968,
+    "rss_after_mb": 140.009472,
+    "stages": {
+      "dataset_generation": {
+        "elapsed_ms": 6523.330999999416,
+        "rss_before_mb": 98.238464,
+        "rss_after_mb": 98.254848,
+        "peak_rss_mb": 98.254848
+      },
+      "primary/import": {
+        "elapsed_ms": 239.48999999993248,
+        "rss_before_mb": 99.258368,
+        "rss_after_mb": 99.966976,
+        "peak_rss_mb": 101.773312
+      },
+      "primary/inspect": {
+        "elapsed_ms": 10087.757199999942,
+        "rss_before_mb": 99.966976,
+        "rss_after_mb": 103.010304,
+        "peak_rss_mb": 175.460352
+      },
+      "primary/mapping": {
+        "elapsed_ms": 62.60329999986425,
+        "rss_before_mb": 103.010304,
+        "rss_after_mb": 101.249024,
+        "peak_rss_mb": 103.481344
+      },
+      "primary/recording_build": {
+        "elapsed_ms": 281463.1294999999,
+        "rss_before_mb": 101.249024,
+        "rss_after_mb": 110.768128,
+        "peak_rss_mb": 158.724096
+      },
+      "peer/import": {
+        "elapsed_ms": 25.67559999988589,
+        "rss_before_mb": 109.125632,
+        "rss_after_mb": 109.973504,
+        "peak_rss_mb": 109.973504
+      },
+      "peer/inspect": {
+        "elapsed_ms": 12503.825499999948,
+        "rss_before_mb": 109.973504,
+        "rss_after_mb": 112.693248,
+        "peak_rss_mb": 116.527104
+      },
+      "peer/mapping": {
+        "elapsed_ms": 119.8872000004485,
+        "rss_before_mb": 112.693248,
+        "rss_after_mb": 109.17888,
+        "peak_rss_mb": 113.094656
+      },
+      "peer/recording_build": {
+        "elapsed_ms": 1572.172899999714,
+        "rss_before_mb": 109.17888,
+        "rss_after_mb": 113.627136,
+        "peak_rss_mb": 113.647616
+      },
+      "query/find_errors": {
+        "elapsed_ms": 21457.647399999587,
+        "rss_before_mb": 110.821376,
+        "rss_after_mb": 119.017472,
+        "peak_rss_mb": 120.864768
+      },
+      "query/low_battery": {
+        "elapsed_ms": 71690.2928999998,
+        "rss_before_mb": 119.017472,
+        "rss_after_mb": 126.599168,
+        "peak_rss_mb": 128.495616
+      },
+      "query/state_duration": {
+        "elapsed_ms": 28761.295899999823,
+        "rss_before_mb": 126.599168,
+        "rss_after_mb": 122.683392,
+        "peak_rss_mb": 485.654528
+      },
+      "query/time_sync": {
+        "elapsed_ms": 12506.512999999359,
+        "rss_before_mb": 121.634816,
+        "rss_after_mb": 125.76768,
+        "peak_rss_mb": 125.76768
+      },
+      "query/custom_scalar_key": {
+        "elapsed_ms": 267449.18989999953,
+        "rss_before_mb": 125.76768,
+        "rss_after_mb": 119.046144,
+        "peak_rss_mb": 132.636672
+      },
+      "query/custom_time_range": {
+        "elapsed_ms": 295171.31280000013,
+        "rss_before_mb": 119.046144,
+        "rss_after_mb": 129.241088,
+        "peak_rss_mb": 131.13344
+      },
+      "query/custom_numeric_threshold": {
+        "elapsed_ms": 497802.56390000065,
+        "rss_before_mb": 129.241088,
+        "rss_after_mb": 128.643072,
+        "peak_rss_mb": 134.176768
+      },
+      "query/compare": {
+        "elapsed_ms": 104224.43310000017,
+        "rss_before_mb": 128.643072,
+        "rss_after_mb": 139.808768,
+        "peak_rss_mb": 603.906048
+      },
+      "time_sync_fixture/build": {
+        "elapsed_ms": 92.89200000057463,
+        "rss_before_mb": 139.927552,
+        "rss_after_mb": 139.988992,
+        "peak_rss_mb": 139.988992
+      },
+      "query/time_sync_topics": {
+        "elapsed_ms": 38.267500000074506,
+        "rss_before_mb": 139.988992,
+        "rss_after_mb": 140.013568,
+        "peak_rss_mb": 140.013568
+      }
+    },
+    "scope": "this process; child processes and system page cache are excluded"
+  }
+}

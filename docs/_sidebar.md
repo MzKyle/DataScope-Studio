@@ -13,6 +13,8 @@
   - [模块全景](architecture/module-overview.md)
   - [数据流](architecture/data-flow.md)
   - [状态模型](architecture/state-model.md)
+  - [Query Storage Benchmark](architecture/query-storage-benchmark.md)
+  - [Query Storage ADR](architecture/adr/ADR-001-query-storage.md)
 
 - **模块详解**
   - [总览](modules/README.md)
