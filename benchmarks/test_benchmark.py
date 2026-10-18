@@ -379,3 +379,38 @@ def test_typed_storage_worker_failure_preserves_unrelated_files(tmp_path: Path, 
     assert report["status"] == "failed"
     assert not list((tmp_path / ".work").iterdir())
     assert unrelated.read_text(encoding="utf-8") == "keep"
+
+
+def test_production_query_backend_runner(tmp_path: Path) -> None:
+    from benchmarks.query_backends import parser, run
+    output = run(parser().parse_args(["--rows", "32", "--query-runs", "1", "--warmups", "0",
+                                     "--output-dir", str(tmp_path)]))
+    report = json.loads(output.read_text(encoding="utf-8"))
+    assert report["status"] == "succeeded"
+    assert report["typed_catalog_read_only"]
+    assert not report["production_code_changed_during_run"]
+    assert report["backends"]["prepare"]["storage"]["typed_logical_rows"] == 2048
+    for name in report["query_names"]:
+        assert report["backends"]["compat"]["queries"][name]["result_sha256"] == (
+            report["backends"]["typed_sql"]["queries"][name]["result_sha256"])
+    routes = report["backends"]["typed_sql"]["queries"]["custom_numeric_threshold"]["execution"]["counts"]["routes"]
+    assert any(r["source"] == "typed_sql" for r in routes)
+    assert not list((tmp_path / ".work").iterdir())
+
+
+def test_query_backend_failure_cleans_only_owned_scratch(tmp_path: Path, monkeypatch) -> None:
+    import benchmarks.query_backends as comparison
+    unrelated = tmp_path / "keep.txt"
+    unrelated.write_text("keep", encoding="utf-8")
+    original = comparison.subprocess.run
+    def fail(command, *args, **kwargs):
+        if "--worker" in command:
+            raise RuntimeError("injected backend worker failure")
+        return original(command, *args, **kwargs)
+    monkeypatch.setattr(comparison.subprocess, "run", fail)
+    with pytest.raises(RuntimeError, match="injected backend"):
+        comparison.run(comparison.parser().parse_args(["--rows", "4", "--output-dir", str(tmp_path)]))
+    report = json.loads(next(tmp_path.glob("query_backends_*.json")).read_text(encoding="utf-8"))
+    assert report["status"] == "failed"
+    assert not list((tmp_path / ".work").iterdir())
+    assert unrelated.read_text(encoding="utf-8") == "keep"

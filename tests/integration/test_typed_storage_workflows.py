@@ -61,6 +61,14 @@ def test_api_typed_build_and_invalid_option(tmp_path, monkeypatch):
         job = wait_for_job(client, response.json()["id"])
         assert job["status"] == "succeeded", job
         assert job["payload"]["query_storage"] == "typed_sqlite"
+        custom = client.post(f"/api/projects/{project['id']}/query/custom", json={
+            "filters": {"key": " BATTERY ", "time_start": 1, "time_end": 1,
+                        "operator": "lt", "value": "0.2"}, "limit": 1})
+        assert custom.status_code == 200
+        assert [(r["time"], r["value"]) for r in custom.json()["rows"]] == [(1, 0.1)]
+        errors = client.post(f"/api/projects/{project['id']}/query", json={"template_id": "find_errors"})
+        assert errors.status_code == 200
+        assert errors.json()["rows"][0]["value"] == "error"
     workspace = Workspace(root)
     assert workspace.run_query(project["id"], "low_battery")["rows"][0]["value"] == 0.1
     with workspace._connect() as conn:
@@ -77,6 +85,10 @@ def test_cli_typed_import(tmp_path, monkeypatch):
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output)
     assert payload["job"]["payload"]["query_storage"] == "typed_sqlite"
+    queried = CliRunner().invoke(cli_app, ["query", "--project", "Typed CLI", "--template", "low_battery",
+                                         "--threshold", "0.2", "--limit", "1", "--json"])
+    assert queried.exit_code == 0, queried.output
+    assert json.loads(queried.output)["rows"][0]["value"] == 0.1
     workspace = Workspace(root)
     with workspace._connect() as conn:
         assert conn.execute("SELECT count(*) FROM typed_indexes").fetchone()[0] == 1

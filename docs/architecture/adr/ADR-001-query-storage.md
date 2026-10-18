@@ -9,6 +9,7 @@
 Implementation follow-up：[Phase C2a](../query-storage-phase-c2a.md)已将 Custom Query 的字段、路径和有限时间筛选接入生产 EAV 路径。
 数值/文本比较仍使用原 Python 逻辑。[Phase C2b](../query-storage-phase-c2b.md)已增加显式启用的 CSV typed 存储与兼容读取；
 默认仍为 legacy，完整 typed SQL 执行和 Diagnostics 性能门槛仍待后续实施。
+[Phase C2c](../query-storage-phase-c2c.md)进一步接入轻量 QueryBackend 和首批 typed 筛选 SQL；聚合与 Diagnostics 仍保持兼容执行。
 
 ## Context and evidence
 
@@ -107,6 +108,9 @@ Typed SQLite 优先以同一个 SQLite transaction 管理 metadata 与样本生�
 
 **Phase C2 推荐 QueryBackend contract + TypedSQLiteBackend + Legacy fallback/parity；不建议自动进入 DuckDBParquetBackend 生产迁移。**
 C2a/C2b 后续实施已获得授权：C2b 将 metadata.sqlite 升至 v4，增加私有 typed writer/reader 和 legacy 路由，未引入完整 QueryBackend 框架或变更默认 backend，旧 query_rows 数据保留。
+C2c 的[生产实现](../query-storage-phase-c2c.md)引入只含计划与有序读取的轻量 QueryBackend，
+先支持 Custom Query 数值筛选、low_battery 和 find_errors；不采用上述候选接口中的通用 aggregate、build_index 或 delete_recording 抽象。
+旧 EAV 与暂不支持的 typed 条件保留兼容执行，compare、state_duration、Diagnostics 的完整算法与默认 legacy 构建不变。
 Time_sync 的已知 20 ms offset 检测缺口仍未修复，不能用其速度宣称业务正确。
 
 Phase D 单独测量 Rerun Build Optimization：historical Smoke build 222.680 秒，Rerun 占 84.2%。

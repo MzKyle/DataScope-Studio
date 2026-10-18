@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from datascope_core.query_backend import QueryRequest, iter_backend_rows
 from datascope_core.models import MappingSpec
 from datascope_core.query import (
     QUERY_TEMPLATES,
@@ -24,8 +25,7 @@ from datascope_core.query_sql import (
     register_custom_query_functions,
 )
 from datascope_core.query_typed import (
-    build_typed_index, clear_query_index, iter_mixed_rows, normalize_query_storage,
-    preflight, selected_typed_indexes,
+    build_typed_index, clear_query_index, normalize_query_storage, preflight,
 )
 from datascope_core.workspace_utils import row_to_dict, source_info_from_row, utc_now
 
@@ -52,6 +52,9 @@ class WorkspaceQueryMixin:
                     project_id,
                     template_id=template_id,
                     recording_ids=recording_ids,
+                    template_params=params,
+                    result_limit=limit,
+                    execute_template=True,
                 )) as rows:
                 return run_query_template_stream(rows, template_id, params, limit)
         rows = self._query_rows(
@@ -136,6 +139,8 @@ class WorkspaceQueryMixin:
                 semantic_types=semantic_types,
                 custom_plan=plan,
                 custom_limit=plan.sql_limit(limit),
+                filters=filters,
+                result_limit=limit,
             )) as rows:
             return run_custom_query(rows, filters, limit)
 
@@ -215,6 +220,10 @@ class WorkspaceQueryMixin:
         search_tokens: list[str] | None = None,
         custom_plan: CustomQueryPlan | None = None,
         custom_limit: int | None = None,
+        filters: Any = None,
+        template_params: Any = None,
+        result_limit: Any = None,
+        execute_template: bool = False,
     ) -> Iterator[dict[str, Any]]:
         conditions, values = self._query_conditions(
             project_id,
@@ -225,49 +234,24 @@ class WorkspaceQueryMixin:
         )
         with closing(self._connect()) as conn, conn:
             conn.execute("BEGIN")
-            limit_sql = ""
-            indexes = selected_typed_indexes(conn, project_id, recording_ids)
             if custom_plan is not None:
                 register_custom_query_functions(conn, custom_plan)
                 conditions.extend(custom_plan.conditions)
                 values.extend(custom_plan.parameters)
-                if custom_limit is not None:
-                    limit_sql = "limit ?"
-                    values.append(custom_limit)
-            if indexes:
-                metadata_conditions, metadata_values = self._query_conditions(
-                    project_id, template_id=template_id, recording_ids=recording_ids,
-                    semantic_types=semantic_types, search_tokens=search_tokens, include_time=False,
-                )
-                if custom_plan is not None:
-                    metadata_conditions.extend(custom_plan.metadata_conditions)
-                    metadata_values.extend(custom_plan.metadata_parameters)
-                # The merged logical stream owns LIMIT; EAV and individual fields
-                # must not truncate candidates ahead of the other sources.
-                mixed_values = values[:-1] if limit_sql else values
-                yield from iter_mixed_rows(conn, conditions, mixed_values,
-                    metadata_conditions, metadata_values, custom_plan, template_id,
-                    custom_limit, getattr(self, "_query_read_stats", None))
-                return
-            cursor = conn.execute(
-                f"""
-                select qr.*
-                from query_rows qr
-                join recordings r on r.id = qr.recording_id
-                where {' and '.join(conditions)}
-                order by qr.recording_id, qr.time, qr.entity_path, qr.key, qr.rowid
-                {limit_sql}
-                """,
-                values,
+            metadata_conditions, metadata_values = self._query_conditions(
+                project_id, template_id=template_id, recording_ids=recording_ids,
+                semantic_types=semantic_types, search_tokens=search_tokens, include_time=False,
             )
-            try:
-                for row in cursor:
-                    stats = getattr(self, "_query_read_stats", None)
-                    if stats is not None:
-                        stats["eav_fetched"] = stats.get("eav_fetched", 0) + 1
-                    yield row_to_dict(row)
-            finally:
-                cursor.close()
+            if custom_plan is not None:
+                metadata_conditions.extend(custom_plan.metadata_conditions)
+                metadata_values.extend(custom_plan.metadata_parameters)
+            request = QueryRequest(
+                project_id, recording_ids, semantic_types, tuple(conditions), tuple(values),
+                tuple(metadata_conditions), tuple(metadata_values), custom_plan, filters,
+                template_id, template_params, result_limit, custom_limit, execute_template,
+            )
+            yield from iter_backend_rows(conn, request, convert=row_to_dict,
+                                        stats=getattr(self, "_query_read_stats", None))
 
     def _query_conditions(
         self,

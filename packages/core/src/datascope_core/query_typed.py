@@ -356,81 +356,78 @@ def _sort_key(row):
             row["entity_path"], row["key"], row["_sample_seq"], row["_binding_seq"])
 
 
-def iter_mixed_rows(conn, conditions, values, metadata_conditions, metadata_values,
-                    plan: CustomQueryPlan | None, template_id: str | None,
-                    limit: int | None, stats: dict | None = None):
-    cursors = []
-    iterators = []
+def select_bindings(conn, conditions, values):
+    return conn.execute(
+        "SELECT qr.*, d.schema_id, s.family FROM typed_bindings qr "
+        "JOIN recordings r ON r.id = qr.recording_id "
+        "JOIN typed_datasets d ON d.id = qr.dataset_id "
+        "JOIN typed_schemas s ON s.id = d.schema_id WHERE " + " AND ".join(conditions),
+        values,
+    ).fetchall()
+
+
+def binding_select(binding, plan, template_id, predicates=(), parameters=(), limit=None):
+    """Select one ordered logical field; callers prove any extra predicates."""
+    table = sample_table(binding["schema_id"])
+    number = binding["column_no"]
+    if type(number) is not int or not 0 <= number < MAX_FIELDS:
+        raise RuntimeError("Invalid typed SQLite column")
+    if binding["family"] not in {"numeric", "state"}:
+        raise RuntimeError("Invalid typed SQLite schema family")
+    if binding["kind"] not in {"int", "float", "bool", "text"}:
+        raise RuntimeError("Invalid typed SQLite kind")
+    if binding["family"] == "numeric" and binding["kind"] == "text":
+        raise RuntimeError("Invalid typed numeric schema kind")
+    column = f"s.c{number}"
+    clauses = ["s.dataset_id = ?", f"{column} IS NOT NULL"]
+    args = [binding["dataset_id"]]
+    if template_id == "state_duration":
+        clauses.append("s.time IS NOT NULL")
+    if plan is not None:
+        for operator, bound in plan.time_bounds:
+            if operator not in {">=", "<="}:
+                raise RuntimeError("Invalid typed time bound")
+            clauses.append(f"s.time {operator} ?")
+            args.append(bound)
+    clauses.extend(predicates)
+    args.extend(parameters)
+    is_state = binding["family"] == "state"
+    join = f" LEFT JOIN typed_states v ON v.id = {column} AND v.dataset_id = s.dataset_id" if is_state else ""
+    projection = "v.value_json" if is_state else column
+    sql = (f"SELECT s.time, s.sample_seq, {projection} AS value FROM {table} s"
+           + join + " WHERE " + " AND ".join(clauses) + " ORDER BY s.time, s.sample_seq")
+    if limit is not None:
+        sql += " LIMIT ?"
+        args.append(limit)
+    return sql, tuple(args)
+
+
+def iter_binding_rows(conn, binding, sql, parameters, stats=None):
+    cursor = conn.execute(sql, parameters)
     try:
-        legacy_sql = ("SELECT qr.*, coalesce(o.sample_seq, qr.rowid) AS _sample_seq, "
-                      "coalesce(o.binding_seq, 0) AS _binding_seq FROM query_rows qr "
-                      "JOIN recordings r ON r.id = qr.recording_id "
-                      "LEFT JOIN typed_legacy_order o ON o.query_rowid = qr.rowid WHERE "
-                      + " AND ".join(conditions)
-                      + " ORDER BY qr.recording_id, qr.time, qr.entity_path, qr.key, _sample_seq, _binding_seq")
-        legacy = conn.execute(legacy_sql, values)
-        cursors.append(legacy)
-
-        def legacy_rows():
-            for row in legacy:
+        for row in cursor:
+            if stats is not None:
+                stats["typed_fetched"] = stats.get("typed_fetched", 0) + 1
+            raw = row["value"]
+            if binding["family"] == "state":
+                if raw is None:
+                    raise RuntimeError("Missing typed state dictionary entry")
+                encoded = raw
+            else:
+                encoded = json.dumps(_decode_number(raw, binding["kind"]), ensure_ascii=False)
                 if stats is not None:
-                    stats["eav_fetched"] = stats.get("eav_fetched", 0) + 1
-                yield dict(row)
+                    stats["typed_numeric_decodes"] = stats.get("typed_numeric_decodes", 0) + 1
+            yield {"recording_id": binding["recording_id"], "source_id": binding["source_id"],
+                   "time": row["time"], "entity_path": binding["entity_path"],
+                   "semantic_type": binding["semantic_type"], "key": binding["key"],
+                   "value_json": encoded, "_sample_seq": row["sample_seq"],
+                   "_binding_seq": binding["binding_seq"]}
+    finally:
+        cursor.close()
 
-        iterators.append(legacy_rows())
-        bindings = conn.execute(
-            "SELECT qr.*, d.schema_id, s.family FROM typed_bindings qr "
-            "JOIN recordings r ON r.id = qr.recording_id "
-            "JOIN typed_datasets d ON d.id = qr.dataset_id "
-            "JOIN typed_schemas s ON s.id = d.schema_id WHERE " + " AND ".join(metadata_conditions),
-            metadata_values,
-        ).fetchall()
-        if stats is not None:
-            stats["bindings"] = len(bindings)
-        for binding in bindings:
-            table = sample_table(binding["schema_id"])
-            column_no = binding["column_no"]
-            if type(column_no) is not int or not 0 <= column_no < MAX_FIELDS:
-                raise RuntimeError("Invalid typed SQLite column")
-            column = f"s.c{column_no}"
-            clauses = ["s.dataset_id = ?", f"{column} IS NOT NULL"]
-            args = [binding["dataset_id"]]
-            if template_id == "state_duration":
-                clauses.append("s.time IS NOT NULL")
-            if plan is not None:
-                for operator, bound in plan.time_bounds:
-                    if operator not in {">=", "<="}:
-                        raise RuntimeError("Invalid typed time bound")
-                    clauses.append(f"s.time {operator} ?")
-                    args.append(bound)
-            is_state = binding["family"] == "state"
-            if binding["family"] not in {"numeric", "state"}:
-                raise RuntimeError("Invalid typed SQLite schema family")
-            join = f" LEFT JOIN typed_states v ON v.id = {column} AND v.dataset_id = s.dataset_id" if is_state else ""
-            projection = "v.value_json" if is_state else column
-            cursor = conn.execute(f"SELECT s.time, s.sample_seq, {projection} AS value FROM {table} s"
-                                  + join + " WHERE " + " AND ".join(clauses)
-                                  + " ORDER BY s.time, s.sample_seq", args)
-            cursors.append(cursor)
 
-            def typed_rows(cursor=cursor, binding=binding, is_state=is_state):
-                for row in cursor:
-                    if stats is not None:
-                        stats["typed_fetched"] = stats.get("typed_fetched", 0) + 1
-                    raw = row["value"]
-                    if is_state:
-                        if raw is None:
-                            raise RuntimeError("Missing typed state dictionary entry")
-                        encoded = raw
-                    else:
-                        encoded = json.dumps(_decode_number(raw, binding["kind"]), ensure_ascii=False)
-                    yield {"recording_id": binding["recording_id"], "source_id": binding["source_id"],
-                           "time": row["time"], "entity_path": binding["entity_path"],
-                           "semantic_type": binding["semantic_type"], "key": binding["key"],
-                           "value_json": encoded, "_sample_seq": row["sample_seq"],
-                           "_binding_seq": binding["binding_seq"]}
-
-            iterators.append(typed_rows())
+def merge_ordered_rows(iterators, limit=None, stats=None):
+    try:
         for count, row in enumerate(heapq.merge(*iterators, key=_sort_key), 1):
             row.pop("_sample_seq")
             row.pop("_binding_seq")
@@ -442,5 +439,3 @@ def iter_mixed_rows(conn, conditions, values, metadata_conditions, metadata_valu
     finally:
         for iterator in iterators:
             iterator.close()
-        for cursor in cursors:
-            cursor.close()

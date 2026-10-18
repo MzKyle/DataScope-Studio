@@ -36,6 +36,7 @@ from benchmarks.benchmark_query import measure_query, query_calls, validate_quer
 from benchmarks.benchmark_report import environment
 from benchmarks.custom_query_pushdown import ReadOnlyWorkspace, describe_input, sha256, write_json
 from benchmarks.generate_dataset import generate_dataset
+from benchmarks.c2b_query_reference import C2bQueryReference
 
 NAMES = ("find_errors", "low_battery", "state_duration", "custom_scalar_key",
          "custom_time_range", "custom_numeric_threshold", "compare")
@@ -50,7 +51,7 @@ class NoSampleIndexes(sqlite3.Connection):
         return super().execute(sql, parameters)
 
 
-class MeasuredWorkspace(Workspace):
+class MeasuredWorkspace(C2bQueryReference, Workspace):
     traces = None
     no_sample_indexes = False
 

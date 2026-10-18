@@ -190,7 +190,7 @@ def test_limit_residuals_late_window_and_closed_connections(tmp_path, monkeypatc
     workspace._query_read_stats = {}
     result = workspace.custom_query(project, {"operator": "lt", "value": 2}, limit=1)
     assert result["rows"][0]["time"] == 150
-    assert workspace._query_read_stats["typed_fetched"] >= 151
+    assert workspace._query_read_stats["typed_fetched"] == 1
     workspace._query_read_stats = {}
     result = workspace.custom_query(project, {"time_start": 190, "time_end": 192})
     assert len(result["rows"]) == workspace._query_read_stats["typed_fetched"] == 3

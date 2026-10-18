@@ -413,3 +413,19 @@ isolated backend processes; tracing/counts are a separate untimed pass.
 performance or storage acceptance result. Only the current run's owned scratch
 directory is cleaned. Existing baseline bytes and retained artifacts are preserved.
 See [C2b design and limits](../docs/architecture/query-storage-phase-c2b.md).
+
+## C2c production query backends
+
+`python -m benchmarks.query_backends --preset smoke` compares the frozen C2b
+compatibility reader and the new production typed SQL reader on one read-only
+typed catalog; the historical C2a EAV catalog is a separate read-only control.
+Use `--preset small` for the second latency gate and `--preset medium` for
+report-only filtering measurements on the retained Phase C inputs.
+
+Each query runs in sequential isolated backend processes, one warm-up and five
+measurements; tracing, plans, candidates and decoding counts are separate untimed
+passes. All 32 fixture fields are retained. Smoke/Small require each of the five
+filter queries to finish within 1 second P95; compare/state_duration remain
+compatibility regressions. No full seven-query or Diagnostics performance claim
+is made. `--rows 32 --query-runs 1 --warmups 0` is a generated self-check only.
+See [C2c semantics and routing](../docs/architecture/query-storage-phase-c2c.md).
