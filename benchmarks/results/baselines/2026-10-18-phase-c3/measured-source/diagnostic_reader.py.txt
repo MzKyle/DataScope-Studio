@@ -1,0 +1,375 @@
+"""One read snapshot, wide typed projections and one EAV pass for Diagnostics."""
+from __future__ import annotations
+
+import json
+import math
+import struct
+import tempfile
+from collections import OrderedDict, defaultdict
+from contextlib import closing
+from dataclasses import dataclass
+from pathlib import Path
+
+import numpy as np
+
+from datascope_core import robot_diagnostics as rules
+from datascope_core.diagnostic_stats import DiagnosticStats, WORK_BYTES, assemble_report
+from datascope_core.query import _result_row, _stream_query_row
+from datascope_core.query_backend import QueryRequest, TypedSQLiteBackend, register_backend_functions, iter_backend_rows
+from datascope_core.query_typed import (
+    _decode_number, _sort_key, binding_select, sample_table, select_bindings, selected_typed_indexes,
+)
+from datascope_core.workspace_utils import recording_from_row
+
+
+class TopSamples:
+    def __init__(self, limit):
+        self.limit, self.items = limit, []
+
+    def add(self, order, value):
+        self.items.append((order, value))
+        if len(self.items) >= self.limit * 2:
+            self.items.sort(key=lambda item: item[0])
+            del self.items[self.limit:]
+
+    def rows(self):
+        return [row for _, row in sorted(self.items, key=lambda item: item[0])[:self.limit]]
+
+
+class OrderKeys:
+    def __init__(self, binding, times, seq):
+        self.binding, self.times, self.seq = binding, times, seq
+
+    def __getitem__(self, index):
+        b, time = self.binding, self.times[index]
+        missing = time is None or math.isnan(float(time))
+        return (b['recording_id'], not missing, 0 if missing else float(time), b['entity_path'],
+                b['key'], int(self.seq[index]), b['binding_seq'])
+
+
+def _snapshot_metadata(conn, project_id, recording_ids):
+    from datascope_core.workspace import _schema_profile_checksum
+    if not conn.execute('SELECT 1 FROM projects WHERE id=?', (project_id,)).fetchone():
+        raise KeyError(f'Project not found: {project_id}')
+    recordings = [recording_from_row(r) for r in conn.execute(
+        'SELECT r.*, s.type AS source_type, s.uri AS source_uri FROM recordings r '
+        'LEFT JOIN sources s ON s.id=r.source_id WHERE r.project_id=? ORDER BY r.created_at DESC', (project_id,))]
+    if recording_ids:
+        selected = set(recording_ids)
+        recordings = [r for r in recordings if r['id'] in selected]
+        missing = selected - {r['id'] for r in recordings}
+        if missing:
+            raise ValueError(f"Recordings do not belong to project: {', '.join(sorted(missing))}")
+    sources, profiles = [], []
+    for source_id in sorted({r['source_id'] for r in recordings if r.get('source_id')}):
+        row = conn.execute('SELECT * FROM sources WHERE id=?', (source_id,)).fetchone()
+        if row is None:
+            raise KeyError(f'Source not found: {source_id}')
+        source = dict(row)
+        source['metadata'] = json.loads(source.pop('metadata_json') or '{}')
+        source['available'] = Path(source['uri']).exists()
+        cached = conn.execute('SELECT profile_json FROM schema_profiles WHERE checksum=?',
+                              (_schema_profile_checksum(source),)).fetchone()
+        if cached is None:
+            raise MissingProfile(source_id)
+        profile = json.loads(cached[0])
+        profile['source_id'] = source_id
+        sources.append(source)
+        profiles.append(profile)
+    return recordings, sources, profiles
+
+
+class MissingProfile(Exception):
+    pass
+
+
+@dataclass(frozen=True)
+class DiagnosticReadPlan:
+    """Private layout/field plan, resolved entirely inside the read snapshot."""
+    recording_ids: tuple[str, ...]
+    typed_bindings: tuple
+    mixed: bool
+    alert_limit: int
+    work_bytes: int
+
+
+def _read_plan(workspace, conn, project_id, recordings, limit):
+    ids = tuple(r['id'] for r in recordings)
+    indexes = selected_typed_indexes(conn, project_id, ids)
+    conditions, args = workspace._query_conditions(project_id, recording_ids=ids,
+                                                   semantic_types=['scalar','scalar_group','state'])
+    return DiagnosticReadPlan(ids, tuple(select_bindings(conn, conditions, args)) if indexes else (),
+                              bool(indexes), limit, getattr(workspace, '_diagnostic_work_bytes', WORK_BYTES))
+
+
+def _typed_stats(conn, bindings, stats, counters):
+    datasets = defaultdict(list)
+    for binding in bindings:
+        binding_select(binding, None, None)  # Validate format/column/kind before SQL interpolation.
+        datasets[binding['dataset_id']].append(dict(binding))
+    conn.create_function('datascope_diag_number', 2, lambda value, kind:
+                         None if value is None else _decode_number(value, kind))
+    packers = {}
+    def pack_numbers(*values):
+        packer = packers.get(len(values))
+        if packer is None:
+            packer = packers[len(values)] = struct.Struct('='+'d'*len(values))
+        try:
+            return packer.pack(*values)
+        except struct.error:
+            return packer.pack(*(float('nan') if value is None else value for value in values))
+    # Transient binary batches avoid millions of retained Python float objects.
+    # SQL still validates every original native value; no JSON is reconstructed.
+    conn.create_function('datascope_diag_pack', -1, pack_numbers)
+    for dataset, group in datasets.items():
+        columns = sorted({b['column_no'] for b in group})
+        representatives = {b['column_no']: b for b in group}
+        state = group[0]['family'] == 'state'
+        projections = []
+        for number in columns:
+            b, col = representatives[number], f's.c{number}'
+            if state:
+                projections.append(col)
+            else:
+                allowed = "'integer','real'" if b['kind'] == 'float' else "'integer'"
+                guard = f'typeof({col}) IN ({allowed})'
+                if b['kind'] == 'bool':
+                    guard += f' AND {col} IN (0,1)'
+                projections.append(f"CASE WHEN {guard} THEN {col} ELSE datascope_diag_number({col},'{b['kind']}') END")
+        parts = [projections[start:start+120] for start in range(0,len(projections),120)]
+        selected = projections if state else ['datascope_diag_pack('+','.join(part)+')' for part in parts]
+        sql = f"SELECT s.time,s.sample_seq,{','.join(selected)} FROM {sample_table(group[0]['schema_id'])} s WHERE s.dataset_id=? ORDER BY s.time,s.sample_seq"
+        cursor = conn.cursor()
+        cursor.row_factory = None
+        cache = OrderedDict()
+        try:
+            cursor.execute(sql, (dataset,))
+            batch_size = max(1, min(50_000, stats.budget.size // (128 * (len(columns) + 2))))
+            def batches():
+                if state:
+                    while rows := cursor.fetchmany(batch_size):
+                        yield np.asarray(rows, dtype=object)
+                else:
+                    while rows := cursor.fetchmany(batch_size):
+                        times = np.fromiter((float('nan') if r[0] is None else r[0] for r in rows), dtype='f8', count=len(rows))
+                        seq = np.fromiter((r[1] for r in rows), dtype='i8', count=len(rows))
+                        values = np.empty((len(rows),len(columns)), dtype='f8')
+                        offset = 0
+                        for i, part in enumerate(parts):
+                            block = np.frombuffer(b''.join(r[i+2] for r in rows), dtype='=f8').reshape(len(rows),len(part))
+                            values[:,offset:offset+len(part)] = block
+                            offset += len(part)
+                        yield times, seq, values
+            for data in batches():
+                count = len(data) if state else len(data[0])
+                counters['typed_physical_rows'] = counters.get('typed_physical_rows', 0) + count
+                times = data[:, 0].astype(np.float64) if state else data[0]
+                sequences = data[:, 1].astype(np.int64) if state else data[1]
+                for number in columns:
+                    raw = data[:, columns.index(number) + 2] if state else data[2][:,columns.index(number)]
+                    mask = raw != None if state else ~np.isnan(raw)  # noqa: E711
+                    if not mask.any():
+                        continue
+                    counters['typed_values_decoded'] = counters.get('typed_values_decoded', 0) + int(mask.sum())
+                    selected_times, selected_seq = times[mask], sequences[mask]
+                    b = representatives[number]
+                    if not state:
+                        values = raw[mask].astype(np.float64)
+                        if not np.isfinite(values).all():
+                            raise RuntimeError('Invalid nonfinite typed numeric value')
+                        numeric, is_state = b['kind'] != 'bool', False
+                    else:
+                        present = raw[mask]
+                        unique = np.unique(present)
+                        if any(type(code) is not int for code in unique):
+                            raise RuntimeError('Invalid typed state dictionary code')
+                        codes = present.astype(np.int64)
+                        missing = [int(code) for code in unique if int(code) not in cache]
+                        for start in range(0, len(missing), 500):
+                            chunk = missing[start:start + 500]
+                            fetched = conn.execute('SELECT id,value_json FROM typed_states WHERE dataset_id=? AND id IN ('
+                                + ','.join('?' for _ in chunk) + ')', [dataset, *chunk]).fetchall()
+                            for row in fetched:
+                                cache[row[0]] = json.loads(row[1])
+                                counters['dictionary_decodes'] = counters.get('dictionary_decodes', 0) + 1
+                        if any(int(code) not in cache for code in unique):
+                            raise RuntimeError('Missing typed state dictionary entry')
+                        decoded = [cache[int(code)] for code in codes]
+                        # A column's preflight kind is fixed; unusual dictionary values
+                        # take the row-compatible path rather than coercing their type.
+                        if all(isinstance(cache[int(code)], str) for code in unique):
+                            for binding in group:
+                                if binding['column_no'] == number:
+                                    stats.add(binding, selected_times, decoded,
+                                        OrderKeys(binding, selected_times, selected_seq), numeric=False, state=True)
+                        else:
+                            _add_values(stats, group, number, selected_times, selected_seq, decoded)
+                        while len(cache) > 4096:
+                            cache.popitem(last=False)
+                        continue
+                    for binding in group:
+                        if binding['column_no'] == number:
+                            stats.add(binding, selected_times, values, OrderKeys(binding, selected_times, selected_seq),
+                                      numeric=numeric, state=is_state)
+                del data
+        finally:
+            cursor.close()
+
+
+def _add_values(stats, bindings, column, times, seq, values):
+    categories = defaultdict(list)
+    for i, value in enumerate(values):
+        numeric = rules._float_or_none(value)
+        categories['number' if numeric is not None else 'state' if value is not None else 'none'].append(i)
+    for category, indexes in categories.items():
+        selected_times, selected_seq = times[indexes], seq[indexes]
+        selected = [rules._float_or_none(values[i]) if category == 'number' else values[i] for i in indexes]
+        for binding in bindings:
+            if binding['column_no'] == column:
+                stats.add(binding, selected_times, selected, OrderKeys(binding, selected_times, selected_seq),
+                          numeric=category == 'number', state=category == 'state')
+
+
+def _typed_alerts(workspace, conn, project_id, ids, samples, thresholds):
+    backend = TypedSQLiteBackend()
+    register_backend_functions(conn)
+    for template, top in samples.items():
+        conditions, args = workspace._query_conditions(project_id, recording_ids=ids,
+            template_id=template, include_time=False)
+        bindings = select_bindings(conn, conditions, args)
+        params = {'threshold': thresholds['battery_low' if template == 'low_battery' else 'detection_confidence']}
+        request = QueryRequest(project_id, ids, None, (), (), (), (), template_id=template,
+                               template_params=params, limit=top.limit, execute_template=True)
+        for binding in bindings:
+            plan = backend.plan(conn, request, binding)
+            with closing(backend.iter_rows(conn, plan)) as rows:
+                count = 0
+                for row in rows:
+                    result = _stream_query_row(row, template, params)
+                    if result is not None:
+                        top.add(_sort_key(row), result)
+                        count += 1
+                        if count >= top.limit:
+                            break
+
+
+def _eav_stats(workspace, conn, project_id, ids, stats, samples, thresholds, counters, mixed):
+    conditions, args = workspace._query_conditions(project_id, recording_ids=ids)
+    general = "qr.semantic_type IN ('scalar','scalar_group','state')"
+    error = "qr.semantic_type IN ('text_log','state')"
+    battery = "qr.semantic_type IN ('scalar','scalar_group') AND (lower(qr.key) LIKE '%battery%' OR lower(qr.entity_path) LIKE '%battery%')"
+    detection = "qr.entity_path LIKE '/camera/pred%' AND qr.key IN ('pred_box_count','score_min','score_mean')"
+    topic = "qr.key='topic_summary'"
+    flags = [general, error, battery, detection, topic]
+    join = ' LEFT JOIN typed_legacy_order o ON o.query_rowid=qr.rowid' if mixed else ''
+    order = 'coalesce(o.sample_seq,qr.rowid),coalesce(o.binding_seq,0)' if mixed else 'qr.rowid,0'
+    sql = ('SELECT qr.*,' + ','.join(f'({f}) AS flag{i}' for i, f in enumerate(flags))
+           + ',' + ('coalesce(o.sample_seq,qr.rowid) AS _sample_seq,coalesce(o.binding_seq,0) AS _binding_seq' if mixed else 'qr.rowid AS _sample_seq,0 AS _binding_seq')
+           + ' FROM query_rows qr JOIN recordings r ON r.id=qr.recording_id' + join
+           + ' WHERE ' + ' AND '.join(conditions) + ' AND (' + ' OR '.join('('+f+')' for f in flags) + ')'
+           + ' ORDER BY qr.recording_id,qr.time,qr.entity_path,qr.key,' + order)
+    # SQLite interprets a bare ORDER BY 0 as a column number, so use the aliases.
+    sql = sql[:sql.rindex(' ORDER BY')] + ' ORDER BY qr.recording_id,qr.time,qr.entity_path,qr.key'
+    if mixed:
+        sql += ',_sample_seq,_binding_seq'
+    cursor = conn.cursor()
+    cursor.row_factory = None
+    cursor.execute(sql, args)
+    names = tuple(column[0] for column in cursor.description)
+    pending, pending_count, topics = {}, 0, []
+    batch_limit = max(1, min(8192, stats.budget.size // 512))
+    def flush():
+        nonlocal pending_count
+        for meta, times, values, orders, category in pending.values():
+            stats.add(meta, times, values, orders, numeric=category=='number', state=category=='state')
+        pending.clear()
+        pending_count = 0
+    try:
+        for entry in cursor:
+            counters['eav_rows'] = counters.get('eav_rows', 0) + 1
+            row = dict(zip(names, entry))
+            counters['eav_values_decoded'] = counters.get('eav_values_decoded', 0) + 1
+            try:
+                value = json.loads(row['value_json'])
+            except json.JSONDecodeError:
+                if row['flag1'] or row['flag2'] or row['flag3']:
+                    raise
+                value = row['value_json']
+            if row['flag4']:
+                topics.append(row)
+            for i, template in enumerate(samples, 1):
+                if row[f'flag{i}']:
+                    threshold = thresholds['battery_low' if template=='low_battery' else 'detection_confidence']
+                    result = _stream_query_row(row, template, {'threshold': threshold})
+                    if result is not None:
+                        samples[template].add(_sort_key(row), result)
+            if row['flag0']:
+                enriched = rules._row_value({**row, 'value': value}) if isinstance(value, dict) else value
+                numeric = rules._float_or_none(enriched)
+                category = 'number' if numeric is not None else 'state' if row['semantic_type']=='state' and enriched is not None else 'none'
+                key = tuple(row[k] for k in ('recording_id','source_id','entity_path','key')) + (category,)
+                group = pending.get(key)
+                if group is None:
+                    group = pending[key] = [row, [], [], [], category]
+                group[1].append(row['time'])
+                group[2].append(numeric if numeric is not None else enriched)
+                group[3].append(_sort_key(row))
+                pending_count += 1
+                if pending_count >= batch_limit:
+                    flush()
+        flush()
+    finally:
+        cursor.close()
+    return topics
+
+
+def run_diagnostic_snapshot(workspace, project_id, ids, thresholds, limit):
+    # Populate only absent profiles before opening the read snapshot. A concurrent
+    # metadata change retries from a new snapshot, never mixing old/new inputs.
+    for attempt in range(3):
+        try:
+            with closing(workspace._connect()) as conn, conn:
+                conn.execute('BEGIN')
+                recordings, sources, profiles = _snapshot_metadata(conn, project_id, ids)
+                limit = max(int(limit), 1)
+                plan = _read_plan(workspace, conn, project_id, recordings, limit)
+                selected = plan.recording_ids
+                root = Path(getattr(workspace, '_diagnostic_temp_root', Path(workspace.root) / 'cache' / 'diagnostics'))
+                root.mkdir(parents=True, exist_ok=True)
+                with tempfile.TemporaryDirectory(prefix='run-', dir=root) as directory, \
+                     closing(DiagnosticStats(directory, plan.work_bytes)) as stats:
+                    assert Path(directory).resolve().parent == root.resolve()
+                    counters = getattr(workspace, '_diagnostic_read_stats', None)
+                    if counters is None:
+                        counters = {}
+                    def fallback_rows(group, category):
+                        conditions, values = workspace._query_conditions(project_id, recording_ids=[group[0]],
+                            semantic_types=['scalar','scalar_group','state'])
+                        for key, value in zip(('source_id','entity_path','key'), group[1:]):
+                            conditions.append(f'qr.{key}=?')
+                            values.append(value)
+                        request = QueryRequest(project_id, [group[0]], None, tuple(conditions), tuple(values),
+                                               tuple(conditions), tuple(values))
+                        with closing(iter_backend_rows(conn, request)) as rows:
+                            for row in rows:
+                                if category == 'time':
+                                    yield row
+                                elif (value := rules._float_or_none(rules._row_value(row))) is not None:
+                                    yield {**row, 'value': value}
+                    stats.fallback_rows = fallback_rows
+                    samples = {name: TopSamples(limit) for name in ('find_errors','low_battery','detection_failure')}
+                    if plan.mixed:
+                        _typed_stats(conn, plan.typed_bindings, stats, counters)
+                        _typed_alerts(workspace, conn, project_id, selected, samples, thresholds)
+                    topics = _eav_stats(workspace, conn, project_id, selected, stats, samples, thresholds, counters, plan.mixed)
+                    result = assemble_report(project_id=project_id, recordings=recordings, sources=sources,
+                        topic_rows=topics, error_rows=samples['find_errors'].rows(), battery_rows=samples['low_battery'].rows(),
+                        detection_rows=samples['detection_failure'].rows(), schema_profiles=profiles, stats=stats,
+                        thresholds=thresholds, limit=limit)
+                    counters.update(logical_rows=stats.row_count, temporary_bytes_written=stats.budget.disk_bytes,
+                                    fallbacks=stats.fallbacks, work_budget_bytes=stats.budget.size)
+                    return result
+        except MissingProfile as missing:
+            if attempt == 2:
+                raise RuntimeError('Schema profile changed repeatedly during diagnostics') from missing
+            workspace.get_schema_profile(str(missing))

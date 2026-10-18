@@ -1,0 +1,364 @@
+"""Private exact statistics; sample-sized Python row lists are never the fast path."""
+from __future__ import annotations
+
+import heapq
+from contextlib import closing
+from itertools import islice
+from collections import Counter
+from pathlib import Path
+
+import numpy as np
+
+from datascope_core import robot_diagnostics as rules
+
+WORK_BYTES = 64 * 1024 * 1024
+
+
+class SpillBudget:
+    def __init__(self, directory, size=WORK_BYTES):
+        self.directory = Path(directory)
+        self.size = max(256, size)
+        self.resident = 0
+        self.serial = 0
+        self.disk_bytes = 0
+        self.spool = None
+        self.spool_path = None
+
+    def path(self):
+        self.serial += 1
+        return self.directory / f"values-{self.serial}.bin"
+
+    def store(self, raw):
+        if self.spool is None:
+            self.spool_path = self.path()
+            self.spool = self.spool_path.open('wb', buffering=0)
+        offset = self.spool.tell()
+        self.spool.write(raw)
+        self.disk_bytes += len(raw)
+        return offset, len(raw)//8
+
+    def close(self):
+        if self.spool is not None:
+            self.spool.close()
+
+    def __del__(self):
+        self.close()
+
+
+class ExactSeries:
+    def __init__(self, budget):
+        self.budget, self.parts, self.file = budget, [], None
+        self.segments = []
+        self.count, self.first, self.first_order = 0, None, None
+        self.constant, self.finite, self.ordered, self.last = True, True, True, None
+
+    def append(self, values, order):
+        values = np.asarray(values, dtype=np.float64)
+        if not len(values):
+            return
+        if self.first_order is not None:
+            self.constant &= bool(np.all(values == self.first))
+        if self.first_order is None or order < self.first_order:
+            self.first_order, self.first = order, float(values[0])
+        self.constant &= bool(np.all(values == self.first))
+        self.finite &= bool(np.isfinite(values).all())
+        self.ordered &= bool(np.all(values[1:] >= values[:-1])) and (
+            self.last is None or values[0] >= self.last)
+        self.last = float(values[-1])
+        self.count += len(values)
+        raw = values.tobytes()
+        if self.file is None and self.budget.resident + len(raw) <= self.budget.size // 4:
+            self.parts.append(raw)
+            self.budget.resident += len(raw)
+            return
+        if self.file is None:
+            for part in self.parts:
+                self.segments.append(self.budget.store(part))
+                self.budget.resident -= len(part)
+            self.parts.clear()
+            self.file = True
+        self.segments.append(self.budget.store(raw))
+
+    def blocks(self):
+        count = max(1, self.budget.size // 64)
+        if self.file is not None:
+            with self.budget.spool_path.open('rb') as stream:
+                remaining, filled = self.count, 0
+                values = np.empty(min(count, remaining), dtype=np.float64)
+                for offset, length in self.segments:
+                    stream.seek(offset)
+                    while length:
+                        size = min(len(values)-filled, length)
+                        target = memoryview(values[filled:filled+size]).cast('B')
+                        if stream.readinto(target) != size*8:
+                            raise RuntimeError('Truncated diagnostic temporary values')
+                        filled += size
+                        length -= size
+                        remaining -= size
+                        if filled == len(values):
+                            yield values
+                            values = np.empty(min(count, remaining), dtype=np.float64)
+                            filled = 0
+        else:
+            for part in self.parts:
+                view = np.frombuffer(part, dtype=np.float64)
+                for start in range(0, len(view), count):
+                    yield view[start:start + count]
+
+    def sorted_blocks(self):
+        if self.ordered:
+            yield from self.blocks()
+            return
+        if self.count * 8 <= self.budget.size // 2:
+            values = np.empty(self.count, dtype=np.float64)
+            offset = 0
+            for block in self.blocks():
+                values[offset:offset + len(block)] = block
+                offset += len(block)
+            values.sort()
+            yield values
+            return
+        # Each run fits the fixed work budget. Merge lazily with bounded reads.
+        paths = []
+        try:
+            for block in self.blocks():
+                values = block.copy()
+                values.sort()
+                path = self.budget.path()
+                values.tofile(path)
+                self.budget.disk_bytes += values.nbytes
+                paths.append(path)
+            def run(path):
+                with path.open('rb') as stream:
+                    while len(block := np.fromfile(stream, dtype=np.float64, count=256)):
+                        yield from block
+            # Limit open readers as well as the run buffers.
+            while len(paths) > 32:
+                merged_paths = []
+                for start in range(0, len(paths), 32):
+                    chunk = paths[start:start + 32]
+                    destination = self.budget.path()
+                    readers = [run(path) for path in chunk]
+                    try:
+                        with destination.open('wb') as stream:
+                            iterator = heapq.merge(*readers)
+                            while len(block := np.fromiter(islice(iterator, 4096), dtype=np.float64)):
+                                block.tofile(stream)
+                                self.budget.disk_bytes += block.nbytes
+                    finally:
+                        for reader in readers:
+                            reader.close()
+                    for path in chunk:
+                        path.unlink()
+                    merged_paths.append(destination)
+                paths = merged_paths
+            iterators = [run(path) for path in paths]
+            try:
+                merged = heapq.merge(*iterators)
+                while len(block := np.fromiter(islice(merged, 4096), dtype=np.float64)):
+                    yield block
+            finally:
+                for iterator in iterators:
+                    iterator.close()
+        finally:
+            for path in paths:
+                path.unlink(missing_ok=True)
+
+    def ranks(self, indexes):
+        indexes = sorted(set(indexes))
+        result, offset = {}, 0
+        with closing(self.sorted_blocks()) as blocks:
+            for block in blocks:
+                for index in indexes:
+                    if offset <= index < offset + len(block):
+                        result[index] = float(block[index - offset])
+                offset += len(block)
+                if len(result) == len(indexes):
+                    break
+        return result
+
+    def median(self):
+        left, right = (self.count - 1) // 2, self.count // 2
+        values = self.ranks((left, right))
+        return values[left] if left == right else (values[left] + values[right]) / 2
+
+    def iqr(self, multiplier):
+        n = self.count
+        if n < 4:
+            values = self.ranks((0, n-1))
+            return 0, values[0], values[n-1]
+        half, start = n // 2, (n + 1) // 2
+        a, b = (half - 1) // 2, half // 2
+        values = self.ranks((a, b, start + a, start + b))
+        q1 = values[a] if a == b else (values[a] + values[b]) / 2
+        q3 = values[start + a] if a == b else (values[start + a] + values[start + b]) / 2
+        iqr = q3 - q1
+        if iqr <= 0:
+            return 0, q1, q3
+        lower, upper = q1 - multiplier * iqr, q3 + multiplier * iqr
+        return sum(int(np.count_nonzero((b < lower) | (b > upper))) for b in self.blocks()), lower, upper
+
+
+class DiagnosticStats:
+    def __init__(self, directory, size=WORK_BYTES):
+        self.budget = SpillBudget(directory, size)
+        self.times, self.numbers, self.states = {}, {}, {}
+        self.row_count = 0
+        self.fallbacks = []
+        self.fallback_rows = None
+
+    def close(self):
+        self.budget.close()
+
+    def add(self, meta, times, values, orders, *, numeric=True, state=False):
+        """Inputs contain only existing logical values; orders retain C2c ties."""
+        if not len(values):
+            return
+        self.row_count += len(values)
+        group = tuple(str(meta.get(k) or '') for k in ('recording_id', 'source_id', 'entity_path'))
+        key = group + (str(meta.get('key') or ''),)
+        times = np.asarray(times, dtype=np.float64)
+        valid_times = ~np.isnan(times)
+        if valid_times.any():
+            pos = int(np.flatnonzero(valid_times)[0])
+            series = self.times.setdefault(group, ExactSeries(self.budget))
+            series.append(times[valid_times], orders[pos])
+        if numeric:
+            series = self.numbers.setdefault(key, ExactSeries(self.budget))
+            series.append(values, orders[0])
+        elif state:
+            strings = [str(v) for v in values]
+            first = self.states.get(key)
+            if first is None:
+                first = self.states[key] = [0, strings[0], True, orders[0]]
+            if orders[0] < first[3]:
+                first[2] &= first[1] == strings[0]
+                first[1], first[3] = strings[0], orders[0]
+            first[0] += len(strings)
+            first[2] &= all(v == first[1] for v in strings)
+
+    def time_findings(self, thresholds):
+        for group, series in sorted(self.times.items(), key=lambda item: item[1].first_order):
+            if series.count < 3:
+                continue
+            if not series.finite:
+                self.fallbacks.append({'group': group, 'reason': 'nonfinite time'})
+                rows = list(self.fallback_rows(group, 'time')) if self.fallback_rows else [
+                    dict(zip(('recording_id', 'source_id', 'entity_path'), group), time=float(v))
+                    for block in series.blocks() for v in block]
+                yield from rules._time_series_quality_findings([], rows, thresholds)
+                continue
+            previous, duplicates, maximum, minimum, gap_count = None, 0, 0., float('inf'), 0
+            for block in series.sorted_blocks():
+                delta = np.diff(block)
+                if previous is not None:
+                    delta = np.concatenate(([float(block[0]) - previous], delta))
+                previous = float(block[-1])
+                duplicates += int(np.count_nonzero(delta == 0))
+                positive = delta[delta > 0]
+                if len(positive):
+                    maximum = max(maximum, float(positive.max()))
+                    minimum = min(minimum, float(positive.min()))
+                    gap_count += len(positive)
+            kwargs = dict(zip(('recording_id', 'source_id', 'entity_path'), group))
+            if duplicates:
+                yield rules._finding('time_series_quality', 'warning',
+                    'Duplicate timestamps were found in indexed rows.', **kwargs, key='time',
+                    evidence={'duplicate_count': duplicates, 'sample_count': series.count},
+                    recommendation='Check whether duplicate samples are expected for this stream.')
+            # An exact bound can prove there is no gap finding without storing
+            # or sorting the gaps. No sampling or approximate median is used.
+            factor = thresholds['time_gap_factor_warn']
+            if gap_count >= 3 and not (factor > 0 and maximum < minimum * factor):
+                gaps, previous = ExactSeries(self.budget), None
+                for block in series.sorted_blocks():
+                    delta = np.diff(block)
+                    if previous is not None:
+                        delta = np.concatenate(([float(block[0]) - previous], delta))
+                    previous = float(block[-1])
+                    gaps.append(delta[delta > 0], (0,))
+                typical = gaps.median()
+                if typical > 0 and maximum >= typical * thresholds['time_gap_factor_warn']:
+                    yield rules._finding('time_series_quality', 'warning',
+                        'A large time gap was found in indexed rows.', **kwargs, key='time',
+                        evidence={'typical_gap_s': typical, 'max_gap_s': maximum,
+                                  'threshold_factor': thresholds['time_gap_factor_warn']},
+                        recommendation='Inspect the source for dropped samples, pauses, or timestamp unit mistakes.')
+
+    def data_findings(self, thresholds):
+        for group, series in sorted(self.numbers.items(), key=lambda item: item[1].first_order):
+            if series.count < 3:
+                continue
+            if not series.finite:
+                self.fallbacks.append({'group': group, 'reason': 'nonfinite numeric values'})
+                rows = list(self.fallback_rows(group, 'numeric')) if self.fallback_rows else [
+                    dict(zip(('recording_id', 'source_id', 'entity_path', 'key'), group), value=float(v))
+                    for block in series.blocks() for v in block]
+                yield from rules._data_quality_findings([], rows, thresholds)
+                continue
+            kwargs = dict(zip(('recording_id', 'source_id', 'entity_path', 'key'), group))
+            if series.constant:
+                yield rules._finding('data_quality', 'info', f'Numeric field {group[-1]} is constant in indexed rows.',
+                    **kwargs, evidence={'value': series.first, 'sample_count': series.count},
+                    recommendation='Confirm this constant value is expected before using it as a signal.')
+                continue
+            count, lower, upper = series.iqr(thresholds['outlier_iqr_multiplier'])
+            if count:
+                yield rules._finding('data_quality', 'warning', f'Numeric field {group[-1]} has values outside the IQR outlier bounds.',
+                    **kwargs, evidence={'outlier_count': count, 'sample_count': series.count,
+                        'lower_bound': lower, 'upper_bound': upper, 'iqr_multiplier': thresholds['outlier_iqr_multiplier']},
+                    recommendation='Inspect the outlier samples and verify units, calibration, or sensor spikes.')
+        for group, (count, first, constant, order) in sorted(self.states.items(), key=lambda item: item[1][3]):
+            if count >= 3 and constant:
+                yield rules._finding('data_quality', 'info', f'State field {group[-1]} never changes in indexed rows.',
+                    **dict(zip(('recording_id', 'source_id', 'entity_path', 'key'), group)),
+                    evidence={'value': first, 'sample_count': count},
+                    recommendation='Confirm that a single state for the full run is expected.')
+
+
+def assemble_report(*, project_id, recordings, sources, topic_rows, error_rows, battery_rows,
+                    detection_rows, schema_profiles, stats, thresholds, limit):
+    """Same category order and scores; retain only the requested findings prefix."""
+    topic_values = [v for row in topic_rows if isinstance(v := rules._row_value(row), dict)]
+    counts, prefix, total = {}, [], 0
+    def add(findings):
+        nonlocal total
+        for finding in findings:
+            total += 1
+            counts.setdefault(finding['category'], Counter())[finding['severity']] += 1
+            if len(prefix) < limit:
+                prefix.append(rules._with_finding_id(total, finding))
+    add(rules._recording_findings(recordings))
+    add(rules._topic_coverage_findings(recordings, topic_values))
+    add(rules._convertibility_findings(sources, topic_values))
+    add(rules._message_volume_findings(recordings, sources, topic_values))
+    add(rules._time_sync_findings(topic_values, thresholds))
+    add(rules._log_findings(error_rows))
+    add(rules._battery_findings(battery_rows, thresholds))
+    add(rules._cv_detection_findings(detection_rows, thresholds))
+    add(rules._schema_quality_findings(schema_profiles, sources, thresholds))
+    add(rules._time_series_quality_findings(schema_profiles, [], thresholds))
+    add(stats.time_findings(thresholds))
+    add(rules._data_quality_findings(schema_profiles, [], thresholds))
+    add(stats.data_findings(thresholds))
+    def score(c):
+        return max(100 - 30*c['critical'] - 10*c['warning'] - 2*c['info'], 0)
+    def severity(c):
+        return 'critical' if c['critical'] else 'warning' if c['warning'] else 'ok'
+    role_counts = Counter(str(v.get('role') or 'raw_topic') for v in topic_values)
+    evidence = {'topic_count': len(topic_values), 'role_counts': {r: role_counts[r] for r in rules.ROBOTICS_ROLES},
+                'source_types': dict(Counter(str(s.get('type') or 'unknown') for s in sources)),
+                'schema_profile_count': len(schema_profiles), 'query_row_count': stats.row_count}
+    checks = []
+    for key, definition in rules.CHECK_DEFINITIONS.items():
+        c = counts.get(key, Counter())
+        sev = severity(c)
+        checks.append({'id': key, 'name': definition['name'], 'status': 'pass' if sev=='ok' else 'fail' if sev=='critical' else 'warn',
+                       'severity': sev, 'score': score(c), 'evidence': {'finding_count': sum(c.values()), **evidence},
+                       'recommendation': definition['recommendation']})
+    all_counts = sum(counts.values(), Counter())
+    health = score(all_counts)
+    overall = 'critical' if all_counts['critical'] or health < 60 else 'warning' if all_counts['warning'] or health < 85 else 'ok'
+    return {'project_id': project_id, 'thresholds': thresholds, 'summary': {'health_score': health,
+        'severity': overall, 'recording_count': len(recordings), 'source_count': len(sources),
+        'topic_count': len(topic_values), 'finding_count': total}, 'checks': checks, 'findings': prefix}

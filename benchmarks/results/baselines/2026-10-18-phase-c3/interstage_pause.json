@@ -1,0 +1,24 @@
+{
+  "stage": "Small EAV new, after all five formal samples and P95; only untimed instrumentation paused",
+  "started_file_mtime_utc": "2026-10-18T11:45:10.083744+00:00",
+  "resumed_utc": "2026-10-18T11:51:47.584660+00:00",
+  "processes": [
+    {
+      "pid": 17124,
+      "created": 1792322066.6384313
+    },
+    {
+      "pid": 26564,
+      "created": 1792322260.609858
+    },
+    {
+      "pid": 27716,
+      "created": 1792322066.6333036
+    },
+    {
+      "pid": 30324,
+      "created": 1792322260.6012893
+    }
+  ],
+  "purpose": "independent old Rerun attribution without overlapping formal query measurements"
+}

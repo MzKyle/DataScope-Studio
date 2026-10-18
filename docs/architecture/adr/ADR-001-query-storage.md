@@ -77,7 +77,7 @@ DuckDB native table 与 Parquet 的速度差异可由存储编码、row-group、
 | Gate | Phase C result / required action |
 | --- | --- |
 | 普通分析 Query P95 ≤ 1000 ms | 本轮 covering variant 在三档、七类 Query 通过；新目标机器、semantic 和更大规模重新测量 |
-| Diagnostics P95 ≤ 5000 ms | **未验证，仍是硬 gate**；历史生产 Smoke 为 23.668 秒，七类 Query 通过不能替代完整诊断验证 |
+| Diagnostics P95 ≤ 5000 ms | C3 完整 32 字段 typed Smoke / Small 最终复验分别为 **154 / 4182 ms**，精确报告与冻结对照 / 分组 oracle 一致；Medium、异常组和新目标机器仍需单独验收，见 [C3 归档](../../../benchmarks/results/baselines/2026-10-18-phase-c3/README.md) |
 | Correctness and public contracts | 本轮 CSV 七类 parity 通过；继续验证 API/CLI/Desktop、稳定排序/limit、完整聚合、null/mixed、异步 stream、text/CV/ROS 与 schema evolution |
 | Build and memory | 记录 source scope、INSERT/load/index、峰值 RSS 和 transient disk；在目标低内存机器与真实 Recording 重测，不只看 warm query |
 | Storage | 本轮 covering 为 1.309× CSV；按真实编码和缺失率重新测量，验证删除、空间回收和 compaction |

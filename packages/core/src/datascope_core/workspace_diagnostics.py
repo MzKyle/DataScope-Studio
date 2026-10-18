@@ -7,8 +7,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from datascope_core.query import run_query_template
-from datascope_core.robot_diagnostics import DEFAULT_THRESHOLDS, build_diagnostic_report
+from datascope_core.robot_diagnostics import DEFAULT_THRESHOLDS
 from datascope_core.workspace_utils import row_to_dict, safe_output_name, utc_now
 
 
@@ -63,80 +62,9 @@ class WorkspaceDiagnosticsMixin:
         preset: str | None = None,
         limit: int = 1000,
     ) -> dict[str, Any]:
-        self.get_project(project_id)
-        resolved_thresholds = _resolve_thresholds(preset, thresholds)
-        recordings = self.list_recordings(project_id)
-        if recording_ids:
-            requested = set(recording_ids)
-            recordings = [recording for recording in recordings if recording["id"] in requested]
-            missing = requested - {recording["id"] for recording in recordings}
-            if missing:
-                raise ValueError(f"Recordings do not belong to project: {', '.join(sorted(missing))}")
-        selected_recording_ids = [recording["id"] for recording in recordings]
-        source_ids = {
-            recording.get("source_id")
-            for recording in recordings
-            if recording.get("source_id")
-        }
-        sources = [self.get_source(source_id) for source_id in sorted(source_ids)]
-        schema_profiles = [self.get_schema_profile(source["id"]) for source in sources]
-        row_limit = max(int(limit), 1)
-        topic_rows = self._query_rows(
-            project_id,
-            template_id="topic_summary",
-            recording_ids=selected_recording_ids,
-        )
-        error_rows = run_query_template(
-            self._query_rows(
-                project_id,
-                template_id="find_errors",
-                recording_ids=selected_recording_ids,
-            ),
-            "find_errors",
-            None,
-            {},
-            row_limit,
-        )["rows"]
-        battery_rows = run_query_template(
-            self._query_rows(
-                project_id,
-                template_id="low_battery",
-                recording_ids=selected_recording_ids,
-            ),
-            "low_battery",
-            None,
-            {"threshold": resolved_thresholds["battery_low"]},
-            row_limit,
-        )["rows"]
-        detection_rows = run_query_template(
-            self._query_rows(
-                project_id,
-                template_id="detection_failure",
-                recording_ids=selected_recording_ids,
-            ),
-            "detection_failure",
-            None,
-            {"threshold": resolved_thresholds["detection_confidence"]},
-            row_limit,
-        )["rows"]
-        general_rows = self._query_rows(
-            project_id,
-            recording_ids=selected_recording_ids,
-            semantic_types=["scalar", "scalar_group", "state"],
-        )
-        return build_diagnostic_report(
-            project_id=project_id,
-            recordings=recordings,
-            sources=sources,
-            topic_rows=topic_rows,
-            error_rows=error_rows,
-            battery_rows=battery_rows,
-            detection_rows=detection_rows,
-            schema_profiles=schema_profiles,
-            query_rows=general_rows,
-            thresholds=resolved_thresholds,
-            limit=row_limit,
-        )
+        from datascope_core.diagnostic_reader import run_diagnostic_snapshot
+        return run_diagnostic_snapshot(self, project_id, recording_ids,
+                                       thresholds, limit, preset=preset)
 
     def diagnostic_presets(self, project_id: str) -> list[dict[str, Any]]:
         self.get_project(project_id)

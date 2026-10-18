@@ -414,3 +414,19 @@ def test_query_backend_failure_cleans_only_owned_scratch(tmp_path: Path, monkeyp
     assert report["status"] == "failed"
     assert not list((tmp_path / ".work").iterdir())
     assert unrelated.read_text(encoding="utf-8") == "keep"
+def test_diagnostics_grouped_oracle(tmp_path):
+    from dataclasses import asdict
+    from benchmarks.benchmark_models import DatasetConfig
+    from benchmarks.diagnostics import prepare, grouped_oracle, FrozenWorkspace
+    from benchmarks.custom_query_pushdown import ReadOnlyWorkspace
+    from benchmarks.typed_storage import fresh_inputs
+    config = DatasetConfig(rows=97)
+    manifest = {**fresh_inputs(tmp_path, config), 'work': str(tmp_path),
+                'config': asdict(config), 'limit': 13}
+    prepare(manifest)
+    root = tmp_path/'typed'
+    expected = FrozenWorkspace(root).run_diagnostics(manifest['project_id'],
+                    [manifest['records'][0]['recording_id']], limit=13)
+    assert grouped_oracle(ReadOnlyWorkspace(root), manifest) == expected
+    assert ReadOnlyWorkspace(root).run_diagnostics(manifest['project_id'],
+                    [manifest['records'][0]['recording_id']], limit=13) == expected

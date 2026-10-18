@@ -1,0 +1,62 @@
+import sys,json,subprocess
+from pathlib import Path
+sys.path.insert(0,str(Path.cwd()))
+from benchmarks.diagnostics import CODE,instrument
+from benchmarks.custom_query_pushdown import ReadOnlyWorkspace,sha256,write_json
+from benchmarks.benchmark_memory import MemorySampler
+from benchmarks.benchmark_query import measure_query,result_digest
+from benchmarks.benchmark_report import environment
+
+originals={
+ 'smoke':'diagnostics_20261018_110712_ede90895.json',
+ 'small':'diagnostics_20261018_111427_a64de8b6.json',
+ 'medium':'diagnostics_20261018_121624_f29621e9.json',
+}
+repo=Path.cwd()
+archive=repo/'benchmarks/results/baselines/2026-10-18-phase-c3'
+if len(sys.argv)==1:
+    for preset in originals:
+        subprocess.run([sys.executable,str(Path(__file__).resolve()),preset],check=True)
+    raise SystemExit(0)
+preset=sys.argv[1]
+original_path=repo/'benchmarks/results'/originals[preset]
+original=json.loads(original_path.read_text(encoding='utf8'))
+root=repo/'.tooling/c3-final-catalogs'/preset
+manifest=json.loads((root/'manifest.json').read_text(encoding='utf8'))
+workspace=ReadOnlyWorkspace(root/'typed')
+workspace._diagnostic_temp_root=root/'temporary'
+before=sha256(workspace.db_path)
+if preset!='smoke':
+    assert before==original['typed_catalog_sha256'],'Retained production typed catalog changed'
+expected=original['backends'].get('oracle',original['backends'].get('typed_old',original['backends']['typed_new']))['result_sha256']
+hashes={p:sha256(repo/p) for p in CODE}
+latest=[]
+def call():
+    return workspace.run_diagnostics(manifest['project_id'],[manifest['records'][0]['recording_id']],limit=1000)
+def validate(value):
+    assert result_digest(value)==expected,'Exact full report differs from frozen/oracle control'
+    latest[:]=[value]
+memory=MemorySampler()
+with memory:
+    measured=measure_query(call,validate,runs=5,warmups=1,memory=memory,name='final/'+preset)
+    execution=instrument(workspace,call)
+counts=execution['counts']
+assert counts['logical_rows']==manifest['config']['rows']*32
+assert counts['typed_sample_cursor_rows']==manifest['config']['rows']*2
+assert counts['typed_values_decoded']==manifest['config']['rows']*32
+oracle=original['backends'].get('oracle')
+assert counts['exact_group_findings_sha256']==(oracle or original['backends']['typed_new']['execution']['counts'])['exact_group_findings_sha256']
+assert sha256(workspace.db_path)==before
+assert hashes=={p:sha256(repo/p) for p in CODE}
+required=preset in ('smoke','small')
+result={'format_version':1,'preset':preset,'status':'succeeded','environment':environment(repo),
+ 'source_files_sha256':hashes,'source_catalog_sha256':before,
+ 'original_round':{'path':str(original_path),'sha256':sha256(original_path)},
+ 'scope':'Final C3 implementation, same complete 32 fields and original typed data; one snapshot including project validation; bounded text dictionary cache; independent sequential process',
+ 'latency':measured,'memory':memory.report(),'execution':execution,'report':latest[0],
+ 'acceptance':{'exact_report_parity':True,'exact_group_findings_parity':True,'all_32_fields':True,
+  'read_only_catalog':True,'latency_required':required,'p95_le_5s':measured['p95_ms']<=5000}}
+if required:
+    assert result['acceptance']['p95_le_5s'],'Final typed Diagnostics exceeds 5s'
+write_json(archive/('final_'+preset+'.json'),result)
+print('Final C3 '+preset+' validated',flush=True)

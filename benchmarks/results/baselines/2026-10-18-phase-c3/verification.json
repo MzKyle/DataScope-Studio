@@ -1,0 +1,32 @@
+{
+  "root_pytest": {
+    "passed": 540,
+    "skipped": 5,
+    "warnings": 2,
+    "elapsed_s": 277.03
+  },
+  "targeted_contract_and_benchmark": {
+    "passed": 54
+  },
+  "desktop": {
+    "files": 14,
+    "passed": 69,
+    "build": "passed"
+  },
+  "compileall": "passed",
+  "release_sanity": "passed",
+  "git_diff_check": "passed",
+  "benchmark_pytest": {
+    "passed": 24,
+    "elapsed_s": 57.32
+  },
+  "commands": [
+    "python -m pytest -q",
+    "python -m pytest -q benchmarks/test_benchmark.py",
+    "python -m compileall -q packages/core/src benchmarks",
+    "python packaging/release/sanity_check.py",
+    "npm.cmd run test -- --run (apps/desktop)",
+    "npm.cmd run build (apps/desktop)",
+    "git diff --check"
+  ]
+}
