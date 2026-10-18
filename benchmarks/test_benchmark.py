@@ -340,3 +340,42 @@ def test_phase_c_resume_remeasures_queries_without_mutating_retained_preparation
     with pytest.raises(ValueError, match='Resume source checksum'):
         run_comparison(comparison_parser().parse_args([
             '--resume-from', str(first), '--query-runs', '1', '--output-dir', str(tmp_path)]))
+
+
+def test_production_typed_storage_runner(tmp_path: Path) -> None:
+    subprocess.run([sys.executable, "-m", "benchmarks.typed_storage", "--rows", "32",
+                    "--query-runs", "1", "--warmups", "0", "--output-dir", str(tmp_path)], check=True)
+    report = json.loads(next(tmp_path.glob("typed_storage_*.json")).read_text(encoding="utf-8"))
+    assert report["status"] == "succeeded"
+    for name in ("typed_time", "typed_none"):
+        storage = report["backends"][name]["storage"]
+        assert storage["writer_counts_match_sql"]
+        assert storage["physical_sample_rows"] == 128
+        assert storage["typed_logical_rows"] == 2048
+        assert len(storage["sample_indexes"]) == (2 if name == "typed_time" else 0)
+    for name in report["backends"]["eav"]["queries"]:
+        assert len({item["queries"][name]["result_sha256"] for item in report["backends"].values()}) == 1
+    assert not list((tmp_path / ".work").iterdir())
+
+
+def test_typed_storage_worker_failure_preserves_unrelated_files(tmp_path: Path, monkeypatch) -> None:
+    from argparse import Namespace
+    import benchmarks.typed_storage as comparison
+
+    unrelated = tmp_path / "keep.txt"
+    unrelated.write_text("keep", encoding="utf-8")
+    original_run = comparison.subprocess.run
+
+    def fail(command, *args, **kwargs):
+        if "--worker" in command:
+            raise RuntimeError("injected typed worker failure")
+        return original_run(command, *args, **kwargs)
+
+    monkeypatch.setattr(comparison.subprocess, "run", fail)
+    with pytest.raises(RuntimeError, match="injected typed"):
+        comparison.run(Namespace(output_dir=tmp_path, rows=4, preset="smoke", query_runs=1,
+                                 warmups=0, keep_artifacts=False, control=None))
+    report = json.loads(next(tmp_path.glob("typed_storage_*.json")).read_text(encoding="utf-8"))
+    assert report["status"] == "failed"
+    assert not list((tmp_path / ".work").iterdir())
+    assert unrelated.read_text(encoding="utf-8") == "keep"

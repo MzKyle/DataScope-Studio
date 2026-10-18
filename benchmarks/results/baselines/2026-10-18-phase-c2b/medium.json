@@ -1,0 +1,1266 @@
+{
+  "format_version": 1,
+  "run_id": "20261017_162935_09ab70c5",
+  "started_at": "2026-10-17T16:29:35.970562+00:00",
+  "preset": "medium",
+  "status": "succeeded",
+  "mode": "production-index-only",
+  "environment": {
+    "platform": "Windows-10-10.0.26300-SP0",
+    "python": "3.11.5 (tags/v3.11.5:cce6ba9, Aug 24 2023, 14:38:34) [MSC v.1936 64 bit (AMD64)]",
+    "cpu": "13th Gen Intel(R) Core(TM) i9-13900HX",
+    "logical_cpus": 32,
+    "physical_cpus": 24,
+    "memory_gb": 16.90710016,
+    "available_memory_gb_at_start": 5.424971776,
+    "datascope_version": "0.4.0",
+    "git_commit": "1bca1b5dc04bd9d99e3fe745b798d2d3b9d5c58a",
+    "git_dirty": true,
+    "benchmark_code_sha256": "19e1b1db81501b891b46a6dda0e7acb041283891941755b8f35817b61c79b7c3",
+    "packages": {
+      "datascope-core": "0.4.0",
+      "pandas": "2.3.3",
+      "numpy": "2.4.6",
+      "rerun-sdk": "0.33.1",
+      "psutil": "7.2.2",
+      "pyarrow": "25.0.1"
+    },
+    "sqlite_version": "3.42.0"
+  },
+  "backends": {
+    "typed_time": {
+      "backend": "typed_time",
+      "status": "succeeded",
+      "queries": {},
+      "environment": {
+        "platform": "Windows-10-10.0.26300-SP0",
+        "python": "3.11.5 (tags/v3.11.5:cce6ba9, Aug 24 2023, 14:38:34) [MSC v.1936 64 bit (AMD64)]",
+        "cpu": "13th Gen Intel(R) Core(TM) i9-13900HX",
+        "logical_cpus": 32,
+        "physical_cpus": 24,
+        "memory_gb": 16.90710016,
+        "available_memory_gb_at_start": 5.344694272,
+        "datascope_version": "0.4.0",
+        "git_commit": "1bca1b5dc04bd9d99e3fe745b798d2d3b9d5c58a",
+        "git_dirty": true,
+        "benchmark_code_sha256": "19e1b1db81501b891b46a6dda0e7acb041283891941755b8f35817b61c79b7c3",
+        "packages": {
+          "datascope-core": "0.4.0",
+          "pandas": "2.3.3",
+          "numpy": "2.4.6",
+          "rerun-sdk": "0.33.1",
+          "psutil": "7.2.2",
+          "pyarrow": "25.0.1"
+        },
+        "sqlite_version": "3.42.0"
+      },
+      "prepare_ms": 559643.2940000014,
+      "storage": {
+        "database_bytes": 1155514368,
+        "objects": null,
+        "sample_indexes": [
+          {
+            "name": "typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1_time",
+            "sql": "CREATE INDEX typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1_time ON typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1 (dataset_id, time, sample_seq)"
+          },
+          {
+            "name": "typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time",
+            "sql": "CREATE INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time ON typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad (dataset_id, time, sample_seq)"
+          }
+        ],
+        "builds": [
+          {
+            "storage": "typed_sqlite",
+            "format_version": 1,
+            "preflight_ms": 11705.906099996355,
+            "write_ms": 528921.0919000034,
+            "index_ms": 8005.619800002023,
+            "index_build_allocated_bytes": 135184384,
+            "source_samples": 3000000,
+            "physical_sample_rows": 6000000,
+            "typed_logical_rows": 96000000,
+            "eav_rows": 0,
+            "fallback_streams": {},
+            "sample_tables": [
+              "typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad",
+              "typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1"
+            ]
+          },
+          {
+            "storage": "typed_sqlite",
+            "format_version": 1,
+            "preflight_ms": 10.317000000213739,
+            "write_ms": 141.84869999735383,
+            "index_ms": 782.0614000011119,
+            "index_build_allocated_bytes": 0,
+            "source_samples": 1000,
+            "physical_sample_rows": 2000,
+            "typed_logical_rows": 32000,
+            "eav_rows": 0,
+            "fallback_streams": {},
+            "sample_tables": [
+              "typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad",
+              "typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1"
+            ]
+          }
+        ],
+        "eav_rows": 0,
+        "physical_sample_rows": 6002000,
+        "typed_logical_rows": 96032000,
+        "writer_counts_match_sql": true,
+        "scope": "checkpointed whole catalog; includes metadata, registry, dictionaries and all indexes; excludes CSV/RRD/RBL"
+      },
+      "connection_policy": {
+        "journal_mode": "wal",
+        "synchronous": 2,
+        "cache_size": -2000,
+        "temp_store": 0,
+        "user_version": 4,
+        "busy_timeout": 5000
+      },
+      "memory": {
+        "method": "psutil process RSS polling; includes native allocations",
+        "sample_interval_ms": 10.0,
+        "peak_rss_mb": 169.910272,
+        "os_peak_rss_mb": 170.307584,
+        "rss_before_mb": 98.197504,
+        "rss_after_mb": 113.176576,
+        "stages": {
+          "production_index_build": {
+            "elapsed_ms": 559417.3650999947,
+            "rss_before_mb": 99.360768,
+            "rss_after_mb": 113.586176,
+            "peak_rss_mb": 169.910272
+          }
+        },
+        "scope": "this process; child processes and system page cache are excluded"
+      }
+    }
+  },
+  "work": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\typed_storage_20261017_162935_09ab70c5",
+  "historical_eav_storage": {
+    "report": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\baselines\\2026-10-17-phase-c\\medium.json",
+    "sha256": "df3ae90f77c231d3b839d2e7e1907672340f0b589e484c4b22dbc06974201e6c",
+    "bytes": 23610019840,
+    "scope": "historical same-input EAV physical layout; no same-round Medium EAV timing"
+  },
+  "input": {
+    "sources": [
+      {
+        "path": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\benchmark_phase_c_20261007_145014_b79b78cf\\input_1.csv",
+        "bytes": 949666455,
+        "sha256": "57137c2e55637d502233428049ba1085e836e69e0213fb9b088b67f8644e5329"
+      },
+      {
+        "path": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\benchmark_phase_c_20261007_145014_b79b78cf\\input_2.csv",
+        "bytes": 313054,
+        "sha256": "147c3a941b56a9220e530dae073c93573b3f4347ea79966cd287fa1cdb6c14cb"
+      }
+    ],
+    "config": {
+      "rows": 3000000,
+      "frequency_hz": 200.0,
+      "scalar_fields": 30,
+      "state_fields": 1,
+      "seed": 20261006
+    },
+    "records": [
+      {
+        "recording_id": "recording_0",
+        "source_id": "source_2230dcbd59af",
+        "spec": {
+          "mapping_id": "mapping_4b087849fc8d",
+          "source_id": "source_2230dcbd59af",
+          "app_id": "datascope.sensor_monitor.v1",
+          "recording_id": "recording_3fac6dbb39bd",
+          "primary_timeline": "timestamp",
+          "streams": [
+            {
+              "stream_id": "stream_position",
+              "source_fields": [
+                "position_x",
+                "position_y",
+                "position_z"
+              ],
+              "semantic_type": "scalar_group",
+              "entity_path": "/metrics/position",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.86,
+              "name": "position",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_position",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_velocity",
+              "source_fields": [
+                "velocity_x",
+                "velocity_y",
+                "velocity_z"
+              ],
+              "semantic_type": "scalar_group",
+              "entity_path": "/metrics/velocity",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.86,
+              "name": "velocity",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_velocity",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_temperature",
+              "source_fields": [
+                "temperature"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/temperature",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.86,
+              "name": "temperature",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_temperature",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_battery",
+              "source_fields": [
+                "battery"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/battery",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.9,
+              "name": "battery",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_battery",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_current",
+              "source_fields": [
+                "current"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/current",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "current",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_current",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_voltage",
+              "source_fields": [
+                "voltage"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/voltage",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "voltage",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_voltage",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_000",
+              "source_fields": [
+                "scalar_000"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_000",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_000",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_000",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_001",
+              "source_fields": [
+                "scalar_001"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_001",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_001",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_001",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_002",
+              "source_fields": [
+                "scalar_002"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_002",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_002",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_002",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_003",
+              "source_fields": [
+                "scalar_003"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_003",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_003",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_003",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_004",
+              "source_fields": [
+                "scalar_004"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_004",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_004",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_004",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_005",
+              "source_fields": [
+                "scalar_005"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_005",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_005",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_005",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_006",
+              "source_fields": [
+                "scalar_006"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_006",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_006",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_006",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_007",
+              "source_fields": [
+                "scalar_007"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_007",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_007",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_007",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_008",
+              "source_fields": [
+                "scalar_008"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_008",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_008",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_008",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_009",
+              "source_fields": [
+                "scalar_009"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_009",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_009",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_009",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_010",
+              "source_fields": [
+                "scalar_010"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_010",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_010",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_010",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_011",
+              "source_fields": [
+                "scalar_011"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_011",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_011",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_011",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_012",
+              "source_fields": [
+                "scalar_012"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_012",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_012",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_012",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_013",
+              "source_fields": [
+                "scalar_013"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_013",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_013",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_013",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_014",
+              "source_fields": [
+                "scalar_014"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_014",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_014",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_014",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_015",
+              "source_fields": [
+                "scalar_015"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_015",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_015",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_015",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_016",
+              "source_fields": [
+                "scalar_016"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_016",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_016",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_016",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_017",
+              "source_fields": [
+                "scalar_017"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_017",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_017",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_017",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_018",
+              "source_fields": [
+                "scalar_018"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_018",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_018",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_018",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_019",
+              "source_fields": [
+                "scalar_019"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_019",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_019",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_019",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_error_code",
+              "source_fields": [
+                "error_code"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/error_code",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.76,
+              "name": "error_code",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_error_code",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_robot_state",
+              "source_fields": [
+                "robot_state"
+              ],
+              "semantic_type": "state",
+              "entity_path": "/states/robot_state",
+              "archetype": "StateChange",
+              "view": "StateTimelineView",
+              "confidence": 0.88,
+              "name": "robot_state",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_robot_state",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            }
+          ],
+          "schema_version": 2,
+          "timeline_unit": "relative_s",
+          "timeline_sort": "source",
+          "effective_timeline_unit": "relative_s",
+          "template_id": "sensor_monitor",
+          "mapping_template_id": null,
+          "status": "draft"
+        },
+        "rows": 3000000
+      },
+      {
+        "recording_id": "recording_1",
+        "source_id": "source_86e5f095c968",
+        "spec": {
+          "mapping_id": "mapping_ef7cab86f69e",
+          "source_id": "source_86e5f095c968",
+          "app_id": "datascope.sensor_monitor.v1",
+          "recording_id": "recording_3e2a5da655a7",
+          "primary_timeline": "timestamp",
+          "streams": [
+            {
+              "stream_id": "stream_position",
+              "source_fields": [
+                "position_x",
+                "position_y",
+                "position_z"
+              ],
+              "semantic_type": "scalar_group",
+              "entity_path": "/metrics/position",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.86,
+              "name": "position",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_position",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_velocity",
+              "source_fields": [
+                "velocity_x",
+                "velocity_y",
+                "velocity_z"
+              ],
+              "semantic_type": "scalar_group",
+              "entity_path": "/metrics/velocity",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.86,
+              "name": "velocity",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_velocity",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_temperature",
+              "source_fields": [
+                "temperature"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/temperature",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.86,
+              "name": "temperature",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_temperature",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_battery",
+              "source_fields": [
+                "battery"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/battery",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.9,
+              "name": "battery",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_battery",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_current",
+              "source_fields": [
+                "current"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/current",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "current",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_current",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_voltage",
+              "source_fields": [
+                "voltage"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/voltage",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "voltage",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_voltage",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_000",
+              "source_fields": [
+                "scalar_000"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_000",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_000",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_000",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_001",
+              "source_fields": [
+                "scalar_001"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_001",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_001",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_001",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_002",
+              "source_fields": [
+                "scalar_002"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_002",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_002",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_002",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_003",
+              "source_fields": [
+                "scalar_003"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_003",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_003",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_003",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_004",
+              "source_fields": [
+                "scalar_004"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_004",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_004",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_004",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_005",
+              "source_fields": [
+                "scalar_005"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_005",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_005",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_005",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_006",
+              "source_fields": [
+                "scalar_006"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_006",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_006",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_006",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_007",
+              "source_fields": [
+                "scalar_007"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_007",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_007",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_007",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_008",
+              "source_fields": [
+                "scalar_008"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_008",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_008",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_008",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_009",
+              "source_fields": [
+                "scalar_009"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_009",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_009",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_009",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_010",
+              "source_fields": [
+                "scalar_010"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_010",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_010",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_010",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_011",
+              "source_fields": [
+                "scalar_011"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_011",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_011",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_011",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_012",
+              "source_fields": [
+                "scalar_012"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_012",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_012",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_012",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_013",
+              "source_fields": [
+                "scalar_013"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_013",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_013",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_013",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_014",
+              "source_fields": [
+                "scalar_014"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_014",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_014",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_014",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_015",
+              "source_fields": [
+                "scalar_015"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_015",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_015",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_015",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_016",
+              "source_fields": [
+                "scalar_016"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_016",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_016",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_016",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_017",
+              "source_fields": [
+                "scalar_017"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_017",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_017",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_017",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_018",
+              "source_fields": [
+                "scalar_018"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_018",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_018",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_018",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_019",
+              "source_fields": [
+                "scalar_019"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_019",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_019",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_019",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_error_code",
+              "source_fields": [
+                "error_code"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/error_code",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.76,
+              "name": "error_code",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_error_code",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_robot_state",
+              "source_fields": [
+                "robot_state"
+              ],
+              "semantic_type": "state",
+              "entity_path": "/states/robot_state",
+              "archetype": "StateChange",
+              "view": "StateTimelineView",
+              "confidence": 0.88,
+              "name": "robot_state",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_robot_state",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            }
+          ],
+          "schema_version": 2,
+          "timeline_unit": "relative_s",
+          "timeline_sort": "source",
+          "effective_timeline_unit": "relative_s",
+          "template_id": "sensor_monitor",
+          "mapping_template_id": null,
+          "status": "draft"
+        },
+        "rows": 1000
+      }
+    ],
+    "logical_samples": 3001000,
+    "control": null
+  },
+  "settings": {
+    "runs": 5,
+    "warmups": 1,
+    "limit": 1000,
+    "timing_scope": "public production query; validation, SQL tracing and counting excluded",
+    "none_ablation": "same production writer; suppress only sample CREATE INDEX in owned scratch catalog",
+    "production_files_sha256": {
+      "query.py": "aa29fd585bcc6c7fcf89607271d8ec90ff08285b2f7e3ee40a925ad80b28299c",
+      "query_sql.py": "bd143745c2f33ad6060bf959d1ab48cb76c7da681f7736583c16413c7fb62255",
+      "query_typed.py": "8e992495a3b3cc269952f0b33fd79d38d745039ba592a8ec106036012b628044",
+      "workspace_query.py": "c7375ac8733af559beb9d00e215d46cc22ae9afdeb1281dbe67a52d698c6f92e",
+      "workspace_database.py": "10504ad99707fe2ef3b4337d9802c421fc57e1bce9a50f5d02eebdff72c9e768"
+    }
+  },
+  "acceptance": {
+    "gates": {
+      "typed_rows_at_most_two_per_sample": true,
+      "writer_counts_match_sql": true,
+      "all_values_retained": true,
+      "no_eav_fallback": true,
+      "storage_at_most_2x_csv": true,
+      "storage_reduced_at_least_80_percent": true
+    },
+    "storage_amplification": 1.2163571498677452,
+    "storage_reduction": 0.9510583059298268,
+    "query_latency_gates": "not a C2b storage acceptance condition"
+  },
+  "final_production_files_sha256": {
+    "query.py": "aa29fd585bcc6c7fcf89607271d8ec90ff08285b2f7e3ee40a925ad80b28299c",
+    "query_sql.py": "bd143745c2f33ad6060bf959d1ab48cb76c7da681f7736583c16413c7fb62255",
+    "query_typed.py": "8e992495a3b3cc269952f0b33fd79d38d745039ba592a8ec106036012b628044",
+    "workspace_query.py": "c7375ac8733af559beb9d00e215d46cc22ae9afdeb1281dbe67a52d698c6f92e",
+    "workspace_database.py": "10504ad99707fe2ef3b4337d9802c421fc57e1bce9a50f5d02eebdff72c9e768"
+  },
+  "production_code_changed_during_run": false,
+  "cleanup": "removed only this run's owned work directory"
+}

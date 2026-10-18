@@ -148,6 +148,9 @@ def import_source(
         help="Return after the job starts.",
     ),
     json_output: bool = typer.Option(False, "--json", help="Print JSON."),
+    query_storage: str = typer.Option(
+        "legacy", "--query-storage", help="Query index: legacy or typed_sqlite (CSV opt-in).",
+    ),
 ) -> None:
     """Import a source into a project and build .rrd/.rbl artifacts."""
     if catalog_dataset and not catalog_url:
@@ -173,6 +176,7 @@ def import_source(
         mcap_decoders=mcap_decoder,
         rrd_optimize_profile=rrd_optimize_profile,
         artifact_validation=artifact_validation,
+        query_storage=query_storage,
         catalog_registration={
             "enabled": bool(catalog_dataset),
             "dataset_name": catalog_dataset or "",

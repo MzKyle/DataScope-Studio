@@ -16,6 +16,9 @@ class CustomQueryPlan:
     parameters: tuple[Any, ...] = ()
     needs_python_filter: bool = True
     needs_unicode_lower: bool = False
+    metadata_conditions: tuple[str, ...] = ()
+    metadata_parameters: tuple[Any, ...] = ()
+    time_bounds: tuple[tuple[str, float], ...] = ()
 
     def sql_limit(self, limit: int) -> int | None:
         # Core historically accepts nonpositive/noninteger limits; leave those
@@ -34,6 +37,9 @@ def compile_custom_query(filters: dict[str, Any] | None) -> CustomQueryPlan:
     parameters: list[Any] = []
     residual = False
     unicode_lower = False
+    metadata_conditions: list[str] = []
+    metadata_parameters: list[Any] = []
+    time_bounds: list[tuple[str, float]] = []
     try:
         for name, operator in (("time_start", ">="), ("time_end", "<=")):
             bound = _filter_float(filters.get(name))
@@ -44,11 +50,14 @@ def compile_custom_query(filters: dict[str, Any] | None) -> CustomQueryPlan:
                 continue
             conditions.append(f"qr.time {operator} ?")
             parameters.append(bound)
+            time_bounds.append((operator, bound))
         for name in ("entity_path", "key"):
             needle = str(filters.get(name) or "").strip().lower()
             if needle:
                 conditions.append(f"instr(datascope_lower(qr.{name}), ?) > 0")
                 parameters.append(needle)
+                metadata_conditions.append(f"instr(datascope_lower(qr.{name}), ?) > 0")
+                metadata_parameters.append(needle)
                 unicode_lower = True
         text = str(filters.get("text") or "").strip().lower()
         operator = str(filters.get("operator") or "any")
@@ -57,7 +66,8 @@ def compile_custom_query(filters: dict[str, Any] | None) -> CustomQueryPlan:
     except (TypeError, ValueError, OverflowError):
         # Preserve the original filter's lazy validation (including empty input).
         return CustomQueryPlan()
-    return CustomQueryPlan(tuple(conditions), tuple(parameters), residual, unicode_lower)
+    return CustomQueryPlan(tuple(conditions), tuple(parameters), residual, unicode_lower,
+                           tuple(metadata_conditions), tuple(metadata_parameters), tuple(time_bounds))
 
 
 def register_custom_query_functions(conn: sqlite3.Connection, plan: CustomQueryPlan) -> None:

@@ -36,5 +36,6 @@ graph TB
 
 [Phase A / B Benchmark 分析](query-storage-benchmark.md)保留历史 Query Index 测量。
 [Phase C 对照](query-storage-phase-c.md)补齐 Typed SQLite，并完成 Smoke、Small、Medium 的同语义验证。
-[ADR-001](adr/ADR-001-query-storage.md)当前选择 **A. Keep optimized SQLite**，建议下一阶段验证 TypedSQLiteBackend；生产仍使用现有 SQLite EAV 路径。
+[ADR-001](adr/ADR-001-query-storage.md)当前选择 **A. Keep optimized SQLite**；默认生产路径仍使用 SQLite EAV，全面切换保留性能和兼容门槛。
 [Phase C2a](query-storage-phase-c2a.md)将 Custom Query 的字段、路径和时间筛选接入现有生产 EAV 路径；数值/文本条件保留原 Python 语义。
+[Phase C2b](query-storage-phase-c2b.md)增加显式启用的 CSV Typed SQLite 存储和混合布局兼容读取；默认仍为 legacy，旧 Recording 不重写。

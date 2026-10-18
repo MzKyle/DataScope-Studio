@@ -1,4 +1,5 @@
 from pathlib import Path
+from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
 from mcap.writer import Writer
@@ -196,5 +197,6 @@ def _mock_rerun_converter(monkeypatch) -> list[list[str]]:
         return Result()
 
     monkeypatch.setattr(mcap_adapter, "rerun_command", lambda: ["/usr/bin/rerun"])
-    monkeypatch.setattr(mcap_adapter.subprocess, "run", fake_run)
+    monkeypatch.setattr(mcap_adapter, "subprocess", SimpleNamespace(
+        **{**vars(mcap_adapter.subprocess), "run": fake_run}))
     return commands

@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from contextlib import asynccontextmanager
 from dataclasses import asdict
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
@@ -98,6 +98,7 @@ class BuildRecordingRequest(BaseModel):
     rrd_optimize_profile: str = "none"
     artifact_validation: str = "basic"
     catalog_registration: dict[str, Any] | None = None
+    query_storage: Literal["legacy", "typed_sqlite"] = "legacy"
 
 
 class QuickInspectBuildRequest(BaseModel):
@@ -540,6 +541,7 @@ def create_app() -> FastAPI:
                 rrd_optimize_profile=payload.rrd_optimize_profile,
                 artifact_validation=payload.artifact_validation,
                 catalog_registration=catalog_registration or payload.catalog_registration,
+                query_storage=payload.query_storage,
             )
             services.supervisor().wake()
             return job

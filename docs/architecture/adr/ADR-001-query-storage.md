@@ -1,17 +1,18 @@
 # ADR-001: Keep optimized SQLite for analytical query storage
 
 - Date: 2026-10-17
-- Status: Accepted for the next implementation plan; production switch remains gated
+- Status: Accepted; C2b opt-in implemented, default production switch remains gated
 - Decision: **A. Keep optimized SQLite**
 - Scope: Phase C Query Storage Architecture Decision Validation
 - History: supersedes the 2026-10-06 Phase B recommendation, “C. Plan DuckDB / Parquet migration”. That historical C label differs from Phase C's “C. Evidence still insufficient”.
 
 Implementation follow-up：[Phase C2a](../query-storage-phase-c2a.md)已将 Custom Query 的字段、路径和有限时间筛选接入生产 EAV 路径。
-数值/文本比较仍使用原 Python 逻辑；这是现有存储上的执行优化，Typed SQLite 与完整诊断门槛仍待后续实施。
+数值/文本比较仍使用原 Python 逻辑。[Phase C2b](../query-storage-phase-c2b.md)已增加显式启用的 CSV typed 存储与兼容读取；
+默认仍为 legacy，完整 typed SQL 执行和 Diagnostics 性能门槛仍待后续实施。
 
 ## Context and evidence
 
-DataScope Studio 是 local-first、离线、build-once/read-many 的机器人数据工具。生产仍使用 SQLite metadata 和逐字段 JSON `query_rows`。
+DataScope Studio 是 local-first、离线、build-once/read-many 的机器人数据工具。默认生产路径仍使用 SQLite metadata 和逐字段 JSON `query_rows`；C2b 为新 CSV Recording 提供 opt-in typed 索引。
 Phase A/B 的性能问题同时涉及 EAV 布局、类型抹除、排序、候选行传输和 Python filtering/aggregation；当时缺少 Typed SQLite 对照。
 因此旧的 production 17,995 ms 与 DuckDB/Parquet 81 ms 不能单独证明必须更换引擎。
 
@@ -105,7 +106,7 @@ Typed SQLite 优先以同一个 SQLite transaction 管理 metadata 与样本生�
 按 Recording/stream/schema 组织样本，保留不同时间轴和缺失语义，避免把本次固定 wide CSV schema 直接当成全局模型。
 
 **Phase C2 推荐 QueryBackend contract + TypedSQLiteBackend + Legacy fallback/parity；不建议自动进入 DuckDBParquetBackend 生产迁移。**
-C2 仍需单独授权和实现审查，本轮没有新增生产 abstraction、变更默认 backend、迁移 metadata.sqlite 或删除 query_rows。
+C2a/C2b 后续实施已获得授权：C2b 将 metadata.sqlite 升至 v4，增加私有 typed writer/reader 和 legacy 路由，未引入完整 QueryBackend 框架或变更默认 backend，旧 query_rows 数据保留。
 Time_sync 的已知 20 ms offset 检测缺口仍未修复，不能用其速度宣称业务正确。
 
 Phase D 单独测量 Rerun Build Optimization：historical Smoke build 222.680 秒，Rerun 占 84.2%。

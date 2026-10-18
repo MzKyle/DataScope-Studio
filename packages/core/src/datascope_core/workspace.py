@@ -57,6 +57,7 @@ from datascope_core.query import (
     iter_query_rows,
     run_query_template,
 )
+from datascope_core.query_typed import clear_query_index, normalize_query_storage
 from datascope_core.rerun_artifacts import (
     normalize_artifact_validation,
     normalize_catalog_registration,
@@ -484,12 +485,14 @@ class Workspace(
         artifact_validation: str = "basic",
         catalog_registration: dict[str, Any] | None = None,
         *,
+        query_storage: str = "legacy",
         _job_id: str | None = None,
         _manage_job: bool = True,
         _cache_dir: str | Path | None = None,
         _cancel_check: Callable[[], None] | None = None,
         _background_job: bool = False,
     ) -> dict[str, Any]:
+        query_storage = normalize_query_storage(query_storage)
         mcap_decoders = normalize_mcap_decoders(mcap_decoders)
         rrd_optimize_profile = normalize_rrd_optimize_profile(rrd_optimize_profile)
         artifact_validation = normalize_artifact_validation(artifact_validation)
@@ -552,6 +555,7 @@ class Workspace(
                     "rrd_optimize_profile": rrd_optimize_profile,
                     "artifact_validation": artifact_validation,
                     "catalog_registration": catalog_registration,
+                    "query_storage": query_storage,
                 },
                 resource_type="source",
                 resource_id=source_id,
@@ -571,8 +575,14 @@ class Workspace(
         last_progress_stage: str | None = None
         last_progress_value: float | None = None
         last_progress_at = 0.0
+        cancel_marker = (
+            Path(project["workspace_path"]) / "cache" / "jobs" / (job_id + ".cancel")
+            if query_storage == "typed_sqlite" and job_id else None
+        )
 
         def check_cancel() -> None:
+            if cancel_marker is not None and cancel_marker.exists():
+                raise JobCancelled(f"Job cancellation requested: {job_id}")
             if _cancel_check is not None:
                 _cancel_check()
             if job_id is not None:
@@ -697,13 +707,18 @@ class Workspace(
                         output_base,
                         "[]",
                         json.dumps(
-                            {"rerun_artifact": artifact_info},
+                            {"rerun_artifact": artifact_info, **(
+                                {"query_index_build": {"job_id": job_id, "storage": query_storage}}
+                                if query_storage == "typed_sqlite" and job_id else {}
+                            )},
                             ensure_ascii=False,
                         ),
                         _now(),
                     ),
                 )
-            self._index_recording(recording_db_id, self.get_source(source_id), spec)
+            self._index_recording(recording_db_id, self.get_source(source_id), spec,
+                                  query_storage=query_storage, cancel_check=check_cancel,
+                                  cancel_signal=(lambda: cancel_marker.exists()) if cancel_marker else None)
             with self._connect() as conn:
                 conn.execute(
                     "update sources set status = ?, updated_at = ? where id = ?",
@@ -732,7 +747,7 @@ class Workspace(
                 path.unlink(missing_ok=True)
             if recording_db_id is not None:
                 with self._connect() as conn:
-                    conn.execute("delete from query_rows where recording_id = ?", (recording_db_id,))
+                    clear_query_index(conn, recording_db_id)
                     conn.execute("delete from recordings where id = ?", (recording_db_id,))
             if _manage_job and job_id is not None:
                 cancelled = isinstance(exc, JobCancelled)
@@ -748,6 +763,8 @@ class Workspace(
             raise
         finally:
             shutil.rmtree(cache_dir, ignore_errors=True)
+            if cancel_marker is not None:
+                cancel_marker.unlink(missing_ok=True)
 
     def _assert_artifact_paths_available(
         self,

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from datascope_core.query_typed import clear_query_index, normalize_query_storage
 from datascope_core.rerun_artifacts import (
     normalize_artifact_validation,
     normalize_catalog_registration,
@@ -44,7 +45,10 @@ class WorkspaceJobsMixin:
         rrd_optimize_profile: str = "none",
         artifact_validation: str = "basic",
         catalog_registration: dict[str, Any] | None = None,
+        *,
+        query_storage: str = "legacy",
     ) -> dict[str, Any]:
+        query_storage = normalize_query_storage(query_storage)
         self.get_project(project_id)
         mcap_decoders = normalize_mcap_decoders(mcap_decoders)
         rrd_optimize_profile = normalize_rrd_optimize_profile(rrd_optimize_profile)
@@ -75,6 +79,7 @@ class WorkspaceJobsMixin:
                 "rrd_optimize_profile": rrd_optimize_profile,
                 "artifact_validation": artifact_validation,
                 "catalog_registration": catalog_registration,
+                "query_storage": query_storage,
             },
             resource_type="source",
             resource_id=source_id,
@@ -289,6 +294,7 @@ class WorkspaceJobsMixin:
                     rrd_optimize_profile=payload.get("rrd_optimize_profile", "none"),
                     artifact_validation=payload.get("artifact_validation", "basic"),
                     catalog_registration=payload.get("catalog_registration"),
+                    query_storage=payload.get("query_storage", "legacy"),
                     _job_id=job_id,
                     _cache_dir=cache_dir,
                     _background_job=True,
@@ -405,6 +411,12 @@ class WorkspaceJobsMixin:
         job = self.get_job(job_id)
         if job["status"] in TERMINAL_JOB_STATUSES:
             return job
+        if job["payload"].get("query_storage") == "typed_sqlite":
+            # The index owns SQLite's single writer transaction. Deliver intent
+            # before waiting for that lock so the worker can roll it back.
+            marker = self._typed_cancel_marker(job)
+            marker.parent.mkdir(parents=True, exist_ok=True)
+            marker.touch()
         now = utc_now()
         next_status = "cancelled" if job["status"] == "pending" else "cancel_requested"
         with self._connect() as conn:
@@ -414,7 +426,7 @@ class WorkspaceJobsMixin:
                 set status = ?, stage = ?, cancel_requested_at = ?,
                     finished_at = case when ? = 'cancelled' then ? else finished_at end,
                     updated_at = ?
-                where id = ?
+                where id = ? and status in ('pending', 'running', 'cancel_requested')
                 """,
                 (next_status, next_status, now, next_status, now, now, job_id),
             )
@@ -540,6 +552,7 @@ class WorkspaceJobsMixin:
 
     def cleanup_job_resources(self, job_id: str) -> None:
         job = self.get_job(job_id)
+        self._typed_cancel_marker(job).unlink(missing_ok=True)
         project = self.get_project(job["project_id"])
         shutil.rmtree(
             Path(project["workspace_path"]) / "cache" / "jobs" / job_id,
@@ -559,6 +572,21 @@ class WorkspaceJobsMixin:
             payload.get("output_dir"),
         )
         with self._connect() as conn:
+            if payload.get("query_storage") == "typed_sqlite" and job["status"] in {
+                "failed", "cancelled", "interrupted"
+            }:
+                # A hard-killed worker cannot run build_recording's exception
+                # cleanup. Only remove records owned by this exact typed job;
+                # a name conflict must never remove a successful earlier build.
+                candidates = conn.execute(
+                    "SELECT id, params_json FROM recordings WHERE project_id = ? AND path = ?",
+                    (job["project_id"], str(paths[0])),
+                ).fetchall()
+                for candidate in candidates:
+                    owner = json.loads(candidate["params_json"] or "{}").get("query_index_build", {})
+                    if owner.get("job_id") == job_id:
+                        clear_query_index(conn, candidate["id"])
+                        conn.execute("DELETE FROM recordings WHERE id = ?", (candidate["id"],))
             committed = conn.execute(
                 "select 1 from recordings where project_id = ? and path = ?",
                 (job["project_id"], str(paths[0])),
@@ -569,8 +597,15 @@ class WorkspaceJobsMixin:
 
     def _check_job_cancelled(self, job_id: str) -> None:
         job = self.get_job(job_id)
-        if job["status"] in {"cancel_requested", "cancelled"}:
+        if job["status"] in {"cancel_requested", "cancelled"} or (
+            job["payload"].get("query_storage") == "typed_sqlite"
+            and self._typed_cancel_marker(job).exists()
+        ):
             raise JobCancelled(f"Job cancellation requested: {job_id}")
+
+    def _typed_cancel_marker(self, job: dict[str, Any]) -> Path:
+        project = self.get_project(job["project_id"])
+        return Path(project["workspace_path"]) / "cache" / "jobs" / (job["id"] + ".cancel")
 
     def _update_job(
         self,

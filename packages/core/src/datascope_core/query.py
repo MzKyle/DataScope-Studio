@@ -350,58 +350,47 @@ def _tabular_rows(
             spec.primary_timeline,
             spec.effective_timeline_unit or spec.timeline_unit,
         )
-        for mapping in spec.streams:
-            if not mapping.get("enabled", True):
-                continue
-            fields = mapping.get("source_fields", [])
+        for _, value in _tabular_sample_values(recording_id, source, spec, row, timestamp):
+            yield value
+
+
+def _tabular_sample_values(
+    recording_id: str,
+    source: SourceInfo,
+    spec: MappingSpec,
+    row: Mapping[str, Any],
+    timestamp: float | None,
+    only_streams: set[int] | None = None,
+) -> Iterator[tuple[int, QueryRow]]:
+    """Original CSV emission order, also used by mixed typed/EAV indexes."""
+    offset = 0
+    for stream_index, mapping in enumerate(spec.streams):
+        fields = mapping.get("source_fields", [])
+        semantic_type = mapping.get("semantic_type", "")
+        first = offset
+        offset += len(fields) + (semantic_type == "text_log")
+        if only_streams is not None and stream_index not in only_streams:
+            continue
+        if mapping.get("enabled", True):
             entity_path = mapping.get("entity_path", "")
-            semantic_type = mapping.get("semantic_type", "")
-            if semantic_type == "scalar":
-                yield from _field_values(
-                    recording_id,
-                    source.source_id,
-                    timestamp,
-                    entity_path,
-                    semantic_type,
-                    row,
-                    fields,
-                )
-            elif semantic_type == "scalar_group":
-                for field in fields:
-                    if field in row and pd.notna(row[field]):
-                        yield QueryRow(
-                            recording_id,
-                            source.source_id,
-                            timestamp,
-                            f"{entity_path}/{field}",
-                            semantic_type,
-                            field,
-                            _json_value(row[field]),
-                        )
-            elif semantic_type in {"state", "text_log"}:
-                yield from _field_values(
-                    recording_id,
-                    source.source_id,
-                    timestamp,
-                    entity_path,
-                    semantic_type,
-                    row,
-                    fields,
-                )
-                if semantic_type == "text_log":
-                    message = " ".join(
-                        f"{field}={row[field]}" for field in fields if field in row and pd.notna(row[field])
+            if semantic_type not in {"scalar", "scalar_group", "state", "text_log"}:
+                continue
+            for field_index, field in enumerate(fields):
+                if field in row and pd.notna(row[field]):
+                    path = f"{entity_path}/{field}" if semantic_type == "scalar_group" else entity_path
+                    yield first + field_index, QueryRow(
+                        recording_id, source.source_id, timestamp, path, semantic_type,
+                        field, _json_value(row[field]),
                     )
-                    if message:
-                        yield QueryRow(
-                            recording_id,
-                            source.source_id,
-                            timestamp,
-                            entity_path,
-                            semantic_type,
-                            "message",
-                            message,
-                        )
+            if semantic_type == "text_log":
+                message = " ".join(
+                    f"{field}={row[field]}" for field in fields if field in row and pd.notna(row[field])
+                )
+                if message:
+                    yield first + len(fields), QueryRow(
+                        recording_id, source.source_id, timestamp, entity_path,
+                        semantic_type, "message", message,
+                    )
 
 
 def _cv_rows(recording_id: str, source: SourceInfo) -> list[QueryRow]:

@@ -1,4 +1,5 @@
 from pathlib import Path
+from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
 from typer.testing import CliRunner
@@ -202,5 +203,7 @@ def _mock_rerun_converter(monkeypatch) -> list[list[str]]:
         return Result()
 
     monkeypatch.setattr(mcap_adapter, "rerun_command", lambda: ["/usr/bin/rerun"])
-    monkeypatch.setattr(mcap_adapter.subprocess, "run", fake_run)
+    # Keep the mock local to the adapter; Windows worker cleanup also uses subprocess.run.
+    monkeypatch.setattr(mcap_adapter, "subprocess", SimpleNamespace(
+        **{**vars(mcap_adapter.subprocess), "run": fake_run}))
     return commands

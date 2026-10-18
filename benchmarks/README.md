@@ -400,3 +400,16 @@ control: exact SQL, source hashes, canonical oracle hashes, query policy and
 runtime versions must match. Its original query samples/environment/provenance
 remain intact. This avoids repeating an expensive unchanged control after a
 typed-only compiler correction; it does not cache or substitute typed results.
+## C2b production typed storage
+
+`python -m benchmarks.typed_storage --preset smoke` compares the current C2a EAV
+production reader with the opt-in CSV typed writer/compatibility reader. Use
+`--preset small` for the retained Small inputs and `--preset medium` for the
+retained Phase C CSV storage/build measurement. The retained old catalogs are
+read-only. Each query has one warm-up and five measured runs in sequential,
+isolated backend processes; tracing/counts are a separate untimed pass.
+
+`--rows 32 --query-runs 1 --warmups 0` is a generated self-check, not a formal
+performance or storage acceptance result. Only the current run's owned scratch
+directory is cleaned. Existing baseline bytes and retained artifacts are preserved.
+See [C2b design and limits](../docs/architecture/query-storage-phase-c2b.md).

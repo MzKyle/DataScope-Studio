@@ -57,6 +57,8 @@ benchmarks/results/benchmark_*.json
 benchmarks/results/benchmark_*.md
 benchmarks/results/duckdb_poc_*.json
 benchmarks/results/duckdb_poc_*.md
+benchmarks/results/typed_storage_*.json
+benchmarks/results/typed_storage_*.md
 
 # Private planning notes
 软件产品设计.md

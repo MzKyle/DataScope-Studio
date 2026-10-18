@@ -21,7 +21,7 @@ def test_migrates_v1_database_and_preserves_catalog(tmp_path: Path) -> None:
     assert project["name"] == "Legacy"
     assert source["storage_mode"] == "copy"
     assert source["original_uri"] == source["uri"]
-    assert _pragma(db_path, "user_version") == 3
+    assert _pragma(db_path, "user_version") == 4
     assert _pragma(db_path, "journal_mode") == "wal"
     assert _pragma(db_path, "foreign_keys", workspace) == 1
     assert _pragma(db_path, "busy_timeout", workspace) == 5000
@@ -36,7 +36,7 @@ def test_migrates_v1_database_and_preserves_catalog(tmp_path: Path) -> None:
     assert "cancel_requested_at" in _columns(db_path, "batch_items")
 
     Workspace(root)
-    assert _pragma(db_path, "user_version") == 3
+    assert _pragma(db_path, "user_version") == 4
 
 
 def test_rejects_future_database_version(tmp_path: Path) -> None:

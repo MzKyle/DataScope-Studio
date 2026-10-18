@@ -1,0 +1,3966 @@
+{
+  "run_id": "20261017_160252_ddb1ad54",
+  "preset": "small",
+  "status": "succeeded",
+  "environment": {
+    "platform": "Windows-10-10.0.26300-SP0",
+    "python": "3.11.5 (tags/v3.11.5:cce6ba9, Aug 24 2023, 14:38:34) [MSC v.1936 64 bit (AMD64)]",
+    "cpu": "13th Gen Intel(R) Core(TM) i9-13900HX",
+    "logical_cpus": 32,
+    "physical_cpus": 24,
+    "memory_gb": 16.90710016,
+    "available_memory_gb_at_start": 4.588322816,
+    "datascope_version": "0.4.0",
+    "git_commit": "1bca1b5dc04bd9d99e3fe745b798d2d3b9d5c58a",
+    "git_dirty": true,
+    "benchmark_code_sha256": "c152c9a05f4f302e04a46ad9b02f8dc4e5f5277bb1b067233a517def592d4524",
+    "packages": {
+      "datascope-core": "0.4.0",
+      "pandas": "2.3.3",
+      "numpy": "2.4.6",
+      "rerun-sdk": "0.33.1",
+      "psutil": "7.2.2",
+      "pyarrow": "25.0.1"
+    },
+    "sqlite_version": "3.42.0"
+  },
+  "backends": {
+    "eav": {
+      "backend": "eav",
+      "status": "succeeded",
+      "queries": {
+        "find_errors": {
+          "runs": 5,
+          "min_ms": 3065.240800002357,
+          "mean_ms": 4676.369000000705,
+          "median_ms": 4770.7345000017085,
+          "p95_ms": 5631.908499999554,
+          "max_ms": 5631.908499999554,
+          "samples_ms": [
+            3065.240800002357,
+            5631.908499999554,
+            5278.116800000134,
+            4770.7345000017085,
+            4635.844399999769
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "af81b8c0613082892b99f3462e58255993d627f85f06450254bc21f70d00cccc",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256",
+          "execution": {
+            "counts": {
+              "eav_fetched": 255975,
+              "json_decodes": 256975,
+              "distinct_time_candidate_samples": 0,
+              "scope": "untimed pass: cursor projection rows can repeat a physical sample across bindings; distinct_time_candidate_samples counts dataset/time candidates, not SQLite pages or rows examined"
+            },
+            "statements": [
+              {
+                "sql": "select * from projects where id = 'project_dc8b870f5bc7'",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SEARCH projects USING INDEX sqlite_autoindex_projects_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "\n                select qr.*\n                from query_rows qr\n                join recordings r on r.id = qr.recording_id\n                where r.project_id = 'project_dc8b870f5bc7' and qr.recording_id in ('recording_b0329d68d4fe') and qr.semantic_type in ('text_log', 'state')\n                order by qr.recording_id, qr.time, qr.entity_path, qr.key, qr.rowid\n                \n                ",
+                "explain": [
+                  [
+                    6,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    14,
+                    0,
+                    0,
+                    "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)"
+                  ],
+                  [
+                    57,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        "low_battery": {
+          "runs": 5,
+          "min_ms": 10754.2620000022,
+          "mean_ms": 12532.970780000323,
+          "median_ms": 12688.15259999974,
+          "p95_ms": 13585.215399994922,
+          "max_ms": 13585.215399994922,
+          "samples_ms": [
+            12688.15259999974,
+            10754.2620000022,
+            12657.840899999428,
+            12979.383000005328,
+            13585.215399994922
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "5577b69d322b3ea7f44e14d6cd08f443f8d41380a235ff67018afa35dc3cc7fe",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256",
+          "execution": {
+            "counts": {
+              "eav_fetched": 251000,
+              "json_decodes": 252000,
+              "distinct_time_candidate_samples": 0,
+              "scope": "untimed pass: cursor projection rows can repeat a physical sample across bindings; distinct_time_candidate_samples counts dataset/time candidates, not SQLite pages or rows examined"
+            },
+            "statements": [
+              {
+                "sql": "select * from projects where id = 'project_dc8b870f5bc7'",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SEARCH projects USING INDEX sqlite_autoindex_projects_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "\n                select qr.*\n                from query_rows qr\n                join recordings r on r.id = qr.recording_id\n                where r.project_id = 'project_dc8b870f5bc7' and qr.recording_id in ('recording_b0329d68d4fe') and qr.semantic_type in ('scalar', 'scalar_group') and (lower(qr.key) like '%battery%' or lower(qr.entity_path) like '%battery%')\n                order by qr.recording_id, qr.time, qr.entity_path, qr.key, qr.rowid\n                \n                ",
+                "explain": [
+                  [
+                    6,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    14,
+                    0,
+                    0,
+                    "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)"
+                  ],
+                  [
+                    65,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        "state_duration": {
+          "runs": 5,
+          "min_ms": 5470.481999996991,
+          "mean_ms": 6040.051780000795,
+          "median_ms": 5966.240600006131,
+          "p95_ms": 6646.063200001663,
+          "max_ms": 6646.063200001663,
+          "samples_ms": [
+            5961.298599999282,
+            6156.174499999906,
+            6646.063200001663,
+            5470.481999996991,
+            5966.240600006131
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "73ab7033d6882b45bc286da01b021720e516508f82749db546e96bb2538e5b65",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256",
+          "execution": {
+            "counts": {
+              "eav_fetched": 300000,
+              "json_decodes": 300000,
+              "distinct_time_candidate_samples": 0,
+              "scope": "untimed pass: cursor projection rows can repeat a physical sample across bindings; distinct_time_candidate_samples counts dataset/time candidates, not SQLite pages or rows examined"
+            },
+            "statements": [
+              {
+                "sql": "select * from projects where id = 'project_dc8b870f5bc7'",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SEARCH projects USING INDEX sqlite_autoindex_projects_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "\n                select qr.*\n                from query_rows qr\n                join recordings r on r.id = qr.recording_id\n                where r.project_id = 'project_dc8b870f5bc7' and qr.recording_id in ('recording_b0329d68d4fe') and qr.semantic_type = 'state' and qr.time is not null\n                order by qr.recording_id, qr.time, qr.entity_path, qr.key, qr.rowid\n                \n                ",
+                "explain": [
+                  [
+                    6,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    14,
+                    0,
+                    0,
+                    "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)"
+                  ],
+                  [
+                    42,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        "custom_scalar_key": {
+          "runs": 5,
+          "min_ms": 8980.656200001249,
+          "mean_ms": 10096.489839999413,
+          "median_ms": 10266.060100002505,
+          "p95_ms": 10838.345699994534,
+          "max_ms": 10838.345699994534,
+          "samples_ms": [
+            9896.273599995766,
+            8980.656200001249,
+            10838.345699994534,
+            10501.11360000301,
+            10266.060100002505
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "5af58804b1be498572e3292ef5c8f33aaa31b782ee34d8cc28806030f73c3909",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256",
+          "execution": {
+            "counts": {
+              "eav_fetched": 1000,
+              "json_decodes": 1000,
+              "distinct_time_candidate_samples": 0,
+              "scope": "untimed pass: cursor projection rows can repeat a physical sample across bindings; distinct_time_candidate_samples counts dataset/time candidates, not SQLite pages or rows examined"
+            },
+            "statements": [
+              {
+                "sql": "select * from projects where id = 'project_dc8b870f5bc7'",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SEARCH projects USING INDEX sqlite_autoindex_projects_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "\n                select qr.*\n                from query_rows qr\n                join recordings r on r.id = qr.recording_id\n                where r.project_id = 'project_dc8b870f5bc7' and qr.recording_id in ('recording_b0329d68d4fe') and qr.semantic_type in ('scalar','scalar_group') and instr(datascope_lower(qr.key), 'scalar_000') > 0\n                order by qr.recording_id, qr.time, qr.entity_path, qr.key, qr.rowid\n                limit 1000\n                ",
+                "explain": [
+                  [
+                    7,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    15,
+                    0,
+                    0,
+                    "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)"
+                  ],
+                  [
+                    68,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        "custom_time_range": {
+          "runs": 5,
+          "min_ms": 2510.7231000001775,
+          "mean_ms": 2835.162320001109,
+          "median_ms": 2817.398300001514,
+          "p95_ms": 3109.9800000010873,
+          "max_ms": 3109.9800000010873,
+          "samples_ms": [
+            2943.565800000215,
+            2794.1444000025513,
+            3109.9800000010873,
+            2817.398300001514,
+            2510.7231000001775
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 352,
+          "result_sha256": "0b630e4948d2fdbf8530062eae74193bf6f741084e6bfbe9fab29ec89d461bc4",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256",
+          "execution": {
+            "counts": {
+              "eav_fetched": 352,
+              "json_decodes": 352,
+              "distinct_time_candidate_samples": 0,
+              "scope": "untimed pass: cursor projection rows can repeat a physical sample across bindings; distinct_time_candidate_samples counts dataset/time candidates, not SQLite pages or rows examined"
+            },
+            "statements": [
+              {
+                "sql": "select * from projects where id = 'project_dc8b870f5bc7'",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SEARCH projects USING INDEX sqlite_autoindex_projects_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "\n                select qr.*\n                from query_rows qr\n                join recordings r on r.id = qr.recording_id\n                where r.project_id = 'project_dc8b870f5bc7' and qr.recording_id in ('recording_b0329d68d4fe') and qr.time >= 1349.995 and qr.time <= 1350.045\n                order by qr.recording_id, qr.time, qr.entity_path, qr.key, qr.rowid\n                limit 1000\n                ",
+                "explain": [
+                  [
+                    7,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    15,
+                    0,
+                    0,
+                    "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=?)"
+                  ],
+                  [
+                    51,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        "custom_numeric_threshold": {
+          "runs": 5,
+          "min_ms": 10858.726999998908,
+          "mean_ms": 11229.481340000348,
+          "median_ms": 11181.88110000483,
+          "p95_ms": 11629.14269999601,
+          "max_ms": 11629.14269999601,
+          "samples_ms": [
+            10858.726999998908,
+            11629.14269999601,
+            11040.270500001498,
+            11437.385400000494,
+            11181.88110000483
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "4cf35d6dd7a12f3dd9325d9d354e0816c7465696deb0c91ce21aa691dfc09586",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256",
+          "execution": {
+            "counts": {
+              "eav_fetched": 284333,
+              "json_decodes": 284333,
+              "distinct_time_candidate_samples": 0,
+              "scope": "untimed pass: cursor projection rows can repeat a physical sample across bindings; distinct_time_candidate_samples counts dataset/time candidates, not SQLite pages or rows examined"
+            },
+            "statements": [
+              {
+                "sql": "select * from projects where id = 'project_dc8b870f5bc7'",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SEARCH projects USING INDEX sqlite_autoindex_projects_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "\n                select qr.*\n                from query_rows qr\n                join recordings r on r.id = qr.recording_id\n                where r.project_id = 'project_dc8b870f5bc7' and qr.recording_id in ('recording_b0329d68d4fe') and qr.semantic_type in ('scalar','scalar_group') and instr(datascope_lower(qr.key), 'battery') > 0\n                order by qr.recording_id, qr.time, qr.entity_path, qr.key, qr.rowid\n                \n                ",
+                "explain": [
+                  [
+                    6,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    14,
+                    0,
+                    0,
+                    "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)"
+                  ],
+                  [
+                    61,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        "compare": {
+          "runs": 5,
+          "min_ms": 26051.42199999682,
+          "mean_ms": 27643.204919999698,
+          "median_ms": 27299.392399996577,
+          "p95_ms": 28903.14219999709,
+          "max_ms": 28903.14219999709,
+          "samples_ms": [
+            26051.42199999682,
+            28696.675400002277,
+            28903.14219999709,
+            27265.392600005725,
+            27299.392399996577
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 4,
+          "result_sha256": "32eca579996163fb70f1fa21d6628af5a794f05e40ea849d14e1d04060856064",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256",
+          "execution": {
+            "counts": {
+              "eav_fetched": 602000,
+              "json_decodes": 1204000,
+              "distinct_time_candidate_samples": 0,
+              "scope": "untimed pass: cursor projection rows can repeat a physical sample across bindings; distinct_time_candidate_samples counts dataset/time candidates, not SQLite pages or rows examined"
+            },
+            "statements": [
+              {
+                "sql": "select * from projects where id = 'project_dc8b870f5bc7'",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SEARCH projects USING INDEX sqlite_autoindex_projects_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "\n                select qr.*\n                from query_rows qr\n                join recordings r on r.id = qr.recording_id\n                where r.project_id = 'project_dc8b870f5bc7' and qr.recording_id in ('recording_b0329d68d4fe','recording_c073fe8bb68f') and qr.semantic_type in ('scalar','scalar_group','state') and ((lower(qr.key) like '%battery%' or lower(qr.entity_path) like '%battery%') or (lower(qr.key) like '%temperature%' or lower(qr.entity_path) like '%temperature%'))\n                order by qr.recording_id, qr.time, qr.entity_path, qr.key, qr.rowid\n                \n                ",
+                "explain": [
+                  [
+                    6,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    30,
+                    0,
+                    0,
+                    "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)"
+                  ],
+                  [
+                    88,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "environment": {
+        "platform": "Windows-10-10.0.26300-SP0",
+        "python": "3.11.5 (tags/v3.11.5:cce6ba9, Aug 24 2023, 14:38:34) [MSC v.1936 64 bit (AMD64)]",
+        "cpu": "13th Gen Intel(R) Core(TM) i9-13900HX",
+        "logical_cpus": 32,
+        "physical_cpus": 24,
+        "memory_gb": 16.90710016,
+        "available_memory_gb_at_start": 4.548333568,
+        "datascope_version": "0.4.0",
+        "git_commit": "1bca1b5dc04bd9d99e3fe745b798d2d3b9d5c58a",
+        "git_dirty": true,
+        "benchmark_code_sha256": "c152c9a05f4f302e04a46ad9b02f8dc4e5f5277bb1b067233a517def592d4524",
+        "packages": {
+          "datascope-core": "0.4.0",
+          "pandas": "2.3.3",
+          "numpy": "2.4.6",
+          "rerun-sdk": "0.33.1",
+          "psutil": "7.2.2",
+          "pyarrow": "25.0.1"
+        },
+        "sqlite_version": "3.42.0"
+      },
+      "storage": {
+        "database_bytes": 2478956544,
+        "scope": "unchanged historical whole production EAV catalog"
+      },
+      "memory": {
+        "method": "psutil process RSS polling; includes native allocations",
+        "sample_interval_ms": 10.0,
+        "peak_rss_mb": 591.577088,
+        "os_peak_rss_mb": 594.16576,
+        "rss_before_mb": 97.857536,
+        "rss_after_mb": 132.022272,
+        "stages": {
+          "query/eav/find_errors": {
+            "elapsed_ms": 24936.023499998555,
+            "rss_before_mb": 97.968128,
+            "rss_after_mb": 101.523456,
+            "peak_rss_mb": 106.201088
+          },
+          "query/eav/low_battery": {
+            "elapsed_ms": 75896.42579999781,
+            "rss_before_mb": 100.94592,
+            "rss_after_mb": 101.425152,
+            "peak_rss_mb": 106.418176
+          },
+          "query/eav/state_duration": {
+            "elapsed_ms": 36332.69709999877,
+            "rss_before_mb": 101.158912,
+            "rss_after_mb": 120.717312,
+            "peak_rss_mb": 484.4544
+          },
+          "query/eav/custom_scalar_key": {
+            "elapsed_ms": 59835.14830000058,
+            "rss_before_mb": 122.650624,
+            "rss_after_mb": 120.963072,
+            "peak_rss_mb": 123.273216
+          },
+          "query/eav/custom_time_range": {
+            "elapsed_ms": 16955.269500002032,
+            "rss_before_mb": 120.827904,
+            "rss_after_mb": 121.257984,
+            "peak_rss_mb": 123.215872
+          },
+          "query/eav/custom_numeric_threshold": {
+            "elapsed_ms": 67766.6984000025,
+            "rss_before_mb": 121.565184,
+            "rss_after_mb": 121.458688,
+            "peak_rss_mb": 126.554112
+          },
+          "query/eav/compare": {
+            "elapsed_ms": 161960.99539999705,
+            "rss_before_mb": 120.840192,
+            "rss_after_mb": 133.65248,
+            "peak_rss_mb": 591.577088
+          }
+        },
+        "scope": "this process; child processes and system page cache are excluded"
+      }
+    },
+    "typed_time": {
+      "backend": "typed_time",
+      "status": "succeeded",
+      "queries": {
+        "find_errors": {
+          "runs": 5,
+          "min_ms": 2105.500199999369,
+          "mean_ms": 2456.1754999987897,
+          "median_ms": 2555.5498999965494,
+          "p95_ms": 2672.607100001187,
+          "max_ms": 2672.607100001187,
+          "samples_ms": [
+            2672.607100001187,
+            2596.6363999978057,
+            2350.5838999990374,
+            2105.500199999369,
+            2555.5498999965494
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "af81b8c0613082892b99f3462e58255993d627f85f06450254bc21f70d00cccc",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256",
+          "execution": {
+            "counts": {
+              "bindings": 1,
+              "typed_fetched": 255975,
+              "logical_yielded": 255975,
+              "json_decodes": 256975,
+              "distinct_time_candidate_samples": 300000,
+              "scope": "untimed pass: cursor projection rows can repeat a physical sample across bindings; distinct_time_candidate_samples counts dataset/time candidates, not SQLite pages or rows examined"
+            },
+            "statements": [
+              {
+                "sql": "select * from projects where id = 'project_dc8b870f5bc7'",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SEARCH projects USING INDEX sqlite_autoindex_projects_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT i.* FROM typed_indexes i JOIN recordings r ON r.id = i.recording_id WHERE r.project_id = 'project_dc8b870f5bc7' AND i.recording_id IN ('recording_b0329d68d4fe')",
+                "explain": [
+                  [
+                    5,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    14,
+                    0,
+                    0,
+                    "SEARCH i USING INDEX sqlite_autoindex_typed_indexes_1 (recording_id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT qr.*, coalesce(o.sample_seq, qr.rowid) AS _sample_seq, coalesce(o.binding_seq, 0) AS _binding_seq FROM query_rows qr JOIN recordings r ON r.id = qr.recording_id LEFT JOIN typed_legacy_order o ON o.query_rowid = qr.rowid WHERE r.project_id = 'project_dc8b870f5bc7' AND qr.recording_id in ('recording_b0329d68d4fe') AND qr.semantic_type in ('text_log', 'state') ORDER BY qr.recording_id, qr.time, qr.entity_path, qr.key, _sample_seq, _binding_seq",
+                "explain": [
+                  [
+                    7,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    15,
+                    0,
+                    0,
+                    "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)"
+                  ],
+                  [
+                    37,
+                    0,
+                    0,
+                    "SEARCH o USING INTEGER PRIMARY KEY (rowid=?) LEFT-JOIN"
+                  ],
+                  [
+                    71,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT qr.*, d.schema_id, s.family FROM typed_bindings qr JOIN recordings r ON r.id = qr.recording_id JOIN typed_datasets d ON d.id = qr.dataset_id JOIN typed_schemas s ON s.id = d.schema_id WHERE r.project_id = 'project_dc8b870f5bc7' AND qr.recording_id in ('recording_b0329d68d4fe') AND qr.semantic_type in ('text_log', 'state')",
+                "explain": [
+                  [
+                    7,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    15,
+                    0,
+                    0,
+                    "SCAN qr"
+                  ],
+                  [
+                    22,
+                    0,
+                    0,
+                    "SEARCH d USING INTEGER PRIMARY KEY (rowid=?)"
+                  ],
+                  [
+                    25,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX sqlite_autoindex_typed_schemas_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, v.value_json AS value FROM typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1 s LEFT JOIN typed_states v ON v.id = s.c0 AND v.dataset_id = s.dataset_id WHERE s.dataset_id = 2 AND s.c0 IS NOT NULL ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    5,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1_time (dataset_id=?)"
+                  ],
+                  [
+                    12,
+                    0,
+                    0,
+                    "SEARCH v USING INTEGER PRIMARY KEY (rowid=?) LEFT-JOIN"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        "low_battery": {
+          "runs": 5,
+          "min_ms": 3719.729099997494,
+          "mean_ms": 4252.508019997913,
+          "median_ms": 4342.183199994906,
+          "p95_ms": 4773.923499997181,
+          "max_ms": 4773.923499997181,
+          "samples_ms": [
+            4422.616800002288,
+            4004.087499997695,
+            3719.729099997494,
+            4773.923499997181,
+            4342.183199994906
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "5577b69d322b3ea7f44e14d6cd08f443f8d41380a235ff67018afa35dc3cc7fe",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256",
+          "execution": {
+            "counts": {
+              "bindings": 1,
+              "typed_fetched": 251000,
+              "logical_yielded": 251000,
+              "json_decodes": 252000,
+              "distinct_time_candidate_samples": 300000,
+              "scope": "untimed pass: cursor projection rows can repeat a physical sample across bindings; distinct_time_candidate_samples counts dataset/time candidates, not SQLite pages or rows examined"
+            },
+            "statements": [
+              {
+                "sql": "select * from projects where id = 'project_dc8b870f5bc7'",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SEARCH projects USING INDEX sqlite_autoindex_projects_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT i.* FROM typed_indexes i JOIN recordings r ON r.id = i.recording_id WHERE r.project_id = 'project_dc8b870f5bc7' AND i.recording_id IN ('recording_b0329d68d4fe')",
+                "explain": [
+                  [
+                    5,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    14,
+                    0,
+                    0,
+                    "SEARCH i USING INDEX sqlite_autoindex_typed_indexes_1 (recording_id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT qr.*, coalesce(o.sample_seq, qr.rowid) AS _sample_seq, coalesce(o.binding_seq, 0) AS _binding_seq FROM query_rows qr JOIN recordings r ON r.id = qr.recording_id LEFT JOIN typed_legacy_order o ON o.query_rowid = qr.rowid WHERE r.project_id = 'project_dc8b870f5bc7' AND qr.recording_id in ('recording_b0329d68d4fe') AND qr.semantic_type in ('scalar', 'scalar_group') AND (lower(qr.key) like '%battery%' or lower(qr.entity_path) like '%battery%') ORDER BY qr.recording_id, qr.time, qr.entity_path, qr.key, _sample_seq, _binding_seq",
+                "explain": [
+                  [
+                    7,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    15,
+                    0,
+                    0,
+                    "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)"
+                  ],
+                  [
+                    45,
+                    0,
+                    0,
+                    "SEARCH o USING INTEGER PRIMARY KEY (rowid=?) LEFT-JOIN"
+                  ],
+                  [
+                    79,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT qr.*, d.schema_id, s.family FROM typed_bindings qr JOIN recordings r ON r.id = qr.recording_id JOIN typed_datasets d ON d.id = qr.dataset_id JOIN typed_schemas s ON s.id = d.schema_id WHERE r.project_id = 'project_dc8b870f5bc7' AND qr.recording_id in ('recording_b0329d68d4fe') AND qr.semantic_type in ('scalar', 'scalar_group') AND (lower(qr.key) like '%battery%' or lower(qr.entity_path) like '%battery%')",
+                "explain": [
+                  [
+                    7,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    15,
+                    0,
+                    0,
+                    "SCAN qr"
+                  ],
+                  [
+                    30,
+                    0,
+                    0,
+                    "SEARCH d USING INTEGER PRIMARY KEY (rowid=?)"
+                  ],
+                  [
+                    33,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX sqlite_autoindex_typed_schemas_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c7 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c7 IS NOT NULL ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=?)"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        "state_duration": {
+          "runs": 5,
+          "min_ms": 2789.7271999972872,
+          "mean_ms": 3024.001739999221,
+          "median_ms": 2983.965999999782,
+          "p95_ms": 3365.985600001295,
+          "max_ms": 3365.985600001295,
+          "samples_ms": [
+            3365.985600001295,
+            3067.7150999981677,
+            2912.6147999995737,
+            2789.7271999972872,
+            2983.965999999782
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "73ab7033d6882b45bc286da01b021720e516508f82749db546e96bb2538e5b65",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256",
+          "execution": {
+            "counts": {
+              "bindings": 1,
+              "typed_fetched": 300000,
+              "logical_yielded": 300000,
+              "json_decodes": 300000,
+              "distinct_time_candidate_samples": 300000,
+              "scope": "untimed pass: cursor projection rows can repeat a physical sample across bindings; distinct_time_candidate_samples counts dataset/time candidates, not SQLite pages or rows examined"
+            },
+            "statements": [
+              {
+                "sql": "select * from projects where id = 'project_dc8b870f5bc7'",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SEARCH projects USING INDEX sqlite_autoindex_projects_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT i.* FROM typed_indexes i JOIN recordings r ON r.id = i.recording_id WHERE r.project_id = 'project_dc8b870f5bc7' AND i.recording_id IN ('recording_b0329d68d4fe')",
+                "explain": [
+                  [
+                    5,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    14,
+                    0,
+                    0,
+                    "SEARCH i USING INDEX sqlite_autoindex_typed_indexes_1 (recording_id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT qr.*, coalesce(o.sample_seq, qr.rowid) AS _sample_seq, coalesce(o.binding_seq, 0) AS _binding_seq FROM query_rows qr JOIN recordings r ON r.id = qr.recording_id LEFT JOIN typed_legacy_order o ON o.query_rowid = qr.rowid WHERE r.project_id = 'project_dc8b870f5bc7' AND qr.recording_id in ('recording_b0329d68d4fe') AND qr.semantic_type = 'state' AND qr.time is not null ORDER BY qr.recording_id, qr.time, qr.entity_path, qr.key, _sample_seq, _binding_seq",
+                "explain": [
+                  [
+                    7,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    15,
+                    0,
+                    0,
+                    "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "SEARCH o USING INTEGER PRIMARY KEY (rowid=?) LEFT-JOIN"
+                  ],
+                  [
+                    56,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT qr.*, d.schema_id, s.family FROM typed_bindings qr JOIN recordings r ON r.id = qr.recording_id JOIN typed_datasets d ON d.id = qr.dataset_id JOIN typed_schemas s ON s.id = d.schema_id WHERE r.project_id = 'project_dc8b870f5bc7' AND qr.recording_id in ('recording_b0329d68d4fe') AND qr.semantic_type = 'state'",
+                "explain": [
+                  [
+                    7,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    15,
+                    0,
+                    0,
+                    "SCAN qr"
+                  ],
+                  [
+                    21,
+                    0,
+                    0,
+                    "SEARCH d USING INTEGER PRIMARY KEY (rowid=?)"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX sqlite_autoindex_typed_schemas_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, v.value_json AS value FROM typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1 s LEFT JOIN typed_states v ON v.id = s.c0 AND v.dataset_id = s.dataset_id WHERE s.dataset_id = 2 AND s.c0 IS NOT NULL AND s.time IS NOT NULL ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    5,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1_time (dataset_id=? AND time>?)"
+                  ],
+                  [
+                    14,
+                    0,
+                    0,
+                    "SEARCH v USING INTEGER PRIMARY KEY (rowid=?) LEFT-JOIN"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        "custom_scalar_key": {
+          "runs": 5,
+          "min_ms": 17.087000000174157,
+          "mean_ms": 20.320939998782706,
+          "median_ms": 19.48409999749856,
+          "p95_ms": 25.891899997077417,
+          "max_ms": 25.891899997077417,
+          "samples_ms": [
+            25.891899997077417,
+            19.48409999749856,
+            17.468199999711942,
+            17.087000000174157,
+            21.67349999945145
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "5af58804b1be498572e3292ef5c8f33aaa31b782ee34d8cc28806030f73c3909",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256",
+          "execution": {
+            "counts": {
+              "bindings": 1,
+              "typed_fetched": 1000,
+              "logical_yielded": 1000,
+              "json_decodes": 1000,
+              "distinct_time_candidate_samples": 300000,
+              "scope": "untimed pass: cursor projection rows can repeat a physical sample across bindings; distinct_time_candidate_samples counts dataset/time candidates, not SQLite pages or rows examined"
+            },
+            "statements": [
+              {
+                "sql": "select * from projects where id = 'project_dc8b870f5bc7'",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SEARCH projects USING INDEX sqlite_autoindex_projects_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT i.* FROM typed_indexes i JOIN recordings r ON r.id = i.recording_id WHERE r.project_id = 'project_dc8b870f5bc7' AND i.recording_id IN ('recording_b0329d68d4fe')",
+                "explain": [
+                  [
+                    5,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    14,
+                    0,
+                    0,
+                    "SEARCH i USING INDEX sqlite_autoindex_typed_indexes_1 (recording_id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT qr.*, coalesce(o.sample_seq, qr.rowid) AS _sample_seq, coalesce(o.binding_seq, 0) AS _binding_seq FROM query_rows qr JOIN recordings r ON r.id = qr.recording_id LEFT JOIN typed_legacy_order o ON o.query_rowid = qr.rowid WHERE r.project_id = 'project_dc8b870f5bc7' AND qr.recording_id in ('recording_b0329d68d4fe') AND qr.semantic_type in ('scalar','scalar_group') AND instr(datascope_lower(qr.key), 'scalar_000') > 0 ORDER BY qr.recording_id, qr.time, qr.entity_path, qr.key, _sample_seq, _binding_seq",
+                "explain": [
+                  [
+                    7,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    15,
+                    0,
+                    0,
+                    "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)"
+                  ],
+                  [
+                    41,
+                    0,
+                    0,
+                    "SEARCH o USING INTEGER PRIMARY KEY (rowid=?) LEFT-JOIN"
+                  ],
+                  [
+                    75,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT qr.*, d.schema_id, s.family FROM typed_bindings qr JOIN recordings r ON r.id = qr.recording_id JOIN typed_datasets d ON d.id = qr.dataset_id JOIN typed_schemas s ON s.id = d.schema_id WHERE r.project_id = 'project_dc8b870f5bc7' AND qr.recording_id in ('recording_b0329d68d4fe') AND qr.semantic_type in ('scalar','scalar_group') AND instr(datascope_lower(qr.key), 'scalar_000') > 0",
+                "explain": [
+                  [
+                    7,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    15,
+                    0,
+                    0,
+                    "SCAN qr"
+                  ],
+                  [
+                    26,
+                    0,
+                    0,
+                    "SEARCH d USING INTEGER PRIMARY KEY (rowid=?)"
+                  ],
+                  [
+                    29,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX sqlite_autoindex_typed_schemas_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c10 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c10 IS NOT NULL ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=?)"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        "custom_time_range": {
+          "runs": 5,
+          "min_ms": 10.347999996156432,
+          "mean_ms": 11.80070000118576,
+          "median_ms": 12.19350000610575,
+          "p95_ms": 13.020500002312474,
+          "max_ms": 13.020500002312474,
+          "samples_ms": [
+            12.19350000610575,
+            10.814400004164781,
+            13.020500002312474,
+            12.627099997189362,
+            10.347999996156432
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 352,
+          "result_sha256": "0b630e4948d2fdbf8530062eae74193bf6f741084e6bfbe9fab29ec89d461bc4",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256",
+          "execution": {
+            "counts": {
+              "bindings": 32,
+              "typed_fetched": 352,
+              "logical_yielded": 352,
+              "json_decodes": 352,
+              "distinct_time_candidate_samples": 22,
+              "scope": "untimed pass: cursor projection rows can repeat a physical sample across bindings; distinct_time_candidate_samples counts dataset/time candidates, not SQLite pages or rows examined"
+            },
+            "statements": [
+              {
+                "sql": "select * from projects where id = 'project_dc8b870f5bc7'",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SEARCH projects USING INDEX sqlite_autoindex_projects_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT i.* FROM typed_indexes i JOIN recordings r ON r.id = i.recording_id WHERE r.project_id = 'project_dc8b870f5bc7' AND i.recording_id IN ('recording_b0329d68d4fe')",
+                "explain": [
+                  [
+                    5,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    14,
+                    0,
+                    0,
+                    "SEARCH i USING INDEX sqlite_autoindex_typed_indexes_1 (recording_id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT qr.*, coalesce(o.sample_seq, qr.rowid) AS _sample_seq, coalesce(o.binding_seq, 0) AS _binding_seq FROM query_rows qr JOIN recordings r ON r.id = qr.recording_id LEFT JOIN typed_legacy_order o ON o.query_rowid = qr.rowid WHERE r.project_id = 'project_dc8b870f5bc7' AND qr.recording_id in ('recording_b0329d68d4fe') AND qr.time >= 1349.995 AND qr.time <= 1350.045 ORDER BY qr.recording_id, qr.time, qr.entity_path, qr.key, _sample_seq, _binding_seq",
+                "explain": [
+                  [
+                    7,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    15,
+                    0,
+                    0,
+                    "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=?)"
+                  ],
+                  [
+                    26,
+                    0,
+                    0,
+                    "SEARCH o USING INTEGER PRIMARY KEY (rowid=?) LEFT-JOIN"
+                  ],
+                  [
+                    58,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT qr.*, d.schema_id, s.family FROM typed_bindings qr JOIN recordings r ON r.id = qr.recording_id JOIN typed_datasets d ON d.id = qr.dataset_id JOIN typed_schemas s ON s.id = d.schema_id WHERE r.project_id = 'project_dc8b870f5bc7' AND qr.recording_id in ('recording_b0329d68d4fe')",
+                "explain": [
+                  [
+                    7,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    15,
+                    0,
+                    0,
+                    "SCAN qr"
+                  ],
+                  [
+                    19,
+                    0,
+                    0,
+                    "SEARCH d USING INTEGER PRIMARY KEY (rowid=?)"
+                  ],
+                  [
+                    22,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX sqlite_autoindex_typed_schemas_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c0 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c0 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c1 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c1 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c2 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c2 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c3 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c3 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c4 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c4 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c5 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c5 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c6 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c6 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c7 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c7 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c8 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c8 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c9 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c9 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c10 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c10 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c11 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c11 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c12 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c12 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c13 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c13 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c14 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c14 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c15 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c15 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c16 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c16 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c17 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c17 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c18 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c18 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c19 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c19 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c20 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c20 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c21 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c21 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c22 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c22 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c23 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c23 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c24 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c24 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c25 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c25 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c26 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c26 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c27 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c27 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c28 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c28 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c29 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c29 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c30 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c30 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, v.value_json AS value FROM typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1 s LEFT JOIN typed_states v ON v.id = s.c0 AND v.dataset_id = s.dataset_id WHERE s.dataset_id = 2 AND s.c0 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    5,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1_time (dataset_id=? AND time>? AND time<?)"
+                  ],
+                  [
+                    14,
+                    0,
+                    0,
+                    "SEARCH v USING INTEGER PRIMARY KEY (rowid=?) LEFT-JOIN"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        "custom_numeric_threshold": {
+          "runs": 5,
+          "min_ms": 4992.228700000851,
+          "mean_ms": 5322.441720000643,
+          "median_ms": 5227.286000001186,
+          "p95_ms": 5676.9787000012,
+          "max_ms": 5676.9787000012,
+          "samples_ms": [
+            5148.792899999535,
+            5227.286000001186,
+            5566.922300000442,
+            4992.228700000851,
+            5676.9787000012
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "4cf35d6dd7a12f3dd9325d9d354e0816c7465696deb0c91ce21aa691dfc09586",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256",
+          "execution": {
+            "counts": {
+              "bindings": 1,
+              "typed_fetched": 284333,
+              "logical_yielded": 284333,
+              "json_decodes": 284333,
+              "distinct_time_candidate_samples": 300000,
+              "scope": "untimed pass: cursor projection rows can repeat a physical sample across bindings; distinct_time_candidate_samples counts dataset/time candidates, not SQLite pages or rows examined"
+            },
+            "statements": [
+              {
+                "sql": "select * from projects where id = 'project_dc8b870f5bc7'",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SEARCH projects USING INDEX sqlite_autoindex_projects_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT i.* FROM typed_indexes i JOIN recordings r ON r.id = i.recording_id WHERE r.project_id = 'project_dc8b870f5bc7' AND i.recording_id IN ('recording_b0329d68d4fe')",
+                "explain": [
+                  [
+                    5,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    14,
+                    0,
+                    0,
+                    "SEARCH i USING INDEX sqlite_autoindex_typed_indexes_1 (recording_id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT qr.*, coalesce(o.sample_seq, qr.rowid) AS _sample_seq, coalesce(o.binding_seq, 0) AS _binding_seq FROM query_rows qr JOIN recordings r ON r.id = qr.recording_id LEFT JOIN typed_legacy_order o ON o.query_rowid = qr.rowid WHERE r.project_id = 'project_dc8b870f5bc7' AND qr.recording_id in ('recording_b0329d68d4fe') AND qr.semantic_type in ('scalar','scalar_group') AND instr(datascope_lower(qr.key), 'battery') > 0 ORDER BY qr.recording_id, qr.time, qr.entity_path, qr.key, _sample_seq, _binding_seq",
+                "explain": [
+                  [
+                    7,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    15,
+                    0,
+                    0,
+                    "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)"
+                  ],
+                  [
+                    41,
+                    0,
+                    0,
+                    "SEARCH o USING INTEGER PRIMARY KEY (rowid=?) LEFT-JOIN"
+                  ],
+                  [
+                    75,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT qr.*, d.schema_id, s.family FROM typed_bindings qr JOIN recordings r ON r.id = qr.recording_id JOIN typed_datasets d ON d.id = qr.dataset_id JOIN typed_schemas s ON s.id = d.schema_id WHERE r.project_id = 'project_dc8b870f5bc7' AND qr.recording_id in ('recording_b0329d68d4fe') AND qr.semantic_type in ('scalar','scalar_group') AND instr(datascope_lower(qr.key), 'battery') > 0",
+                "explain": [
+                  [
+                    7,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    15,
+                    0,
+                    0,
+                    "SCAN qr"
+                  ],
+                  [
+                    26,
+                    0,
+                    0,
+                    "SEARCH d USING INTEGER PRIMARY KEY (rowid=?)"
+                  ],
+                  [
+                    29,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX sqlite_autoindex_typed_schemas_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c7 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c7 IS NOT NULL ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=?)"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        "compare": {
+          "runs": 5,
+          "min_ms": 9923.094099998707,
+          "mean_ms": 10986.348520001047,
+          "median_ms": 11097.60350000579,
+          "p95_ms": 11570.044300002337,
+          "max_ms": 11570.044300002337,
+          "samples_ms": [
+            11097.60350000579,
+            11434.162400000787,
+            11570.044300002337,
+            10906.838299997617,
+            9923.094099998707
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 4,
+          "result_sha256": "32eca579996163fb70f1fa21d6628af5a794f05e40ea849d14e1d04060856064",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256",
+          "execution": {
+            "counts": {
+              "bindings": 4,
+              "typed_fetched": 602000,
+              "logical_yielded": 602000,
+              "json_decodes": 1204000,
+              "distinct_time_candidate_samples": 301000,
+              "scope": "untimed pass: cursor projection rows can repeat a physical sample across bindings; distinct_time_candidate_samples counts dataset/time candidates, not SQLite pages or rows examined"
+            },
+            "statements": [
+              {
+                "sql": "select * from projects where id = 'project_dc8b870f5bc7'",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SEARCH projects USING INDEX sqlite_autoindex_projects_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT i.* FROM typed_indexes i JOIN recordings r ON r.id = i.recording_id WHERE r.project_id = 'project_dc8b870f5bc7' AND i.recording_id IN ('recording_b0329d68d4fe','recording_c073fe8bb68f')",
+                "explain": [
+                  [
+                    5,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    29,
+                    0,
+                    0,
+                    "SEARCH i USING INDEX sqlite_autoindex_typed_indexes_1 (recording_id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT qr.*, coalesce(o.sample_seq, qr.rowid) AS _sample_seq, coalesce(o.binding_seq, 0) AS _binding_seq FROM query_rows qr JOIN recordings r ON r.id = qr.recording_id LEFT JOIN typed_legacy_order o ON o.query_rowid = qr.rowid WHERE r.project_id = 'project_dc8b870f5bc7' AND qr.recording_id in ('recording_b0329d68d4fe','recording_c073fe8bb68f') AND qr.semantic_type in ('scalar','scalar_group','state') AND ((lower(qr.key) like '%battery%' or lower(qr.entity_path) like '%battery%') or (lower(qr.key) like '%temperature%' or lower(qr.entity_path) like '%temperature%')) ORDER BY qr.recording_id, qr.time, qr.entity_path, qr.key, _sample_seq, _binding_seq",
+                "explain": [
+                  [
+                    7,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    31,
+                    0,
+                    0,
+                    "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)"
+                  ],
+                  [
+                    73,
+                    0,
+                    0,
+                    "SEARCH o USING INTEGER PRIMARY KEY (rowid=?) LEFT-JOIN"
+                  ],
+                  [
+                    102,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT qr.*, d.schema_id, s.family FROM typed_bindings qr JOIN recordings r ON r.id = qr.recording_id JOIN typed_datasets d ON d.id = qr.dataset_id JOIN typed_schemas s ON s.id = d.schema_id WHERE r.project_id = 'project_dc8b870f5bc7' AND qr.recording_id in ('recording_b0329d68d4fe','recording_c073fe8bb68f') AND qr.semantic_type in ('scalar','scalar_group','state') AND ((lower(qr.key) like '%battery%' or lower(qr.entity_path) like '%battery%') or (lower(qr.key) like '%temperature%' or lower(qr.entity_path) like '%temperature%'))",
+                "explain": [
+                  [
+                    7,
+                    0,
+                    0,
+                    "SCAN qr"
+                  ],
+                  [
+                    45,
+                    0,
+                    0,
+                    "SEARCH d USING INTEGER PRIMARY KEY (rowid=?)"
+                  ],
+                  [
+                    48,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    55,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX sqlite_autoindex_typed_schemas_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c6 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c6 IS NOT NULL ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c7 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c7 IS NOT NULL ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c6 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 3 AND s.c6 IS NOT NULL ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c7 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 3 AND s.c7 IS NOT NULL ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=?)"
+                  ]
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "environment": {
+        "platform": "Windows-10-10.0.26300-SP0",
+        "python": "3.11.5 (tags/v3.11.5:cce6ba9, Aug 24 2023, 14:38:34) [MSC v.1936 64 bit (AMD64)]",
+        "cpu": "13th Gen Intel(R) Core(TM) i9-13900HX",
+        "logical_cpus": 32,
+        "physical_cpus": 24,
+        "memory_gb": 16.90710016,
+        "available_memory_gb_at_start": 4.612333568,
+        "datascope_version": "0.4.0",
+        "git_commit": "1bca1b5dc04bd9d99e3fe745b798d2d3b9d5c58a",
+        "git_dirty": true,
+        "benchmark_code_sha256": "13561136fe4de69d3d069e68ff1914cb1e4f40a33e7aca0c1beab7c2c68d72a4",
+        "packages": {
+          "datascope-core": "0.4.0",
+          "pandas": "2.3.3",
+          "numpy": "2.4.6",
+          "rerun-sdk": "0.33.1",
+          "psutil": "7.2.2",
+          "pyarrow": "25.0.1"
+        },
+        "sqlite_version": "3.42.0"
+      },
+      "prepare_ms": 52272.1842999963,
+      "storage": {
+        "database_bytes": 115220480,
+        "objects": null,
+        "sample_indexes": [
+          {
+            "name": "typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1_time",
+            "sql": "CREATE INDEX typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1_time ON typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1 (dataset_id, time, sample_seq)"
+          },
+          {
+            "name": "typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time",
+            "sql": "CREATE INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time ON typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad (dataset_id, time, sample_seq)"
+          }
+        ],
+        "builds": [
+          {
+            "storage": "typed_sqlite",
+            "format_version": 1,
+            "preflight_ms": 590.3489999982412,
+            "write_ms": 49413.44850000314,
+            "index_ms": 756.1411999995471,
+            "index_build_allocated_bytes": 13418496,
+            "source_samples": 300000,
+            "physical_sample_rows": 600000,
+            "typed_logical_rows": 9600000,
+            "eav_rows": 0,
+            "fallback_streams": {},
+            "sample_tables": [
+              "typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad",
+              "typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1"
+            ]
+          },
+          {
+            "storage": "typed_sqlite",
+            "format_version": 1,
+            "preflight_ms": 13.970200001494959,
+            "write_ms": 127.53170000360114,
+            "index_ms": 73.78690000041388,
+            "index_build_allocated_bytes": 0,
+            "source_samples": 1000,
+            "physical_sample_rows": 2000,
+            "typed_logical_rows": 32000,
+            "eav_rows": 0,
+            "fallback_streams": {},
+            "sample_tables": [
+              "typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad",
+              "typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1"
+            ]
+          }
+        ],
+        "eav_rows": 0,
+        "physical_sample_rows": 602000,
+        "typed_logical_rows": 9632000,
+        "writer_counts_match_sql": true,
+        "scope": "checkpointed whole catalog; includes metadata, registry, dictionaries and all indexes; excludes CSV/RRD/RBL"
+      },
+      "memory": {
+        "method": "psutil process RSS polling; includes native allocations",
+        "sample_interval_ms": 10.0,
+        "peak_rss_mb": 377.716736,
+        "os_peak_rss_mb": 378.32704,
+        "rss_before_mb": 99.18464,
+        "rss_after_mb": 134.18496,
+        "stages": {
+          "production_index_build": {
+            "elapsed_ms": 52038.32859999966,
+            "rss_before_mb": 100.114432,
+            "rss_after_mb": 111.57504,
+            "peak_rss_mb": 168.062976
+          },
+          "query/typed_time/find_errors": {
+            "elapsed_ms": 14463.187400004244,
+            "rss_before_mb": 111.190016,
+            "rss_after_mb": 111.673344,
+            "peak_rss_mb": 113.545216
+          },
+          "query/typed_time/low_battery": {
+            "elapsed_ms": 25206.68940000178,
+            "rss_before_mb": 110.94016,
+            "rss_after_mb": 111.607808,
+            "peak_rss_mb": 113.29536
+          },
+          "query/typed_time/state_duration": {
+            "elapsed_ms": 18296.26780000399,
+            "rss_before_mb": 110.968832,
+            "rss_after_mb": 129.302528,
+            "peak_rss_mb": 377.556992
+          },
+          "query/typed_time/custom_scalar_key": {
+            "elapsed_ms": 144.1008999972837,
+            "rss_before_mb": 131.497984,
+            "rss_after_mb": 126.291968,
+            "peak_rss_mb": 131.514368
+          },
+          "query/typed_time/custom_time_range": {
+            "elapsed_ms": 80.45580000180053,
+            "rss_before_mb": 124.739584,
+            "rss_after_mb": 125.751296,
+            "peak_rss_mb": 125.751296
+          },
+          "query/typed_time/custom_numeric_threshold": {
+            "elapsed_ms": 31906.445900000108,
+            "rss_before_mb": 125.8496,
+            "rss_after_mb": 125.17376,
+            "peak_rss_mb": 127.885312
+          },
+          "query/typed_time/compare": {
+            "elapsed_ms": 65601.48710000067,
+            "rss_before_mb": 124.145664,
+            "rss_after_mb": 137.3184,
+            "peak_rss_mb": 375.083008
+          }
+        },
+        "scope": "this process; child processes and system page cache are excluded"
+      }
+    },
+    "typed_none": {
+      "backend": "typed_none",
+      "status": "succeeded",
+      "queries": {
+        "find_errors": {
+          "runs": 5,
+          "min_ms": 1955.2905000018654,
+          "mean_ms": 2133.693080001103,
+          "median_ms": 2178.0275000055553,
+          "p95_ms": 2277.4133999992046,
+          "max_ms": 2277.4133999992046,
+          "samples_ms": [
+            1955.2905000018654,
+            2277.4133999992046,
+            2194.5498999994015,
+            2063.1840999994893,
+            2178.0275000055553
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "af81b8c0613082892b99f3462e58255993d627f85f06450254bc21f70d00cccc",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256",
+          "execution": {
+            "counts": {
+              "bindings": 1,
+              "typed_fetched": 255975,
+              "logical_yielded": 255975,
+              "json_decodes": 256975,
+              "distinct_time_candidate_samples": 300000,
+              "scope": "untimed pass: cursor projection rows can repeat a physical sample across bindings; distinct_time_candidate_samples counts dataset/time candidates, not SQLite pages or rows examined"
+            },
+            "statements": [
+              {
+                "sql": "select * from projects where id = 'project_dc8b870f5bc7'",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SEARCH projects USING INDEX sqlite_autoindex_projects_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT i.* FROM typed_indexes i JOIN recordings r ON r.id = i.recording_id WHERE r.project_id = 'project_dc8b870f5bc7' AND i.recording_id IN ('recording_b0329d68d4fe')",
+                "explain": [
+                  [
+                    5,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    14,
+                    0,
+                    0,
+                    "SEARCH i USING INDEX sqlite_autoindex_typed_indexes_1 (recording_id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT qr.*, coalesce(o.sample_seq, qr.rowid) AS _sample_seq, coalesce(o.binding_seq, 0) AS _binding_seq FROM query_rows qr JOIN recordings r ON r.id = qr.recording_id LEFT JOIN typed_legacy_order o ON o.query_rowid = qr.rowid WHERE r.project_id = 'project_dc8b870f5bc7' AND qr.recording_id in ('recording_b0329d68d4fe') AND qr.semantic_type in ('text_log', 'state') ORDER BY qr.recording_id, qr.time, qr.entity_path, qr.key, _sample_seq, _binding_seq",
+                "explain": [
+                  [
+                    7,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    15,
+                    0,
+                    0,
+                    "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)"
+                  ],
+                  [
+                    37,
+                    0,
+                    0,
+                    "SEARCH o USING INTEGER PRIMARY KEY (rowid=?) LEFT-JOIN"
+                  ],
+                  [
+                    71,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT qr.*, d.schema_id, s.family FROM typed_bindings qr JOIN recordings r ON r.id = qr.recording_id JOIN typed_datasets d ON d.id = qr.dataset_id JOIN typed_schemas s ON s.id = d.schema_id WHERE r.project_id = 'project_dc8b870f5bc7' AND qr.recording_id in ('recording_b0329d68d4fe') AND qr.semantic_type in ('text_log', 'state')",
+                "explain": [
+                  [
+                    7,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    15,
+                    0,
+                    0,
+                    "SCAN qr"
+                  ],
+                  [
+                    22,
+                    0,
+                    0,
+                    "SEARCH d USING INTEGER PRIMARY KEY (rowid=?)"
+                  ],
+                  [
+                    25,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX sqlite_autoindex_typed_schemas_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, v.value_json AS value FROM typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1 s LEFT JOIN typed_states v ON v.id = s.c0 AND v.dataset_id = s.dataset_id WHERE s.dataset_id = 2 AND s.c0 IS NOT NULL ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    10,
+                    0,
+                    0,
+                    "SEARCH v USING INTEGER PRIMARY KEY (rowid=?) LEFT-JOIN"
+                  ],
+                  [
+                    28,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        "low_battery": {
+          "runs": 5,
+          "min_ms": 3227.8263999978662,
+          "mean_ms": 3442.160879999574,
+          "median_ms": 3301.8534000002546,
+          "p95_ms": 3880.9136999989278,
+          "max_ms": 3880.9136999989278,
+          "samples_ms": [
+            3227.8263999978662,
+            3301.8534000002546,
+            3566.791099998227,
+            3880.9136999989278,
+            3233.4198000025935
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "5577b69d322b3ea7f44e14d6cd08f443f8d41380a235ff67018afa35dc3cc7fe",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256",
+          "execution": {
+            "counts": {
+              "bindings": 1,
+              "typed_fetched": 251000,
+              "logical_yielded": 251000,
+              "json_decodes": 252000,
+              "distinct_time_candidate_samples": 300000,
+              "scope": "untimed pass: cursor projection rows can repeat a physical sample across bindings; distinct_time_candidate_samples counts dataset/time candidates, not SQLite pages or rows examined"
+            },
+            "statements": [
+              {
+                "sql": "select * from projects where id = 'project_dc8b870f5bc7'",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SEARCH projects USING INDEX sqlite_autoindex_projects_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT i.* FROM typed_indexes i JOIN recordings r ON r.id = i.recording_id WHERE r.project_id = 'project_dc8b870f5bc7' AND i.recording_id IN ('recording_b0329d68d4fe')",
+                "explain": [
+                  [
+                    5,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    14,
+                    0,
+                    0,
+                    "SEARCH i USING INDEX sqlite_autoindex_typed_indexes_1 (recording_id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT qr.*, coalesce(o.sample_seq, qr.rowid) AS _sample_seq, coalesce(o.binding_seq, 0) AS _binding_seq FROM query_rows qr JOIN recordings r ON r.id = qr.recording_id LEFT JOIN typed_legacy_order o ON o.query_rowid = qr.rowid WHERE r.project_id = 'project_dc8b870f5bc7' AND qr.recording_id in ('recording_b0329d68d4fe') AND qr.semantic_type in ('scalar', 'scalar_group') AND (lower(qr.key) like '%battery%' or lower(qr.entity_path) like '%battery%') ORDER BY qr.recording_id, qr.time, qr.entity_path, qr.key, _sample_seq, _binding_seq",
+                "explain": [
+                  [
+                    7,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    15,
+                    0,
+                    0,
+                    "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)"
+                  ],
+                  [
+                    45,
+                    0,
+                    0,
+                    "SEARCH o USING INTEGER PRIMARY KEY (rowid=?) LEFT-JOIN"
+                  ],
+                  [
+                    79,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT qr.*, d.schema_id, s.family FROM typed_bindings qr JOIN recordings r ON r.id = qr.recording_id JOIN typed_datasets d ON d.id = qr.dataset_id JOIN typed_schemas s ON s.id = d.schema_id WHERE r.project_id = 'project_dc8b870f5bc7' AND qr.recording_id in ('recording_b0329d68d4fe') AND qr.semantic_type in ('scalar', 'scalar_group') AND (lower(qr.key) like '%battery%' or lower(qr.entity_path) like '%battery%')",
+                "explain": [
+                  [
+                    7,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    15,
+                    0,
+                    0,
+                    "SCAN qr"
+                  ],
+                  [
+                    30,
+                    0,
+                    0,
+                    "SEARCH d USING INTEGER PRIMARY KEY (rowid=?)"
+                  ],
+                  [
+                    33,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX sqlite_autoindex_typed_schemas_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c7 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c7 IS NOT NULL ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    18,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        "state_duration": {
+          "runs": 5,
+          "min_ms": 2618.7493999968865,
+          "mean_ms": 3021.61780000024,
+          "median_ms": 3026.709600002505,
+          "p95_ms": 3389.6112000002177,
+          "max_ms": 3389.6112000002177,
+          "samples_ms": [
+            2955.812899999728,
+            2618.7493999968865,
+            3117.2059000018635,
+            3026.709600002505,
+            3389.6112000002177
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "73ab7033d6882b45bc286da01b021720e516508f82749db546e96bb2538e5b65",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256",
+          "execution": {
+            "counts": {
+              "bindings": 1,
+              "typed_fetched": 300000,
+              "logical_yielded": 300000,
+              "json_decodes": 300000,
+              "distinct_time_candidate_samples": 300000,
+              "scope": "untimed pass: cursor projection rows can repeat a physical sample across bindings; distinct_time_candidate_samples counts dataset/time candidates, not SQLite pages or rows examined"
+            },
+            "statements": [
+              {
+                "sql": "select * from projects where id = 'project_dc8b870f5bc7'",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SEARCH projects USING INDEX sqlite_autoindex_projects_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT i.* FROM typed_indexes i JOIN recordings r ON r.id = i.recording_id WHERE r.project_id = 'project_dc8b870f5bc7' AND i.recording_id IN ('recording_b0329d68d4fe')",
+                "explain": [
+                  [
+                    5,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    14,
+                    0,
+                    0,
+                    "SEARCH i USING INDEX sqlite_autoindex_typed_indexes_1 (recording_id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT qr.*, coalesce(o.sample_seq, qr.rowid) AS _sample_seq, coalesce(o.binding_seq, 0) AS _binding_seq FROM query_rows qr JOIN recordings r ON r.id = qr.recording_id LEFT JOIN typed_legacy_order o ON o.query_rowid = qr.rowid WHERE r.project_id = 'project_dc8b870f5bc7' AND qr.recording_id in ('recording_b0329d68d4fe') AND qr.semantic_type = 'state' AND qr.time is not null ORDER BY qr.recording_id, qr.time, qr.entity_path, qr.key, _sample_seq, _binding_seq",
+                "explain": [
+                  [
+                    7,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    15,
+                    0,
+                    0,
+                    "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "SEARCH o USING INTEGER PRIMARY KEY (rowid=?) LEFT-JOIN"
+                  ],
+                  [
+                    56,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT qr.*, d.schema_id, s.family FROM typed_bindings qr JOIN recordings r ON r.id = qr.recording_id JOIN typed_datasets d ON d.id = qr.dataset_id JOIN typed_schemas s ON s.id = d.schema_id WHERE r.project_id = 'project_dc8b870f5bc7' AND qr.recording_id in ('recording_b0329d68d4fe') AND qr.semantic_type = 'state'",
+                "explain": [
+                  [
+                    7,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    15,
+                    0,
+                    0,
+                    "SCAN qr"
+                  ],
+                  [
+                    21,
+                    0,
+                    0,
+                    "SEARCH d USING INTEGER PRIMARY KEY (rowid=?)"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX sqlite_autoindex_typed_schemas_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, v.value_json AS value FROM typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1 s LEFT JOIN typed_states v ON v.id = s.c0 AND v.dataset_id = s.dataset_id WHERE s.dataset_id = 2 AND s.c0 IS NOT NULL AND s.time IS NOT NULL ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    13,
+                    0,
+                    0,
+                    "SEARCH v USING INTEGER PRIMARY KEY (rowid=?) LEFT-JOIN"
+                  ],
+                  [
+                    31,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        "custom_scalar_key": {
+          "runs": 5,
+          "min_ms": 216.65149999898858,
+          "mean_ms": 263.8978400020278,
+          "median_ms": 263.87850000173785,
+          "p95_ms": 324.0555000011227,
+          "max_ms": 324.0555000011227,
+          "samples_ms": [
+            216.65149999898858,
+            324.0555000011227,
+            279.36700000282144,
+            263.87850000173785,
+            235.53670000546845
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "5af58804b1be498572e3292ef5c8f33aaa31b782ee34d8cc28806030f73c3909",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256",
+          "execution": {
+            "counts": {
+              "bindings": 1,
+              "typed_fetched": 1000,
+              "logical_yielded": 1000,
+              "json_decodes": 1000,
+              "distinct_time_candidate_samples": 300000,
+              "scope": "untimed pass: cursor projection rows can repeat a physical sample across bindings; distinct_time_candidate_samples counts dataset/time candidates, not SQLite pages or rows examined"
+            },
+            "statements": [
+              {
+                "sql": "select * from projects where id = 'project_dc8b870f5bc7'",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SEARCH projects USING INDEX sqlite_autoindex_projects_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT i.* FROM typed_indexes i JOIN recordings r ON r.id = i.recording_id WHERE r.project_id = 'project_dc8b870f5bc7' AND i.recording_id IN ('recording_b0329d68d4fe')",
+                "explain": [
+                  [
+                    5,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    14,
+                    0,
+                    0,
+                    "SEARCH i USING INDEX sqlite_autoindex_typed_indexes_1 (recording_id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT qr.*, coalesce(o.sample_seq, qr.rowid) AS _sample_seq, coalesce(o.binding_seq, 0) AS _binding_seq FROM query_rows qr JOIN recordings r ON r.id = qr.recording_id LEFT JOIN typed_legacy_order o ON o.query_rowid = qr.rowid WHERE r.project_id = 'project_dc8b870f5bc7' AND qr.recording_id in ('recording_b0329d68d4fe') AND qr.semantic_type in ('scalar','scalar_group') AND instr(datascope_lower(qr.key), 'scalar_000') > 0 ORDER BY qr.recording_id, qr.time, qr.entity_path, qr.key, _sample_seq, _binding_seq",
+                "explain": [
+                  [
+                    7,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    15,
+                    0,
+                    0,
+                    "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)"
+                  ],
+                  [
+                    41,
+                    0,
+                    0,
+                    "SEARCH o USING INTEGER PRIMARY KEY (rowid=?) LEFT-JOIN"
+                  ],
+                  [
+                    75,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT qr.*, d.schema_id, s.family FROM typed_bindings qr JOIN recordings r ON r.id = qr.recording_id JOIN typed_datasets d ON d.id = qr.dataset_id JOIN typed_schemas s ON s.id = d.schema_id WHERE r.project_id = 'project_dc8b870f5bc7' AND qr.recording_id in ('recording_b0329d68d4fe') AND qr.semantic_type in ('scalar','scalar_group') AND instr(datascope_lower(qr.key), 'scalar_000') > 0",
+                "explain": [
+                  [
+                    7,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    15,
+                    0,
+                    0,
+                    "SCAN qr"
+                  ],
+                  [
+                    26,
+                    0,
+                    0,
+                    "SEARCH d USING INTEGER PRIMARY KEY (rowid=?)"
+                  ],
+                  [
+                    29,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX sqlite_autoindex_typed_schemas_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c10 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c10 IS NOT NULL ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    18,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        "custom_time_range": {
+          "runs": 5,
+          "min_ms": 4709.659300002386,
+          "mean_ms": 5199.603520000528,
+          "median_ms": 5232.956899999408,
+          "p95_ms": 5590.936199994758,
+          "max_ms": 5590.936199994758,
+          "samples_ms": [
+            4709.659300002386,
+            5232.956899999408,
+            5590.936199994758,
+            5203.031700002612,
+            5261.433500003477
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 352,
+          "result_sha256": "0b630e4948d2fdbf8530062eae74193bf6f741084e6bfbe9fab29ec89d461bc4",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256",
+          "execution": {
+            "counts": {
+              "bindings": 32,
+              "typed_fetched": 352,
+              "logical_yielded": 352,
+              "json_decodes": 352,
+              "distinct_time_candidate_samples": 22,
+              "scope": "untimed pass: cursor projection rows can repeat a physical sample across bindings; distinct_time_candidate_samples counts dataset/time candidates, not SQLite pages or rows examined"
+            },
+            "statements": [
+              {
+                "sql": "select * from projects where id = 'project_dc8b870f5bc7'",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SEARCH projects USING INDEX sqlite_autoindex_projects_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT i.* FROM typed_indexes i JOIN recordings r ON r.id = i.recording_id WHERE r.project_id = 'project_dc8b870f5bc7' AND i.recording_id IN ('recording_b0329d68d4fe')",
+                "explain": [
+                  [
+                    5,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    14,
+                    0,
+                    0,
+                    "SEARCH i USING INDEX sqlite_autoindex_typed_indexes_1 (recording_id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT qr.*, coalesce(o.sample_seq, qr.rowid) AS _sample_seq, coalesce(o.binding_seq, 0) AS _binding_seq FROM query_rows qr JOIN recordings r ON r.id = qr.recording_id LEFT JOIN typed_legacy_order o ON o.query_rowid = qr.rowid WHERE r.project_id = 'project_dc8b870f5bc7' AND qr.recording_id in ('recording_b0329d68d4fe') AND qr.time >= 1349.995 AND qr.time <= 1350.045 ORDER BY qr.recording_id, qr.time, qr.entity_path, qr.key, _sample_seq, _binding_seq",
+                "explain": [
+                  [
+                    7,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    15,
+                    0,
+                    0,
+                    "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=?)"
+                  ],
+                  [
+                    26,
+                    0,
+                    0,
+                    "SEARCH o USING INTEGER PRIMARY KEY (rowid=?) LEFT-JOIN"
+                  ],
+                  [
+                    58,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT qr.*, d.schema_id, s.family FROM typed_bindings qr JOIN recordings r ON r.id = qr.recording_id JOIN typed_datasets d ON d.id = qr.dataset_id JOIN typed_schemas s ON s.id = d.schema_id WHERE r.project_id = 'project_dc8b870f5bc7' AND qr.recording_id in ('recording_b0329d68d4fe')",
+                "explain": [
+                  [
+                    7,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    15,
+                    0,
+                    0,
+                    "SCAN qr"
+                  ],
+                  [
+                    19,
+                    0,
+                    0,
+                    "SEARCH d USING INTEGER PRIMARY KEY (rowid=?)"
+                  ],
+                  [
+                    22,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX sqlite_autoindex_typed_schemas_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c0 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c0 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c1 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c1 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c2 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c2 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c3 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c3 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c4 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c4 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c5 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c5 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c6 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c6 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c7 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c7 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c8 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c8 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c9 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c9 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c10 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c10 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c11 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c11 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c12 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c12 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c13 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c13 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c14 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c14 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c15 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c15 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c16 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c16 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c17 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c17 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c18 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c18 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c19 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c19 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c20 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c20 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c21 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c21 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c22 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c22 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c23 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c23 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c24 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c24 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c25 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c25 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c26 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c26 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c27 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c27 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c28 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c28 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c29 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c29 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    24,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c30 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c30 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    22,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, v.value_json AS value FROM typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1 s LEFT JOIN typed_states v ON v.id = s.c0 AND v.dataset_id = s.dataset_id WHERE s.dataset_id = 2 AND s.c0 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    4,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    16,
+                    0,
+                    0,
+                    "SEARCH v USING INTEGER PRIMARY KEY (rowid=?) LEFT-JOIN"
+                  ],
+                  [
+                    34,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        "custom_numeric_threshold": {
+          "runs": 5,
+          "min_ms": 4987.113100003626,
+          "mean_ms": 5338.024479999149,
+          "median_ms": 5369.580700004008,
+          "p95_ms": 5559.205599995039,
+          "max_ms": 5559.205599995039,
+          "samples_ms": [
+            5559.205599995039,
+            5234.097199994721,
+            5540.12579999835,
+            5369.580700004008,
+            4987.113100003626
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "4cf35d6dd7a12f3dd9325d9d354e0816c7465696deb0c91ce21aa691dfc09586",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256",
+          "execution": {
+            "counts": {
+              "bindings": 1,
+              "typed_fetched": 284333,
+              "logical_yielded": 284333,
+              "json_decodes": 284333,
+              "distinct_time_candidate_samples": 300000,
+              "scope": "untimed pass: cursor projection rows can repeat a physical sample across bindings; distinct_time_candidate_samples counts dataset/time candidates, not SQLite pages or rows examined"
+            },
+            "statements": [
+              {
+                "sql": "select * from projects where id = 'project_dc8b870f5bc7'",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SEARCH projects USING INDEX sqlite_autoindex_projects_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT i.* FROM typed_indexes i JOIN recordings r ON r.id = i.recording_id WHERE r.project_id = 'project_dc8b870f5bc7' AND i.recording_id IN ('recording_b0329d68d4fe')",
+                "explain": [
+                  [
+                    5,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    14,
+                    0,
+                    0,
+                    "SEARCH i USING INDEX sqlite_autoindex_typed_indexes_1 (recording_id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT qr.*, coalesce(o.sample_seq, qr.rowid) AS _sample_seq, coalesce(o.binding_seq, 0) AS _binding_seq FROM query_rows qr JOIN recordings r ON r.id = qr.recording_id LEFT JOIN typed_legacy_order o ON o.query_rowid = qr.rowid WHERE r.project_id = 'project_dc8b870f5bc7' AND qr.recording_id in ('recording_b0329d68d4fe') AND qr.semantic_type in ('scalar','scalar_group') AND instr(datascope_lower(qr.key), 'battery') > 0 ORDER BY qr.recording_id, qr.time, qr.entity_path, qr.key, _sample_seq, _binding_seq",
+                "explain": [
+                  [
+                    7,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    15,
+                    0,
+                    0,
+                    "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)"
+                  ],
+                  [
+                    41,
+                    0,
+                    0,
+                    "SEARCH o USING INTEGER PRIMARY KEY (rowid=?) LEFT-JOIN"
+                  ],
+                  [
+                    75,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT qr.*, d.schema_id, s.family FROM typed_bindings qr JOIN recordings r ON r.id = qr.recording_id JOIN typed_datasets d ON d.id = qr.dataset_id JOIN typed_schemas s ON s.id = d.schema_id WHERE r.project_id = 'project_dc8b870f5bc7' AND qr.recording_id in ('recording_b0329d68d4fe') AND qr.semantic_type in ('scalar','scalar_group') AND instr(datascope_lower(qr.key), 'battery') > 0",
+                "explain": [
+                  [
+                    7,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    15,
+                    0,
+                    0,
+                    "SCAN qr"
+                  ],
+                  [
+                    26,
+                    0,
+                    0,
+                    "SEARCH d USING INTEGER PRIMARY KEY (rowid=?)"
+                  ],
+                  [
+                    29,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX sqlite_autoindex_typed_schemas_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c7 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c7 IS NOT NULL ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    18,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        "compare": {
+          "runs": 5,
+          "min_ms": 11577.771400006895,
+          "mean_ms": 12348.160440000356,
+          "median_ms": 12409.349000001384,
+          "p95_ms": 12918.448399999761,
+          "max_ms": 12918.448399999761,
+          "samples_ms": [
+            11577.771400006895,
+            12409.349000001384,
+            12399.08349999314,
+            12918.448399999761,
+            12436.1499000006
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 4,
+          "result_sha256": "32eca579996163fb70f1fa21d6628af5a794f05e40ea849d14e1d04060856064",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256",
+          "execution": {
+            "counts": {
+              "bindings": 4,
+              "typed_fetched": 602000,
+              "logical_yielded": 602000,
+              "json_decodes": 1204000,
+              "distinct_time_candidate_samples": 301000,
+              "scope": "untimed pass: cursor projection rows can repeat a physical sample across bindings; distinct_time_candidate_samples counts dataset/time candidates, not SQLite pages or rows examined"
+            },
+            "statements": [
+              {
+                "sql": "select * from projects where id = 'project_dc8b870f5bc7'",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SEARCH projects USING INDEX sqlite_autoindex_projects_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT i.* FROM typed_indexes i JOIN recordings r ON r.id = i.recording_id WHERE r.project_id = 'project_dc8b870f5bc7' AND i.recording_id IN ('recording_b0329d68d4fe','recording_c073fe8bb68f')",
+                "explain": [
+                  [
+                    5,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    29,
+                    0,
+                    0,
+                    "SEARCH i USING INDEX sqlite_autoindex_typed_indexes_1 (recording_id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT qr.*, coalesce(o.sample_seq, qr.rowid) AS _sample_seq, coalesce(o.binding_seq, 0) AS _binding_seq FROM query_rows qr JOIN recordings r ON r.id = qr.recording_id LEFT JOIN typed_legacy_order o ON o.query_rowid = qr.rowid WHERE r.project_id = 'project_dc8b870f5bc7' AND qr.recording_id in ('recording_b0329d68d4fe','recording_c073fe8bb68f') AND qr.semantic_type in ('scalar','scalar_group','state') AND ((lower(qr.key) like '%battery%' or lower(qr.entity_path) like '%battery%') or (lower(qr.key) like '%temperature%' or lower(qr.entity_path) like '%temperature%')) ORDER BY qr.recording_id, qr.time, qr.entity_path, qr.key, _sample_seq, _binding_seq",
+                "explain": [
+                  [
+                    7,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    31,
+                    0,
+                    0,
+                    "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)"
+                  ],
+                  [
+                    73,
+                    0,
+                    0,
+                    "SEARCH o USING INTEGER PRIMARY KEY (rowid=?) LEFT-JOIN"
+                  ],
+                  [
+                    102,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT qr.*, d.schema_id, s.family FROM typed_bindings qr JOIN recordings r ON r.id = qr.recording_id JOIN typed_datasets d ON d.id = qr.dataset_id JOIN typed_schemas s ON s.id = d.schema_id WHERE r.project_id = 'project_dc8b870f5bc7' AND qr.recording_id in ('recording_b0329d68d4fe','recording_c073fe8bb68f') AND qr.semantic_type in ('scalar','scalar_group','state') AND ((lower(qr.key) like '%battery%' or lower(qr.entity_path) like '%battery%') or (lower(qr.key) like '%temperature%' or lower(qr.entity_path) like '%temperature%'))",
+                "explain": [
+                  [
+                    7,
+                    0,
+                    0,
+                    "SCAN qr"
+                  ],
+                  [
+                    45,
+                    0,
+                    0,
+                    "SEARCH d USING INTEGER PRIMARY KEY (rowid=?)"
+                  ],
+                  [
+                    48,
+                    0,
+                    0,
+                    "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                  ],
+                  [
+                    55,
+                    0,
+                    0,
+                    "SEARCH s USING INDEX sqlite_autoindex_typed_schemas_1 (id=?)"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c6 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c6 IS NOT NULL ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    18,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c7 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c7 IS NOT NULL ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    18,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c6 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 3 AND s.c6 IS NOT NULL ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    18,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              },
+              {
+                "sql": "SELECT s.time, s.sample_seq, s.c7 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 3 AND s.c7 IS NOT NULL ORDER BY s.time, s.sample_seq",
+                "explain": [
+                  [
+                    3,
+                    0,
+                    0,
+                    "SCAN s"
+                  ],
+                  [
+                    18,
+                    0,
+                    0,
+                    "USE TEMP B-TREE FOR ORDER BY"
+                  ]
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "environment": {
+        "platform": "Windows-10-10.0.26300-SP0",
+        "python": "3.11.5 (tags/v3.11.5:cce6ba9, Aug 24 2023, 14:38:34) [MSC v.1936 64 bit (AMD64)]",
+        "cpu": "13th Gen Intel(R) Core(TM) i9-13900HX",
+        "logical_cpus": 32,
+        "physical_cpus": 24,
+        "memory_gb": 16.90710016,
+        "available_memory_gb_at_start": 4.616073216,
+        "datascope_version": "0.4.0",
+        "git_commit": "1bca1b5dc04bd9d99e3fe745b798d2d3b9d5c58a",
+        "git_dirty": true,
+        "benchmark_code_sha256": "95b0bb99a00d0ab0fc98099690b577eda9825979aa77a81d4b988a6b0dd5230b",
+        "packages": {
+          "datascope-core": "0.4.0",
+          "pandas": "2.3.3",
+          "numpy": "2.4.6",
+          "rerun-sdk": "0.33.1",
+          "psutil": "7.2.2",
+          "pyarrow": "25.0.1"
+        },
+        "sqlite_version": "3.42.0"
+      },
+      "prepare_ms": 44861.901399999624,
+      "storage": {
+        "database_bytes": 101752832,
+        "objects": null,
+        "sample_indexes": [],
+        "builds": [
+          {
+            "storage": "typed_sqlite",
+            "format_version": 1,
+            "preflight_ms": 592.8418999974383,
+            "write_ms": 42759.12139999855,
+            "index_ms": 78.35789999808185,
+            "index_build_allocated_bytes": 4096,
+            "source_samples": 300000,
+            "physical_sample_rows": 600000,
+            "typed_logical_rows": 9600000,
+            "eav_rows": 0,
+            "fallback_streams": {},
+            "sample_tables": [
+              "typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad",
+              "typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1"
+            ]
+          },
+          {
+            "storage": "typed_sqlite",
+            "format_version": 1,
+            "preflight_ms": 6.119300000136718,
+            "write_ms": 202.64750000205822,
+            "index_ms": 118.86380000214558,
+            "index_build_allocated_bytes": 0,
+            "source_samples": 1000,
+            "physical_sample_rows": 2000,
+            "typed_logical_rows": 32000,
+            "eav_rows": 0,
+            "fallback_streams": {},
+            "sample_tables": [
+              "typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad",
+              "typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1"
+            ]
+          }
+        ],
+        "eav_rows": 0,
+        "physical_sample_rows": 602000,
+        "typed_logical_rows": 9632000,
+        "writer_counts_match_sql": true,
+        "scope": "checkpointed whole catalog; includes metadata, registry, dictionaries and all indexes; excludes CSV/RRD/RBL"
+      },
+      "memory": {
+        "method": "psutil process RSS polling; includes native allocations",
+        "sample_interval_ms": 10.0,
+        "peak_rss_mb": 377.311232,
+        "os_peak_rss_mb": 377.851904,
+        "rss_before_mb": 98.533376,
+        "rss_after_mb": 132.698112,
+        "stages": {
+          "production_index_build": {
+            "elapsed_ms": 44635.83790000121,
+            "rss_before_mb": 99.753984,
+            "rss_after_mb": 108.408832,
+            "peak_rss_mb": 167.022592
+          },
+          "query/typed_none/find_errors": {
+            "elapsed_ms": 12791.456499995547,
+            "rss_before_mb": 108.032,
+            "rss_after_mb": 109.203456,
+            "peak_rss_mb": 112.955392
+          },
+          "query/typed_none/low_battery": {
+            "elapsed_ms": 20856.95680000208,
+            "rss_before_mb": 107.966464,
+            "rss_after_mb": 109.514752,
+            "peak_rss_mb": 113.680384
+          },
+          "query/typed_none/state_duration": {
+            "elapsed_ms": 17895.827300002566,
+            "rss_before_mb": 108.343296,
+            "rss_after_mb": 128.270336,
+            "peak_rss_mb": 377.311232
+          },
+          "query/typed_none/custom_scalar_key": {
+            "elapsed_ms": 1576.479900002596,
+            "rss_before_mb": 123.174912,
+            "rss_after_mb": 123.65824,
+            "peak_rss_mb": 128.421888
+          },
+          "query/typed_none/custom_time_range": {
+            "elapsed_ms": 29885.834100001375,
+            "rss_before_mb": 122.830848,
+            "rss_after_mb": 124.063744,
+            "peak_rss_mb": 126.01344
+          },
+          "query/typed_none/custom_numeric_threshold": {
+            "elapsed_ms": 32066.748199998983,
+            "rss_before_mb": 124.186624,
+            "rss_after_mb": 123.891712,
+            "peak_rss_mb": 129.08544
+          },
+          "query/typed_none/compare": {
+            "elapsed_ms": 73890.27640000131,
+            "rss_before_mb": 123.00288,
+            "rss_after_mb": 136.577024,
+            "peak_rss_mb": 374.624256
+          }
+        },
+        "scope": "this process; child processes and system page cache are excluded"
+      }
+    }
+  },
+  "work": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\typed_storage_20261017_160252_ddb1ad54",
+  "input": {
+    "sources": [
+      {
+        "path": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\benchmark_20261006_024955_baseline_small_index_fixed_295b46c4\\workspace\\projects\\project_dc8b870f5bc7\\raw\\source_9a1a2225232b\\robot.csv",
+        "bytes": 94672760,
+        "sha256": "81fbed270f445e4d1b4bf0a7c81409b92dc25a1f4e2ef3ad25382cfa3c36a2e3"
+      },
+      {
+        "path": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\benchmark_20261006_024955_baseline_small_index_fixed_295b46c4\\workspace\\projects\\project_dc8b870f5bc7\\raw\\source_339b594f44f3\\peer.csv",
+        "bytes": 313054,
+        "sha256": "147c3a941b56a9220e530dae073c93573b3f4347ea79966cd287fa1cdb6c14cb"
+      }
+    ],
+    "config": {
+      "rows": 300000,
+      "frequency_hz": 200.0,
+      "scalar_fields": 30,
+      "state_fields": 1,
+      "seed": 20261006
+    },
+    "logical_samples": 301000,
+    "control": {
+      "baseline": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\baselines\\2026-10-06\\small_index.json",
+      "baseline_sha256": "ba00959ec215b48a523092e9efe16ddd74f27090fb5f67fad6729a8d827bb7cc",
+      "workspace": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\benchmark_20261006_024955_baseline_small_index_fixed_295b46c4\\workspace",
+      "database": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\benchmark_20261006_024955_baseline_small_index_fixed_295b46c4\\workspace\\metadata.sqlite",
+      "database_sha256": "71450030fe143a1545af25d618010742d002aadd3918703145b240f9b2d632c5",
+      "database_bytes": 2478956544,
+      "schema": [
+        [
+          "index",
+          "idx_batch_items_batch_status",
+          "CREATE INDEX idx_batch_items_batch_status\n          on batch_items(batch_id, status, created_at)"
+        ],
+        [
+          "index",
+          "idx_batch_jobs_project_status",
+          "CREATE INDEX idx_batch_jobs_project_status\n          on batch_jobs(project_id, status, created_at)"
+        ],
+        [
+          "index",
+          "idx_diagnostic_exports_project_created",
+          "CREATE INDEX idx_diagnostic_exports_project_created\n          on diagnostic_exports(project_id, created_at)"
+        ],
+        [
+          "index",
+          "idx_jobs_project_status_created",
+          "CREATE INDEX idx_jobs_project_status_created\n          on jobs(project_id, status, created_at)"
+        ],
+        [
+          "index",
+          "idx_jobs_status_created",
+          "CREATE INDEX idx_jobs_status_created\n          on jobs(status, created_at)"
+        ],
+        [
+          "index",
+          "idx_query_rows_key",
+          "CREATE INDEX idx_query_rows_key\n          on query_rows(key)"
+        ],
+        [
+          "index",
+          "idx_query_rows_recording",
+          "CREATE INDEX idx_query_rows_recording\n          on query_rows(recording_id)"
+        ],
+        [
+          "index",
+          "idx_query_rows_recording_semantic_key",
+          "CREATE INDEX idx_query_rows_recording_semantic_key\n          on query_rows(recording_id, semantic_type, key, entity_path, time)"
+        ],
+        [
+          "index",
+          "idx_sources_project_storage",
+          "CREATE INDEX idx_sources_project_storage\n          on sources(project_id, storage_mode, created_at)"
+        ],
+        [
+          "index",
+          "sqlite_autoindex_batch_items_1",
+          null
+        ],
+        [
+          "index",
+          "sqlite_autoindex_batch_jobs_1",
+          null
+        ],
+        [
+          "index",
+          "sqlite_autoindex_diagnostic_exports_1",
+          null
+        ],
+        [
+          "index",
+          "sqlite_autoindex_jobs_1",
+          null
+        ],
+        [
+          "index",
+          "sqlite_autoindex_mapping_template_registry_1",
+          null
+        ],
+        [
+          "index",
+          "sqlite_autoindex_mappings_1",
+          null
+        ],
+        [
+          "index",
+          "sqlite_autoindex_plugins_1",
+          null
+        ],
+        [
+          "index",
+          "sqlite_autoindex_projects_1",
+          null
+        ],
+        [
+          "index",
+          "sqlite_autoindex_query_exports_1",
+          null
+        ],
+        [
+          "index",
+          "sqlite_autoindex_recordings_1",
+          null
+        ],
+        [
+          "index",
+          "sqlite_autoindex_schema_profiles_1",
+          null
+        ],
+        [
+          "index",
+          "sqlite_autoindex_sources_1",
+          null
+        ],
+        [
+          "index",
+          "sqlite_autoindex_streams_1",
+          null
+        ],
+        [
+          "index",
+          "sqlite_autoindex_template_registry_1",
+          null
+        ],
+        [
+          "table",
+          "batch_items",
+          "CREATE TABLE batch_items (\n              id text primary key,\n              batch_id text not null,\n              source_path text not null,\n              source_id text,\n              recording_id text,\n              status text not null,\n              error_message text,\n              attempt integer not null default 1,\n              cancel_requested_at text,\n              created_at text not null,\n              updated_at text not null,\n              foreign key(batch_id) references batch_jobs(id),\n              foreign key(source_id) references sources(id),\n              foreign key(recording_id) references recordings(id)\n            )"
+        ],
+        [
+          "table",
+          "batch_jobs",
+          "CREATE TABLE batch_jobs (\n              id text primary key,\n              project_id text not null,\n              job_id text,\n              status text not null,\n              template_id text not null default 'sensor_monitor',\n              output_prefix text not null default 'batch_run',\n              storage_mode text not null default 'copy',\n              patterns_json text not null default '[]',\n              total integer not null,\n              succeeded integer not null,\n              failed integer not null,\n              cancelled integer not null default 0,\n              created_at text not null,\n              updated_at text not null,\n              foreign key(project_id) references projects(id),\n              foreign key(job_id) references jobs(id)\n            )"
+        ],
+        [
+          "table",
+          "diagnostic_exports",
+          "CREATE TABLE diagnostic_exports (\n              id text primary key,\n              project_id text not null,\n              recording_ids_json text not null default '[]',\n              thresholds_json text not null default '{}',\n              summary_json text not null default '{}',\n              path text not null,\n              format text not null,\n              created_at text not null,\n              foreign key(project_id) references projects(id)\n            )"
+        ],
+        [
+          "table",
+          "jobs",
+          "CREATE TABLE jobs (\n              id text primary key,\n              project_id text not null,\n              type text not null,\n              status text not null,\n              progress real not null,\n              stage text not null default 'queued',\n              log_path text,\n              error_message text,\n              payload_json text not null default '{}',\n              result_json text,\n              error_json text,\n              attempt integer not null default 1,\n              retry_of_job_id text,\n              resource_type text,\n              resource_id text,\n              worker_pid integer,\n              worker_token text,\n              heartbeat_at text,\n              started_at text,\n              finished_at text,\n              cancel_requested_at text,\n              created_at text not null,\n              updated_at text not null,\n              foreign key(project_id) references projects(id),\n              foreign key(retry_of_job_id) references jobs(id)\n            )"
+        ],
+        [
+          "table",
+          "mapping_template_registry",
+          "CREATE TABLE mapping_template_registry (\n              id text primary key,\n              name text not null,\n              version text not null,\n              source_family text not null,\n              visual_template_id text not null,\n              path text not null,\n              config_json text not null,\n              enabled integer not null default 1,\n              installed_at text not null,\n              updated_at text not null\n            )"
+        ],
+        [
+          "table",
+          "mappings",
+          "CREATE TABLE mappings (\n              id text primary key,\n              project_id text not null,\n              source_id text not null,\n              stream_id text,\n              entity_path text,\n              archetype text,\n              config_json text not null,\n              user_confirmed integer not null default 0,\n              path text not null,\n              created_at text not null,\n              updated_at text not null,\n              foreign key(project_id) references projects(id),\n              foreign key(source_id) references sources(id)\n            )"
+        ],
+        [
+          "table",
+          "plugins",
+          "CREATE TABLE plugins (\n              id text primary key,\n              name text not null,\n              version text not null,\n              path text not null,\n              status text not null,\n              manifest_json text not null,\n              installed_at text not null,\n              updated_at text not null\n            )"
+        ],
+        [
+          "table",
+          "projects",
+          "CREATE TABLE projects (\n              id text primary key,\n              name text not null,\n              description text not null default '',\n              workspace_path text not null,\n              created_at text not null,\n              updated_at text not null\n            )"
+        ],
+        [
+          "table",
+          "query_exports",
+          "CREATE TABLE query_exports (\n              id text primary key,\n              project_id text not null,\n              recording_id text,\n              path text not null,\n              format text not null,\n              created_at text not null,\n              foreign key(project_id) references projects(id)\n            )"
+        ],
+        [
+          "table",
+          "query_rows",
+          "CREATE TABLE query_rows (\n              recording_id text not null,\n              source_id text not null,\n              time real,\n              entity_path text not null,\n              semantic_type text not null,\n              key text not null,\n              value_json text not null,\n              foreign key(recording_id) references recordings(id),\n              foreign key(source_id) references sources(id)\n            )"
+        ],
+        [
+          "table",
+          "recordings",
+          "CREATE TABLE recordings (\n              id text primary key,\n              project_id text not null,\n              source_id text,\n              app_id text not null,\n              path text not null,\n              blueprint_id text,\n              blueprint_path text,\n              run_name text not null,\n              tags_json text not null default '[]',\n              params_json text not null default '{}',\n              created_at text not null,\n              foreign key(project_id) references projects(id),\n              foreign key(source_id) references sources(id)\n            )"
+        ],
+        [
+          "table",
+          "schema_profiles",
+          "CREATE TABLE schema_profiles (\n              checksum text primary key,\n              source_type text not null,\n              profile_json text not null,\n              created_at text not null,\n              updated_at text not null\n            )"
+        ],
+        [
+          "table",
+          "sources",
+          "CREATE TABLE sources (\n              id text primary key,\n              project_id text not null,\n              type text not null,\n              uri text not null,\n              checksum text not null,\n              size_bytes integer not null,\n              status text not null,\n              metadata_json text not null default '{}',\n              storage_mode text not null default 'copy',\n              original_uri text,\n              created_at text not null,\n              updated_at text not null,\n              foreign key(project_id) references projects(id)\n            )"
+        ],
+        [
+          "table",
+          "streams",
+          "CREATE TABLE streams (\n              id text not null,\n              source_id text not null,\n              name text not null,\n              semantic_type text not null,\n              fields_json text not null,\n              time_key text,\n              sample_rate real,\n              start_time real,\n              end_time real,\n              confidence real not null,\n              metadata_json text not null default '{}',\n              primary key(id, source_id),\n              foreign key(source_id) references sources(id)\n            )"
+        ],
+        [
+          "table",
+          "template_registry",
+          "CREATE TABLE template_registry (\n              id text primary key,\n              name text not null,\n              version text not null,\n              app_id text not null,\n              source text not null,\n              path text,\n              manifest_json text not null,\n              enabled integer not null default 1,\n              installed_at text not null,\n              updated_at text not null\n            )"
+        ]
+      ],
+      "schema_version": 3,
+      "source": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\benchmark_20261006_024955_baseline_small_index_fixed_295b46c4\\robot.csv",
+      "source_sha256": "81fbed270f445e4d1b4bf0a7c81409b92dc25a1f4e2ef3ad25382cfa3c36a2e3",
+      "source_bytes": 94672760,
+      "dataset": {
+        "rows": 300000,
+        "frequency_hz": 200.0,
+        "scalar_fields": 30,
+        "state_fields": 1,
+        "seed": 20261006,
+        "duration_seconds": 1500.0,
+        "last_timestamp_seconds": 1499.995,
+        "total_columns": 33,
+        "expected_query_rows": 9600000
+      },
+      "primary_query_rows": 9600000,
+      "recording_id": "recording_b0329d68d4fe",
+      "project_id": "project_dc8b870f5bc7"
+    }
+  },
+  "settings": {
+    "runs": 5,
+    "warmups": 1,
+    "limit": 1000,
+    "timing_scope": "public production query; validation, SQL tracing and counting excluded",
+    "none_ablation": "same production writer; suppress only sample CREATE INDEX in owned scratch catalog",
+    "production_files_sha256": {
+      "query.py": "aa29fd585bcc6c7fcf89607271d8ec90ff08285b2f7e3ee40a925ad80b28299c",
+      "query_sql.py": "bd143745c2f33ad6060bf959d1ab48cb76c7da681f7736583c16413c7fb62255",
+      "query_typed.py": "8e992495a3b3cc269952f0b33fd79d38d745039ba592a8ec106036012b628044",
+      "workspace_query.py": "83f35b193f1516055d707e62015764fdd7fd633a91a223d8457ef57ec1985ec8",
+      "workspace_database.py": "10504ad99707fe2ef3b4337d9802c421fc57e1bce9a50f5d02eebdff72c9e768"
+    }
+  },
+  "acceptance": {
+    "gates": {
+      "typed_rows_at_most_two_per_sample": true,
+      "writer_counts_match_sql": true,
+      "all_values_retained": true,
+      "no_eav_fallback": true,
+      "storage_at_most_2x_csv": true,
+      "storage_reduced_at_least_80_percent": true
+    },
+    "storage_amplification": 1.2130282949409688,
+    "storage_reduction": 0.9535205728882676,
+    "query_latency_gates": "not a C2b storage acceptance condition"
+  },
+  "read_only_verification": true,
+  "cleanup": "removed only this run's owned work directory"
+}

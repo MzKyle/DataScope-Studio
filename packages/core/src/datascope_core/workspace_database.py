@@ -1,18 +1,21 @@
 from __future__ import annotations
 
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 from uuid import uuid4
 
+from datascope_core.query_typed import create_typed_registry
 
-SCHEMA_VERSION = 3
+
+SCHEMA_VERSION = 4
 
 
 class WorkspaceDatabaseMixin:
     db_path: Path
 
     def _init_db(self) -> None:
-        with self._connect() as conn:
+        with closing(self._connect()) as conn, conn:
             version = int(conn.execute("pragma user_version").fetchone()[0])
             has_projects = conn.execute(
                 "select 1 from sqlite_master where type = 'table' and name = 'projects'"
@@ -33,6 +36,12 @@ class WorkspaceDatabaseMixin:
                     version = 2
                 if version == 2:
                     self._migrate_v2_to_v3(conn)
+                    version = 3
+                if version == 3:
+                    conn.execute("BEGIN")
+                    create_typed_registry(conn)
+                    conn.execute("pragma user_version = 4")
+            conn.commit()
             conn.execute("pragma journal_mode = WAL")
             conn.execute("pragma synchronous = NORMAL")
 
@@ -296,6 +305,7 @@ class WorkspaceDatabaseMixin:
             """
         )
         _create_indexes(conn)
+        create_typed_registry(conn)
 
     @staticmethod
     def _migrate_v1_to_v2(conn: sqlite3.Connection) -> None:
@@ -363,7 +373,7 @@ class WorkspaceDatabaseMixin:
             """
         )
         _create_indexes(conn)
-        conn.execute(f"pragma user_version = {SCHEMA_VERSION}")
+        conn.execute("pragma user_version = 3")
 
 
 def _create_indexes(conn: sqlite3.Connection) -> None:
