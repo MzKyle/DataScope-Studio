@@ -73,14 +73,14 @@ class CsvAdapter:
         }
 
     def convert(self, request: ConvertRequest) -> None:
-        write_tabular_chunks(
-            pd.read_csv(
-                request.source.path,
-                chunksize=50_000,
-                **_read_csv_kwargs(_source_csv_config(request.source)),
-            ),
-            request,
-        )
+        # Keep pandas' original 50,000-row inference boundaries on every replay.
+        def frames():
+            with pd.read_csv(request.source.path, chunksize=50_000,
+                    **_read_csv_kwargs(_source_csv_config(request.source))) as reader:
+                for frame in reader:
+                    yield frame
+                    del frame
+        write_tabular_chunks(frames(), request, _frame_factory=frames)
 
 
 def read_csv_source(source: SourceInfo, *, nrows: int | None = None) -> pd.DataFrame:

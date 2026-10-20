@@ -430,3 +430,25 @@ def test_diagnostics_grouped_oracle(tmp_path):
     assert grouped_oracle(ReadOnlyWorkspace(root), manifest) == expected
     assert ReadOnlyWorkspace(root).run_diagnostics(manifest['project_id'],
                     [manifest['records'][0]['recording_id']], limit=13) == expected
+def test_rerun_medium_reports_integrity_without_paired_parity(tmp_path, monkeypatch):
+    from argparse import Namespace
+    import json
+    import pytest
+    rr = pytest.importorskip('rerun')
+    if not str(rr.__version__).startswith('0.33.'):
+        pytest.skip('Real SDK 0.33 reader contract')
+    from benchmarks import rerun_build as benchmark
+    # Small orchestration fixture only; never used by archived performance runs.
+    original_inputs = benchmark.fresh_inputs
+    monkeypatch.setitem(benchmark.PRESETS, 'medium', 20)
+    monkeypatch.setattr(benchmark, 'fresh_inputs',
+        lambda work, config, retained: original_inputs(work, config))
+    benchmark.run(Namespace(preset='medium', rows=None, output_dir=tmp_path,
+        phase_c_input=benchmark.REPO/'benchmarks/results/baselines/2026-10-17-phase-c/medium.json',
+        runs=None, warmups=None, profile_only=False, keep_artifacts=False))
+    report = json.loads(next(tmp_path.glob('rerun_build_*.json')).read_text(encoding='utf8'))
+    assert report['status'] == 'succeeded'
+    assert set(report['schemes']) == {'new'}
+    assert report['acceptance']['sdk_decode_complete'] is True
+    assert report['acceptance']['sdk_parity'] is None
+    assert report['schemes']['new']['samples'][0]['validation']['business']['logical_component_rows'] == 640

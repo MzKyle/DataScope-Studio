@@ -66,3 +66,6 @@ benchmarks/results/diagnostics_*.md
 
 # Private planning notes
 软件产品设计.md
+
+benchmarks/results/rerun_build_*.json
+benchmarks/results/rerun_build_*.md

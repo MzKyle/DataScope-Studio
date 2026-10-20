@@ -1,0 +1,319 @@
+{
+  "scope": "separate untimed attribution; standard complete 32-field Smoke CSV; frozen C2c writer",
+  "elapsed_ms": 95310.1364000031,
+  "sections": {
+    "milliseconds": {
+      "sdk_setup": 0.145500001963228,
+      "sdk_calls": 44818.3312034962,
+      "sqlite_load": 93.89789999113418,
+      "csv_read": 55.82590000994969,
+      "time_conversion": 5758.3762993454,
+      "pickle_dumps": 71.11130068369675,
+      "sqlite_sort_fetch": 435.24029885884374,
+      "pickle_loads": 337.8814000461716,
+      "archetype_arrow": 25038.91060645401,
+      "flush_disconnect": 38.740299991331995
+    },
+    "inclusive_milliseconds": {
+      "sdk_setup": 0.145500001963228,
+      "sdk_calls": 44818.3312034962,
+      "sqlite_load": 93.89789999113418,
+      "csv_read": 55.82590000994969,
+      "time_conversion": 5758.3762993454,
+      "pickle_dumps": 71.11130068369675,
+      "sqlite_sort_fetch": 435.24029885884374,
+      "pickle_loads": 337.8814000461716,
+      "archetype_arrow": 25038.91060645401,
+      "flush_disconnect": 38.740299991331995
+    },
+    "calls": {
+      "sdk_setup": 1,
+      "sdk_calls": 1020002,
+      "sqlite_load": 4,
+      "csv_read": 4,
+      "time_conversion": 60000,
+      "pickle_dumps": 30000,
+      "sqlite_sort_fetch": 30002,
+      "pickle_loads": 30000,
+      "archetype_arrow": 960000,
+      "flush_disconnect": 1
+    },
+    "scope": "separate instrumented build; milliseconds are exclusive intervals, inclusive_milliseconds must not be summed; uninstrumented overhead remains; SDK native serialization is included in sdk_calls"
+  },
+  "memory": {
+    "method": "psutil process RSS polling; includes native allocations",
+    "sample_interval_ms": 10.0,
+    "peak_rss_mb": 198.602752,
+    "os_peak_rss_mb": 198.602752,
+    "rss_before_mb": 102.514688,
+    "rss_after_mb": 135.819264,
+    "stages": {},
+    "scope": "this process; child processes and system page cache are excluded"
+  },
+  "source_sha256": "f6d328637d65ddf5d2f5277e507e4142515f96f085559897634601d77d8db895",
+  "writer_sha256": "e554410b3784797bb3820c1a09cd222dacaf6e236d36c02ff25260545f21d1c1",
+  "environment": {
+    "platform": "Windows-10-10.0.26300-SP0",
+    "python": "3.11.5 (tags/v3.11.5:cce6ba9, Aug 24 2023, 14:38:34) [MSC v.1936 64 bit (AMD64)]",
+    "cpu": "13th Gen Intel(R) Core(TM) i9-13900HX",
+    "logical_cpus": 32,
+    "physical_cpus": 24,
+    "memory_gb": 16.90710016,
+    "available_memory_gb_at_start": 6.157963264,
+    "datascope_version": "0.4.0",
+    "git_commit": "98c252c287b24d884badb3cdacc0cdf0f663afc0",
+    "git_dirty": true,
+    "benchmark_code_sha256": "2ae8cede0787b8004e5ed80209fcff00f06dddaeba36d4823ddda6a981fb6ddf",
+    "packages": {
+      "datascope-core": "0.4.0",
+      "pandas": "2.3.3",
+      "numpy": "2.4.6",
+      "rerun-sdk": "0.33.1",
+      "psutil": "7.2.2",
+      "pyarrow": "25.0.1"
+    },
+    "sqlite_version": "3.42.0"
+  },
+  "rows": 30000,
+  "fields": 32,
+  "legacy_adapter": "Only close the SQLite sort connection/cursor before Windows unlink; frozen source/rows/order/pickle/SDK unchanged",
+  "verify": {
+    "returncode": 0,
+    "stdout": "",
+    "stderr": "1 file verified without error.\n"
+  },
+  "rrd": {
+    "sha256": "5eb4054f0e7a4b155e2f482c264c155f18c085c86471335415df1a4b8df2ac47",
+    "groups": [
+      {
+        "entity": "/metrics/battery",
+        "component": "Scalars:scalars",
+        "type": "float64",
+        "rows": 30000,
+        "sha256": "1606901987cf6b267cef9d01e2158f2fb76a4d43a70809ca258dfa37b50541a8"
+      },
+      {
+        "entity": "/metrics/current",
+        "component": "Scalars:scalars",
+        "type": "float64",
+        "rows": 30000,
+        "sha256": "ef7f8a89323e03599c68a60cabddb864657c64f7d1f7a493ae514eadba9d63a5"
+      },
+      {
+        "entity": "/metrics/error_code",
+        "component": "Scalars:scalars",
+        "type": "float64",
+        "rows": 30000,
+        "sha256": "17f8e8679213091e104d9e8291b522ff98982ae715aac2d4db29e02b74959e86"
+      },
+      {
+        "entity": "/metrics/position/position_x",
+        "component": "Scalars:scalars",
+        "type": "float64",
+        "rows": 30000,
+        "sha256": "b7c4ee26ef2fe2865d6e7707c38dbd4969c118d1d3afd8de8aa754ebd3b1aa92"
+      },
+      {
+        "entity": "/metrics/position/position_y",
+        "component": "Scalars:scalars",
+        "type": "float64",
+        "rows": 30000,
+        "sha256": "16e68825ed0f3dd1d87eca10123b8c25023d9d7f211c6378f6489de33cf01320"
+      },
+      {
+        "entity": "/metrics/position/position_z",
+        "component": "Scalars:scalars",
+        "type": "float64",
+        "rows": 30000,
+        "sha256": "3cda535f503281c7486607fd41dd993767d41f9514afb1d44cc742835b027ecf"
+      },
+      {
+        "entity": "/metrics/scalar_000",
+        "component": "Scalars:scalars",
+        "type": "float64",
+        "rows": 30000,
+        "sha256": "d85d83ad93b507c67d32e809a26c5cd97c33c5dae2af89049d230d8594d2e4c4"
+      },
+      {
+        "entity": "/metrics/scalar_001",
+        "component": "Scalars:scalars",
+        "type": "float64",
+        "rows": 30000,
+        "sha256": "58c4eed76f31db0a7a8dcc5727325685e3da5efea86029d5b03ed1237f83208a"
+      },
+      {
+        "entity": "/metrics/scalar_002",
+        "component": "Scalars:scalars",
+        "type": "float64",
+        "rows": 30000,
+        "sha256": "1d063bced2bf8af856a6d453f38f8036eb436fec3e8056b1c7e68ff4fb02412b"
+      },
+      {
+        "entity": "/metrics/scalar_003",
+        "component": "Scalars:scalars",
+        "type": "float64",
+        "rows": 30000,
+        "sha256": "9d21fbf9bc126e3fc6737c466942d9d48019780f4c48330cfb9a13cb0d6bfeb4"
+      },
+      {
+        "entity": "/metrics/scalar_004",
+        "component": "Scalars:scalars",
+        "type": "float64",
+        "rows": 30000,
+        "sha256": "d4597d1c0a7f80dee4bd0b9b84dd458c6997303e1dd06b285a1941866ef9fd7a"
+      },
+      {
+        "entity": "/metrics/scalar_005",
+        "component": "Scalars:scalars",
+        "type": "float64",
+        "rows": 30000,
+        "sha256": "2a9ebb4a407f932343d8d41c5c27a98e36e597027c4c2663ab1ddac2817048c3"
+      },
+      {
+        "entity": "/metrics/scalar_006",
+        "component": "Scalars:scalars",
+        "type": "float64",
+        "rows": 30000,
+        "sha256": "696513fe96cc4341da9b82c2797a4ff04bb0d2c4e9a8f26c0d58da42ae43fd57"
+      },
+      {
+        "entity": "/metrics/scalar_007",
+        "component": "Scalars:scalars",
+        "type": "float64",
+        "rows": 30000,
+        "sha256": "81236f822c49ffc01ee431a7eebb69aa5221ffcd9443a90d96bf37f12dea9e60"
+      },
+      {
+        "entity": "/metrics/scalar_008",
+        "component": "Scalars:scalars",
+        "type": "float64",
+        "rows": 30000,
+        "sha256": "6a53e9c9cec28b88c55ece037059fce5934c3e0a8b167a70e6e7c721ef0b1ab9"
+      },
+      {
+        "entity": "/metrics/scalar_009",
+        "component": "Scalars:scalars",
+        "type": "float64",
+        "rows": 30000,
+        "sha256": "f7eecfa21626ef6977af11aae48a19f55df68c297ec47598b344e490f8562b5f"
+      },
+      {
+        "entity": "/metrics/scalar_010",
+        "component": "Scalars:scalars",
+        "type": "float64",
+        "rows": 30000,
+        "sha256": "52528d7dd210aa3e6cdeb25e26fbb4e452e146b22b4f063ed197fbc8f3475c49"
+      },
+      {
+        "entity": "/metrics/scalar_011",
+        "component": "Scalars:scalars",
+        "type": "float64",
+        "rows": 30000,
+        "sha256": "284afaa317edfc97bac89d654d2b279a197c9ebceb0a5d2dae43a03707f9cd2a"
+      },
+      {
+        "entity": "/metrics/scalar_012",
+        "component": "Scalars:scalars",
+        "type": "float64",
+        "rows": 30000,
+        "sha256": "da036e360d19eb343c015061b895ebbce4624bff0bf7eb1bc8e5b088be0a1229"
+      },
+      {
+        "entity": "/metrics/scalar_013",
+        "component": "Scalars:scalars",
+        "type": "float64",
+        "rows": 30000,
+        "sha256": "d27f5789d89e776979aab9be046a7ad94c6845b14ddfb5ead32019c05e632e8d"
+      },
+      {
+        "entity": "/metrics/scalar_014",
+        "component": "Scalars:scalars",
+        "type": "float64",
+        "rows": 30000,
+        "sha256": "3e2f40eb38509dcd8554b4087b7422f545b5f85732d5204b60b45e03503479e6"
+      },
+      {
+        "entity": "/metrics/scalar_015",
+        "component": "Scalars:scalars",
+        "type": "float64",
+        "rows": 30000,
+        "sha256": "26b665484809791acc6a9794cccded842bf6abdf623cc3dde7c4f0c6573a9b8a"
+      },
+      {
+        "entity": "/metrics/scalar_016",
+        "component": "Scalars:scalars",
+        "type": "float64",
+        "rows": 30000,
+        "sha256": "5c08b7fbbebed922b2de81009cd9e0a37c65e3440722ba3441cb6b809be6c89a"
+      },
+      {
+        "entity": "/metrics/scalar_017",
+        "component": "Scalars:scalars",
+        "type": "float64",
+        "rows": 30000,
+        "sha256": "558323fa3f2abb129a6dd41e03b5941a45029a13c85611a101e33fc87c317570"
+      },
+      {
+        "entity": "/metrics/scalar_018",
+        "component": "Scalars:scalars",
+        "type": "float64",
+        "rows": 30000,
+        "sha256": "8456682fafac97ff2bb80d941a550470f0c6114135ad0a4a56d1176d40dfdd5e"
+      },
+      {
+        "entity": "/metrics/scalar_019",
+        "component": "Scalars:scalars",
+        "type": "float64",
+        "rows": 30000,
+        "sha256": "01cf7960776f38094bd828b5dacd49715cdeb592f7f74dd27360b4afdcacaca5"
+      },
+      {
+        "entity": "/metrics/temperature",
+        "component": "Scalars:scalars",
+        "type": "float64",
+        "rows": 30000,
+        "sha256": "78a774141c4155ddef8fffed4c1538af14cb643319e1fa65ced52fde3e043698"
+      },
+      {
+        "entity": "/metrics/velocity/velocity_x",
+        "component": "Scalars:scalars",
+        "type": "float64",
+        "rows": 30000,
+        "sha256": "58204ec3bf1875a49ac09e64ec0483a7c6daf9975692735d803652e721913dee"
+      },
+      {
+        "entity": "/metrics/velocity/velocity_y",
+        "component": "Scalars:scalars",
+        "type": "float64",
+        "rows": 30000,
+        "sha256": "8d3b787f63b687e6f69b10919509c855081cf9009935f827dbf9bb6d7488d2a3"
+      },
+      {
+        "entity": "/metrics/velocity/velocity_z",
+        "component": "Scalars:scalars",
+        "type": "float64",
+        "rows": 30000,
+        "sha256": "95d056677464746673dc511d636754bc095b3423fffd0df25ca026db42c25720"
+      },
+      {
+        "entity": "/metrics/voltage",
+        "component": "Scalars:scalars",
+        "type": "float64",
+        "rows": 30000,
+        "sha256": "262b2a6ac063e6c33df7a6dadedf843a4a621d7a23915f46388ea5cda7dd475f"
+      },
+      {
+        "entity": "/states/robot_state",
+        "component": "StateChange:state",
+        "type": "list<item: string>",
+        "rows": 30000,
+        "sha256": "4ca81a66a1fdfa4f823cec2b5b0c8fbc8f368dfd3a05597dae11269beb777bb2"
+      }
+    ],
+    "logical_component_rows": 960000,
+    "temporary_bytes": 40080000,
+    "scope": "all business components, row sequence, exact ns time type/value and duplicate ingestion order; ignores SDK clocks/IDs and chunk boundaries"
+  },
+  "profiler_sha256": "4026cfe684cfa1d7a0ad7e59ba25e4b2c86bb80af1f3c9fe04e0670dd0e8cbca",
+  "decoder_sha256": "47fab6654d4f0584c1729e08d60bca81dccb43931eb0be65d714045de54e69d7"
+}

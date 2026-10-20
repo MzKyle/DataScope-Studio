@@ -4,7 +4,7 @@ import pickle
 import sqlite3
 import sys
 from collections.abc import Iterable, Iterator, Mapping
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -58,7 +58,20 @@ def cleanup_recording_streams() -> None:
         cleanup()
 
 
-def write_tabular_chunks(frames: Iterable[pd.DataFrame], request: ConvertRequest) -> None:
+def write_tabular_chunks(frames: Iterable[pd.DataFrame], request: ConvertRequest, *,
+                         _frame_factory=None, _fast_sort=True, _batch_numeric=True,
+                         _stats=None, _sort_work_bytes=None) -> None:
+    if _frame_factory is not None:
+        close = getattr(frames, "close", None)
+        if callable(close):
+            close()
+        from datascope_core.csv_rerun import write_replayable_csv
+        return write_replayable_csv(request, _frame_factory, fast_sort=_fast_sort,
+                                    batch_numeric=_batch_numeric, stats=_stats)
+    _write_legacy_tabular_chunks(frames, request, _sort_work_bytes)
+
+
+def _write_legacy_tabular_chunks(frames, request, sort_work_bytes=None) -> None:
     Path(request.output_rrd).parent.mkdir(parents=True, exist_ok=True)
     with recording_stream(
         request.app_id,
@@ -67,24 +80,32 @@ def write_tabular_chunks(frames: Iterable[pd.DataFrame], request: ConvertRequest
         rec.save(request.output_rrd)
         rec.send_recording_name(request.recording_id)
         rows = (
-            _externally_sorted_rows(frames, request)
+            _externally_sorted_rows(frames, request, _work_bytes=sort_work_bytes)
             if request.timeline_sort == "ascending"
             else _source_order_rows(frames, request)
         )
-        for row_index, row in enumerate(rows):
-            _check_cancel(request)
-            _set_row_time(
-                rec,
-                row,
-                row_index,
-                request.mappings,
-                time_key=request.primary_timeline,
-                time_unit=request.timeline_unit,
-            )
-            for mapping in request.mappings:
-                _log_mapping(rec, row, mapping)
-            if row_index % 1_000 == 0:
-                _report_progress(request, "converting", _fraction(row_index, request))
+        try:
+            for row_index, row in enumerate(rows):
+                _check_cancel(request)
+                _set_row_time(
+                    rec,
+                    row,
+                    row_index,
+                    request.mappings,
+                    time_key=request.primary_timeline,
+                    time_unit=request.timeline_unit,
+                )
+                for mapping in request.mappings:
+                    _log_mapping(rec, row, mapping)
+                if row_index % 1_000 == 0:
+                    _report_progress(request, "converting", _fraction(row_index, request))
+        finally:
+            close = getattr(rows, "close", None)
+            if callable(close):
+                close()
+            close_frames = getattr(frames, "close", None)
+            if callable(close_frames):
+                close_frames()
 
 
 def _source_order_rows(
@@ -100,59 +121,49 @@ def _source_order_rows(
         _report_progress(request, "converting", _fraction(processed, request))
 
 
-def _externally_sorted_rows(
-    frames: Iterable[pd.DataFrame],
-    request: ConvertRequest,
-) -> Iterable[dict[str, Any]]:
+def _externally_sorted_rows(frames, request, *, _work_bytes=None):
     cache_dir = Path(request.cache_dir or Path(request.output_rrd).parent)
     cache_dir.mkdir(parents=True, exist_ok=True)
     sort_db = cache_dir / "tabular-sort.sqlite"
     sort_db.unlink(missing_ok=True)
     try:
-        with sqlite3.connect(sort_db) as conn:
-            conn.execute(
-                "create table rows (sort_missing integer not null, sort_time real not null, ordinal integer primary key, payload blob not null)"
-            )
+        with closing(sqlite3.connect(sort_db)) as conn:
+            conn.execute("create table rows (sort_missing integer not null, sort_time real not null, ordinal integer primary key, payload blob not null)")
             ordinal = 0
             for frame in frames:
                 _check_cancel(request)
-                values = []
+                values, buffered = [], 0
+                allowance = None if _work_bytes is None else max(1024, min(_work_bytes//4,
+                    _work_bytes-int(frame.memory_usage(deep=True).sum())-8*1024*1024))
                 for row in _frame_records(frame):
-                    timestamp = (
-                        time_seconds_or_none(row[request.primary_timeline], unit=request.timeline_unit)
-                        if request.primary_timeline
-                        and request.primary_timeline in row
-                        and pd.notna(row[request.primary_timeline])
-                        else None
-                    )
-                    values.append(
-                        (
-                            int(timestamp is None),
-                            float(timestamp or 0.0),
-                            ordinal,
-                            sqlite3.Binary(pickle.dumps(row, protocol=pickle.HIGHEST_PROTOCOL)),
-                        )
-                    )
+                    timestamp = (time_seconds_or_none(row[request.primary_timeline], unit=request.timeline_unit)
+                        if request.primary_timeline and request.primary_timeline in row
+                        and pd.notna(row[request.primary_timeline]) else None)
+                    payload = pickle.dumps(row, protocol=pickle.HIGHEST_PROTOCOL)
+                    values.append((int(timestamp is None), float(timestamp or 0.0), ordinal, sqlite3.Binary(payload)))
+                    buffered += len(payload)+512
                     ordinal += 1
-                conn.executemany(
-                    "insert into rows (sort_missing, sort_time, ordinal, payload) values (?, ?, ?, ?)",
-                    values,
-                )
+                    if allowance is not None and buffered >= allowance:
+                        _check_cancel(request)
+                        conn.executemany("insert into rows (sort_missing, sort_time, ordinal, payload) values (?, ?, ?, ?)", values)
+                        values.clear()
+                        buffered = 0
+                if values:
+                    conn.executemany("insert into rows (sort_missing, sort_time, ordinal, payload) values (?, ?, ?, ?)", values)
+                    values.clear()
                 conn.commit()
-                _report_progress(request, "sorting", _fraction(ordinal, request) * 0.5)
-            cursor = conn.execute(
-                "select payload from rows order by sort_missing, sort_time, ordinal"
-            )
-            for index, (payload,) in enumerate(cursor):
-                _check_cancel(request)
-                if index % 1_000 == 0:
-                    _report_progress(
-                        request,
-                        "converting",
-                        0.5 + (_fraction(index, request) * 0.5),
-                    )
-                yield pickle.loads(payload)
+                frame = None
+                _report_progress(request, "sorting", _fraction(ordinal, request)*0.5)
+            with closing(conn.execute("select payload from rows order by sort_missing, sort_time, ordinal")) as cursor:
+                for index, (payload,) in enumerate(cursor):
+                    _check_cancel(request)
+                    if index % 1_000 == 0:
+                        _report_progress(request, "converting", 0.5+_fraction(index, request)*0.5)
+                    yield pickle.loads(payload)
     finally:
+        close_frames = getattr(frames, "close", None)
+        if callable(close_frames):
+            close_frames()
         sort_db.unlink(missing_ok=True)
 
 
