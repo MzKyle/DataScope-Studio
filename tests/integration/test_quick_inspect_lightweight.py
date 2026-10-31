@@ -66,6 +66,15 @@ def test_skipped_index_build_failure_cleans_own_artifacts(tmp_path, monkeypatch)
     assert not list((project_path / "blueprints").glob("*.rbl"))
 
 
+def test_html_explains_rule_scope_without_mutating_structured_report():
+    report = {"summary": {"health_score": 100}, "findings": []}
+    rendered = _diagnostics_html(report)
+    assert "Rule-check score: 100" in rendered
+    assert "No rule matches" in rendered
+    assert "not per-message" in rendered
+    assert report == {"summary": {"health_score": 100}, "findings": []}
+
+
 def test_lightweight_rrd_preserves_business_components_and_timelines(tmp_path):
     experimental = pytest.importorskip("rerun.experimental")
     if not hasattr(experimental, "RrdReader"):

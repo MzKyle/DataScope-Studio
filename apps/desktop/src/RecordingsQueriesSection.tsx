@@ -6,6 +6,7 @@ import {
   Search,
   Tags
 } from "lucide-react";
+import { checkLabel } from "./diagnostic-presentation";
 
 import {
   CardHeader,
@@ -258,7 +259,7 @@ export function RecordingsQueriesSection({
               {queryTemplates.length ? (
                 queryTemplates.map((template) => (
                   <option key={template.template_id} value={template.template_id}>
-                    {template.name}
+                    {checkLabel(template.template_id, template.name, t)}
                   </option>
                 ))
               ) : (

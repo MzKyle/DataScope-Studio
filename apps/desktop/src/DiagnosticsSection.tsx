@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
+import { checkLabel } from "./diagnostic-presentation";
 import {
   Activity,
   Clipboard,
@@ -205,6 +206,7 @@ export function DiagnosticsSection({
 
   return (
     <section className="section-stack" id="diagnostics">
+      <p className="scope-note">{t("checkScopeHint")}</p>
       <SectionTitle
         eyebrow={t("workspace")}
         title={t("diagnostics")}
@@ -466,8 +468,8 @@ export function DiagnosticsSection({
             {report.checks.map((check) => (
               <article key={check.id} className={`card diagnostic-check severity-${check.severity}`}>
                 <div className="diagnostic-check-heading">
-                  <strong>{check.name}</strong>
-                  <span>{check.status}</span>
+                  <strong>{checkLabel(check.id, check.name, t)}</strong>
+                  <span>{check.status === "pass" ? t("noRuleMatches") : check.status}</span>
                 </div>
                 <p>{t("score")}: {check.score}</p>
                 <p className="path-line light">{check.recommendation}</p>
@@ -528,7 +530,7 @@ export function DiagnosticsSection({
                         <Fragment key={finding.id}>
                           <tr>
                             <td data-label={t("severity")}>{finding.severity}</td>
-                            <td data-label={t("category")}>{finding.category}</td>
+                            <td data-label={t("category")}>{checkLabel(finding.category, finding.category, t)}</td>
                             <td data-label={t("recording")}>{finding.recording_id ?? "-"}</td>
                             <td data-label={t("source")}>{finding.source_id ?? "-"}</td>
                             <td data-label={t("topics")}>{finding.topic ?? "-"}</td>

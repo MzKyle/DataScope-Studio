@@ -1,0 +1,108 @@
+{
+  "scope": "Windows; 20,000 rows; legacy; 3 fresh-process builds each; copied source; exact business-row RRD hashes exclude SDK clocks/IDs",
+  "rows": [
+    {
+      "mode": "full",
+      "round": "0",
+      "import_s": 2.9472055999940494,
+      "build_s": 5.7267376000017975,
+      "total_s": 8.673943199995847,
+      "rerun_s": 3.31966989999637,
+      "query_index_s": 2.3283892999970703,
+      "catalog_bytes": 41746432,
+      "query_rows": 180000,
+      "semantic_hash": "b02c939f1621415eca04d9d5bcec295bc4b0580bd2c15f67dd8fccaac1f342ed",
+      "logical_component_rows": 180000
+    },
+    {
+      "mode": "lightweight",
+      "round": "0",
+      "import_s": 1.3141901000053622,
+      "build_s": 1.760296100001142,
+      "total_s": 3.074486200006504,
+      "rerun_s": 1.7146665000036592,
+      "query_index_s": 0,
+      "catalog_bytes": 221184,
+      "query_rows": 0,
+      "semantic_hash": "b02c939f1621415eca04d9d5bcec295bc4b0580bd2c15f67dd8fccaac1f342ed",
+      "logical_component_rows": 180000
+    },
+    {
+      "mode": "full",
+      "round": "1",
+      "import_s": 1.016261900003883,
+      "build_s": 3.3908883000040078,
+      "total_s": 4.407150200007891,
+      "rerun_s": 1.287100500005181,
+      "query_index_s": 2.060888400003023,
+      "catalog_bytes": 41746432,
+      "query_rows": 180000,
+      "semantic_hash": "b02c939f1621415eca04d9d5bcec295bc4b0580bd2c15f67dd8fccaac1f342ed",
+      "logical_component_rows": 180000
+    },
+    {
+      "mode": "lightweight",
+      "round": "1",
+      "import_s": 1.0524943999989773,
+      "build_s": 1.389521800003422,
+      "total_s": 2.4420162000023993,
+      "rerun_s": 1.3491417999975965,
+      "query_index_s": 0,
+      "catalog_bytes": 221184,
+      "query_rows": 0,
+      "semantic_hash": "b02c939f1621415eca04d9d5bcec295bc4b0580bd2c15f67dd8fccaac1f342ed",
+      "logical_component_rows": 180000
+    },
+    {
+      "mode": "full",
+      "round": "2",
+      "import_s": 1.0418699000001652,
+      "build_s": 3.5779924000016763,
+      "total_s": 4.6198623000018415,
+      "rerun_s": 1.372553400004108,
+      "query_index_s": 2.162065500000608,
+      "catalog_bytes": 41746432,
+      "query_rows": 180000,
+      "semantic_hash": "b02c939f1621415eca04d9d5bcec295bc4b0580bd2c15f67dd8fccaac1f342ed",
+      "logical_component_rows": 180000
+    },
+    {
+      "mode": "lightweight",
+      "round": "2",
+      "import_s": 1.1806271000023116,
+      "build_s": 1.598212600001716,
+      "total_s": 2.7788397000040277,
+      "rerun_s": 1.5515967000028468,
+      "query_index_s": 0,
+      "catalog_bytes": 221184,
+      "query_rows": 0,
+      "semantic_hash": "b02c939f1621415eca04d9d5bcec295bc4b0580bd2c15f67dd8fccaac1f342ed",
+      "logical_component_rows": 180000
+    }
+  ],
+  "medians": {
+    "full": {
+      "import_s": 1.0418699000001652,
+      "rerun_s": 1.372553400004108,
+      "query_index_s": 2.162065500000608,
+      "build_s": 3.5779924000016763,
+      "total_s": 4.6198623000018415,
+      "catalog_bytes": 41746432
+    },
+    "lightweight": {
+      "import_s": 1.1806271000023116,
+      "rerun_s": 1.5515967000028468,
+      "query_index_s": 0,
+      "build_s": 1.598212600001716,
+      "total_s": 2.7788397000040277,
+      "catalog_bytes": 221184
+    }
+  },
+  "input_sha256": "57f4a17546fe2f7893fa05769f517cf38dcb133f393f4b02263d1a4f4b7833eb",
+  "environment": {
+    "python": "3.11.5",
+    "platform": "Windows-10-10.0.26300-SP0",
+    "rerun-sdk": "0.33.1",
+    "pandas": "2.3.3"
+  }
+}

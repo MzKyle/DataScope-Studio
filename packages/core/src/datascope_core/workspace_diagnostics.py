@@ -229,10 +229,14 @@ def _write_diagnostics_export(report: dict[str, Any], path: Path, fmt: str) -> N
 def _diagnostics_html(report: dict[str, Any]) -> str:
     summary = report.get("summary", {})
     findings = report.get("findings", [])
+    labels = {
+        "time_sync": "Topic time-range differences",
+        "cv_detection": "Low-confidence or missing predictions",
+    }
     rows = "\n".join(
         "<tr>"
         f"<td>{html.escape(str(item.get('severity', '')))}</td>"
-        f"<td>{html.escape(str(item.get('category', '')))}</td>"
+        f"<td>{html.escape(labels.get(str(item.get('category', '')), str(item.get('category', ''))))}</td>"
         f"<td>{html.escape(str(item.get('recording_id') or ''))}</td>"
         f"<td>{html.escape(str(item.get('topic') or ''))}</td>"
         f"<td>{html.escape(str(item.get('message', '')))}</td>"
@@ -257,12 +261,16 @@ def _diagnostics_html(report: dict[str, Any]) -> str:
 <body>
   <h1>DataScope Diagnostics Report</h1>
   <p>Severity: <strong>{html.escape(str(summary.get('severity', 'unknown')).upper())}</strong></p>
-  <p>Health score: {html.escape(str(summary.get('health_score', '')))}
+  <p>Rule-check score: {html.escape(str(summary.get('health_score', '')))}
      | Recordings: {html.escape(str(summary.get('recording_count', '')))}
      | Sources: {html.escape(str(summary.get('source_count', '')))}
      | Topics: {html.escape(str(summary.get('topic_count', '')))}
      | Findings: {html.escape(str(summary.get('finding_count', '')))}</p>
+  <p>Existing rule output only. No rule matches does not mean comprehensive data health.
+     Topic checks compare start/end ranges, not per-message clock synchronization.
+     Detection checks identify low-confidence or missing predictions, not model accuracy.</p>
   <h2>Findings</h2>
+  {'' if findings else '<p>No rule matches.</p>'}
   <table>
     <thead><tr><th>Severity</th><th>Category</th><th>Recording</th><th>Topic</th><th>Message</th><th>Recommendation</th></tr></thead>
     <tbody>{rows}</tbody>

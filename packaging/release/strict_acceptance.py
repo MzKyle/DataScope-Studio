@@ -181,7 +181,9 @@ def run_command(command: Command, *, dry_run: bool) -> None:
         return
     env = os.environ.copy()
     env.update(command.env)
-    subprocess.run(command.argv, cwd=command.cwd, env=env, check=True)
+    # Windows CreateProcess does not resolve npm.cmd from the bare name "npm".
+    executable = shutil.which(command.argv[0]) or command.argv[0]
+    subprocess.run((executable, *command.argv[1:]), cwd=command.cwd, env=env, check=True)
 
 
 def parse_node_version(raw: str) -> tuple[int, int, int]:

@@ -5,7 +5,7 @@
 桌面端：
 
 - 在 Settings 中设置默认导出目录。
-- 在 Dashboard Quick Actions 中点击“导出项目”。
+- 在项目工具中点击“导出项目”。
 
 CLI：
 

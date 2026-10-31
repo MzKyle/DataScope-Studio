@@ -129,7 +129,18 @@ def test_typed_exports_keep_complete_report_contract(tmp_path, fmt):
     reference_path, result_path = tmp_path/('old.'+fmt), tmp_path/('new.'+fmt)
     old(workspace).export_diagnostics(project, fmt=fmt, output_path=str(reference_path), limit=2)
     workspace.export_diagnostics(project, fmt=fmt, output_path=str(result_path), limit=2)
-    assert reference_path.read_bytes() == result_path.read_bytes()
+    if fmt == 'html':
+        # Human-facing scope text changed; the embedded complete report is stable.
+        import html
+        import json
+        import re
+        def embedded(path):
+            return json.loads(html.unescape(re.search(r'<pre>(.*?)</pre>',
+                path.read_text(encoding='utf-8'), re.S).group(1)))
+        assert embedded(reference_path) == embedded(result_path)
+        assert 'Rule-check score:' in result_path.read_text(encoding='utf-8')
+    else:
+        assert reference_path.read_bytes() == result_path.read_bytes()
 
 
 def test_signed_zero_first_value_and_group_fallback_reason(tmp_path):

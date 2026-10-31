@@ -22,10 +22,10 @@ V0.5 之后，DataScope Studio 在转换时生成轻量 query index，优先写�
 | --- | --- |
 | `find_errors` | 在日志和状态中查找 ERROR/WARN/fault/error |
 | `low_battery` | 查找 battery scalar 低于阈值 |
-| `detection_failure` | 查找低置信度或无预测框的检测帧 |
+| `detection_failure` | 筛选低置信度或无检测结果样本，不代表模型准确率 |
 | `topic_summary` | 汇总 MCAP topic、role、message_count |
 | `state_duration` | 估算状态持续时间 |
-| `time_sync` | 查询 timestamp/frame 时间差异 |
+| `time_sync` | 比较 Topic 起止时间范围，不验证逐消息同步 |
 
 ## 查询性能
 
@@ -71,3 +71,5 @@ JSON、CSV 或 HTML 报告写入项目 `exports/`，并在 `diagnostic_exports` 
 
 CSV 导出必须可用。Parquet 导出依赖 `pyarrow`，缺失时返回明确错误。
 诊断报告导出支持 JSON、CSV 和 HTML；CSV 以 findings 为主表，完整报告使用 JSON。
+
+规则检查得分仅反映现有规则输出。未发现规则命中不代表全面健康。桌面快速查看跳过查询索引，项目内重新构建后才提供记录筛选和检查。

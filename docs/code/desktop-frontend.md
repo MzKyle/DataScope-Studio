@@ -39,3 +39,5 @@ Recordings、Diagnostics、Extensions、Settings 分区组织。
 ## 文件选择
 
 桌面端使用 Tauri dialog 插件选择文件或文件夹。浏览器环境下会退化为手动路径输入。
+
+当前任务入口为快速查看、项目和设置。`features/studio/ProjectWorkspace.tsx` 提供项目工具和记录详情框架，`use-context-drafts.ts` 隔离临时与各项目草稿。`features/quick-inspect/project-transfer.ts` 编排重导入与 Mapping 保留，重试复用已完成步骤。原组件文件名不再代表一级导航。
