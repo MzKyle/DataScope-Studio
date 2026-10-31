@@ -2,6 +2,25 @@ import { describe, expect, it, vi } from "vitest";
 
 import { api, apiErrorFromResponse } from "./api";
 
+describe("query storage routing", () => {
+  it("passes the same strategy to batch builds and disk estimates", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+      new Response(JSON.stringify({ kind: "batch_import" }), { status: 200 }));
+    try {
+      await api.batchImport("project", ["values.csv"], "sensor_monitor", "run", "reference", "auto");
+      await api.estimateBatchImport("project", ["values.csv"], "reference", "auto");
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      for (const [, init] of fetchMock.mock.calls) {
+        expect(JSON.parse(String(init?.body))).toMatchObject({
+          patterns: ["values.csv"], storage_mode: "reference", query_storage: "auto"
+        });
+      }
+    } finally {
+      fetchMock.mockRestore();
+    }
+  });
+});
+
 describe("apiErrorFromResponse", () => {
   it("preserves structured artifact conflict details", () => {
     const error = apiErrorFromResponse(
@@ -217,7 +236,8 @@ describe("apiErrorFromResponse", () => {
     );
 
     await api.buildQuickInspect("session_1", "run", "sensor_monitor", "/tmp/out", {
-      artifact_validation: "basic"
+      artifact_validation: "basic",
+      query_storage: "auto"
     });
 
     const [url, init] = fetchMock.mock.calls[0];
@@ -230,6 +250,7 @@ describe("apiErrorFromResponse", () => {
       mcap_decoders: null,
       rrd_optimize_profile: "none",
       artifact_validation: "basic",
+      query_storage: "auto",
       catalog_registration: null
     });
     fetchMock.mockRestore();

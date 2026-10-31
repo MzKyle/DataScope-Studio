@@ -10,6 +10,7 @@ import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { api, ApiError, asApiError, type ApiStatus } from "../../api";
+import { DEFAULT_QUERY_STORAGE, type QueryStorage } from "../../query-storage";
 import {
   ErrorDialog,
   GlobalErrorToast,
@@ -229,6 +230,7 @@ export function StudioWorkspace() {
   const [mcapDecoders, setMcapDecoders] = useState("");
   const [rrdOptimizeProfile, setRrdOptimizeProfile] = useState("none");
   const [artifactValidation, setArtifactValidation] = useState("basic");
+  const [queryStorage, setQueryStorage] = useState<QueryStorage>(DEFAULT_QUERY_STORAGE);
   const [catalogEnabled, setCatalogEnabled] = useState(false);
   const [catalogDataset, setCatalogDataset] = useState("datascope");
   const [catalogManagedLocal, setCatalogManagedLocal] = useState(true);
@@ -1042,6 +1044,7 @@ export function StudioWorkspace() {
                 : null,
             rrd_optimize_profile: rrdOptimizeProfile,
             artifact_validation: artifactValidation,
+            query_storage: queryStorage,
             catalog_registration: {
               enabled: catalogEnabled,
               dataset_name: catalogDataset,
@@ -1108,6 +1111,7 @@ export function StudioWorkspace() {
               : null,
           rrd_optimize_profile: rrdOptimizeProfile,
           artifact_validation: artifactValidation,
+          query_storage: queryStorage,
           catalog_registration: {
             enabled: catalogEnabled,
             dataset_name: catalogDataset,
@@ -1636,7 +1640,8 @@ export function StudioWorkspace() {
           patterns,
           selectedTemplateId,
           batchOutputPrefix,
-          batchStorageMode
+          batchStorageMode,
+          queryStorage
         ),
       { area: "batch" }
     );
@@ -1659,7 +1664,7 @@ export function StudioWorkspace() {
     if (!selectedProjectId || !batchPattern.trim()) return;
     const result = await run(
       t("busyEstimatingBatch"),
-      () => api.estimateBatchImport(selectedProjectId, parseBatchPatterns(), batchStorageMode),
+      () => api.estimateBatchImport(selectedProjectId, parseBatchPatterns(), batchStorageMode, queryStorage),
       { area: "batch" }
     );
     if (result) {
@@ -2031,6 +2036,8 @@ export function StudioWorkspace() {
               mcapDecoders={mcapDecoders}
               rrdOptimizeProfile={rrdOptimizeProfile}
               artifactValidation={artifactValidation}
+              queryStorage={queryStorage}
+              onQueryStorageChange={setQueryStorage}
               catalogEnabled={catalogEnabled}
               catalogDataset={catalogDataset}
               catalogManagedLocal={catalogManagedLocal}

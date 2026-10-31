@@ -73,6 +73,22 @@ def time_seconds_or_none(value: Any, unit: str = "auto") -> float | None:
     return normalized.seconds if normalized is not None else None
 
 
+def query_time_batch(series: pd.Series, unit: str = "auto") -> list[float | None]:
+    """Fast relative numeric timelines; all other values use the scalar contract.
+
+    In particular, epoch/datetime validation is deliberately not approximated by
+    pandas' different timestamp range or a vectorized datetime conversion.
+    """
+    if (pd.api.types.is_bool_dtype(series.dtype) or pd.api.types.is_integer_dtype(series.dtype)
+            or pd.api.types.is_float_dtype(series.dtype)):
+        values = series.to_numpy(dtype=float, na_value=float("nan"))
+        if unit in {"seconds", "relative_s"} or (
+            unit == "auto" and ((abs(values) < 1_000_000_000) | pd.isna(values)).all()
+        ):
+            return [float(value) if math.isfinite(value) else None for value in values]
+    return [time_seconds_or_none(value, unit=unit) for value in series.tolist()]
+
+
 def prepare_tabular_frame(
     frame: pd.DataFrame,
     *,
@@ -82,10 +98,7 @@ def prepare_tabular_frame(
 ) -> pd.DataFrame:
     if timeline_sort != "ascending" or not time_key or time_key not in frame:
         return frame
-    normalized = [
-        time_seconds_or_none(value, unit=time_unit)
-        for value in frame[time_key].tolist()
-    ]
+    normalized = query_time_batch(frame[time_key], time_unit)
     order = sorted(
         range(len(frame)),
         key=lambda index: (

@@ -46,7 +46,7 @@ class NoSampleIndexes(sqlite3.Connection):
     def execute(self, sql, parameters=()):
         # Benchmark-only ablation: production's entire writer still runs. Only
         # the two sample CREATE INDEX statements are suppressed; ANALYZE runs.
-        if sql.startswith("CREATE INDEX typed_samples_"):
+        if sql.startswith(("CREATE INDEX typed_samples_", "CREATE INDEX IF NOT EXISTS typed_samples_")):
             return super().execute("SELECT 1")
         return super().execute(sql, parameters)
 

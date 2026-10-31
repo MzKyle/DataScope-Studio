@@ -106,6 +106,25 @@ def iter_mixed_rows(conn, conditions, values, metadata_conditions, metadata_valu
 
 
 class C2bQueryReference:
+    def run_query(self, project_id, template_id, recording_ids=None, params=None, limit=1000):
+        from datascope_core.query import (
+            STREAMABLE_QUERY_TEMPLATES, run_query_template, run_query_template_stream,
+        )
+        self.get_project(project_id)
+        if template_id in STREAMABLE_QUERY_TEMPLATES:
+            with closing(self._iter_query_rows(project_id, template_id=template_id,
+                                               recording_ids=recording_ids)) as rows:
+                return run_query_template_stream(rows, template_id, params, limit)
+        rows = self._query_rows(project_id, template_id=template_id, recording_ids=recording_ids)
+        return run_query_template(rows, template_id, None, params, limit)
+
+    def compare(self, project_id, recording_ids, metric_keys=None, mode='summary', limit=1000):
+        from datascope_core.query import compare_recordings
+        self.get_project(project_id)
+        rows = self._query_rows(project_id, recording_ids=recording_ids,
+            semantic_types=['scalar', 'scalar_group', 'state'], search_tokens=metric_keys)
+        return compare_recordings(rows, recording_ids, metric_keys, mode, limit)
+
     def _iter_query_rows(
         self,
         project_id: str,

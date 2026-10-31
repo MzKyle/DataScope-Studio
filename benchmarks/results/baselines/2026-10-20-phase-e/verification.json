@@ -1,0 +1,213 @@
+{
+  "date_utc": "2026-10-20T14:54:43.380427+00:00",
+  "baseline_commit": "ab8473317b904388448bb3b5c83cc01bede35e30",
+  "python_and_benchmark": {
+    "command": ".venv/Scripts/python.exe -m pytest -q tests benchmarks/test_benchmark.py",
+    "status": "pending"
+  },
+  "auto_entrypoints_and_lifecycle": {
+    "status": "passed",
+    "passed": 36,
+    "command": ".venv/Scripts/python.exe -m pytest -q tests/unit/test_query_aggregate.py tests/integration/test_typed_storage_workflows.py tests/integration/test_quick_inspect.py tests/unit/test_job_executor.py"
+  },
+  "desktop_tests": {
+    "status": "passed",
+    "files": 14,
+    "passed": 71,
+    "command": "npm test",
+    "node": "20.20.1",
+    "directory": "apps/desktop"
+  },
+  "desktop_build": {
+    "status": "passed",
+    "command": "npm run build",
+    "directory": "apps/desktop"
+  },
+  "compileall": {
+    "status": "passed",
+    "command": ".venv/Scripts/python.exe -m compileall -q packages/core/src packages/cli/src services/api/src benchmarks"
+  },
+  "release_sanity": {
+    "status": "passed",
+    "command": ".venv/Scripts/python.exe packaging/release/sanity_check.py"
+  },
+  "git_diff_check": {
+    "status": "passed",
+    "command": "git diff --check"
+  },
+  "performance": {
+    "smoke": {
+      "status": "succeeded",
+      "acceptance": {
+        "queries_p95_le_1s": true,
+        "diagnostics_exact_parity": true,
+        "diagnostics_p95": true,
+        "index_le_180s": true,
+        "medium_index_speedup_ge_3": null,
+        "workspace_le_300s": true,
+        "storage_le_2x": true,
+        "build_rss_le_1gib": true,
+        "query_rss_le_512mib": true,
+        "all_32_fields": true,
+        "no_eav_fallback": true
+      }
+    },
+    "small": {
+      "status": "succeeded",
+      "acceptance": {
+        "queries_p95_le_1s": true,
+        "diagnostics_exact_parity": true,
+        "diagnostics_p95": true,
+        "index_le_180s": true,
+        "medium_index_speedup_ge_3": null,
+        "workspace_le_300s": true,
+        "storage_le_2x": true,
+        "build_rss_le_1gib": true,
+        "query_rss_le_512mib": true,
+        "all_32_fields": true,
+        "no_eav_fallback": true
+      }
+    },
+    "medium": {
+      "status": "succeeded",
+      "acceptance": {
+        "queries_p95_le_1s": true,
+        "diagnostics_exact_parity": true,
+        "diagnostics_p95": true,
+        "index_le_180s": true,
+        "medium_index_speedup_ge_3": true,
+        "workspace_le_300s": true,
+        "storage_le_2x": true,
+        "build_rss_le_1gib": true,
+        "query_rss_le_512mib": true,
+        "all_32_fields": true,
+        "no_eav_fallback": true
+      }
+    },
+    "large": {
+      "status": "succeeded",
+      "acceptance": null
+    }
+  },
+  "post_measurement_fix": {
+    "reason": "New retry test exposed loss of auto strategy for direct Core batches; review found Catalog/cache/output disk budget routing gaps",
+    "scope": "Persist direct non-legacy batches through Job executor; group disk budgets by actual device, propagate batch strategy into estimates",
+    "files": {
+      "packages/core/src/datascope_core/workspace.py": {
+        "measured": "979c9d0eccc06a7e4ad8731cf1876bbae26929026b540cb718910689c665f86a",
+        "delivered": "0265d6299e1fa5833f10fac73e9cbb6136bdf1386474d3c8b1d9cb1e64f7c9bb",
+        "changed_definitions_ast": [
+          "Workspace.batch_import"
+        ],
+        "patch": "post_measurement_batch_retry.patch"
+      },
+      "packages/core/src/datascope_core/workspace_storage.py": {
+        "measured": "d84d8ca941ad8a43eb406e0cf6f2ffce9e8c63ef289f3a1130f3e8b3b4a6baf3",
+        "delivered": "7c951a8e300c4260d7fa536c39dc4588a9170f45945841b48b29e0d466264e72",
+        "changed_definitions_ast": [
+          "WorkspaceStorageMixin.estimate_batch_import",
+          "WorkspaceStorageMixin.estimate_build",
+          "_disk_device",
+          "_volume_budget"
+        ],
+        "patch": "post_measurement_disk_budget.patch"
+      },
+      "packages/core/src/datascope_core/workspace_jobs.py": {
+        "measured": "82b67a5a4c07dc52657f103ed3593a70e92dc12d9fd12f2a12a2c2d9f364f910",
+        "delivered": "55217152a55ad693ed0cab9b8ba331ec492af216b9d1341608147a5b8ca1440a",
+        "changed_definitions_ast": [
+          "WorkspaceJobsMixin.enqueue_batch_import"
+        ],
+        "patch": "post_measurement_batch_estimate.patch"
+      }
+    },
+    "report_source_differences": {
+      "smoke": {
+        "packages\\core\\src\\datascope_core\\workspace.py": {
+          "measured": "979c9d0eccc06a7e4ad8731cf1876bbae26929026b540cb718910689c665f86a",
+          "delivered": "0265d6299e1fa5833f10fac73e9cbb6136bdf1386474d3c8b1d9cb1e64f7c9bb"
+        },
+        "packages\\core\\src\\datascope_core\\workspace_jobs.py": {
+          "measured": "82b67a5a4c07dc52657f103ed3593a70e92dc12d9fd12f2a12a2c2d9f364f910",
+          "delivered": "55217152a55ad693ed0cab9b8ba331ec492af216b9d1341608147a5b8ca1440a"
+        },
+        "packages\\core\\src\\datascope_core\\workspace_storage.py": {
+          "measured": "d84d8ca941ad8a43eb406e0cf6f2ffce9e8c63ef289f3a1130f3e8b3b4a6baf3",
+          "delivered": "7c951a8e300c4260d7fa536c39dc4588a9170f45945841b48b29e0d466264e72"
+        }
+      },
+      "small": {
+        "packages\\core\\src\\datascope_core\\workspace.py": {
+          "measured": "979c9d0eccc06a7e4ad8731cf1876bbae26929026b540cb718910689c665f86a",
+          "delivered": "0265d6299e1fa5833f10fac73e9cbb6136bdf1386474d3c8b1d9cb1e64f7c9bb"
+        },
+        "packages\\core\\src\\datascope_core\\workspace_jobs.py": {
+          "measured": "82b67a5a4c07dc52657f103ed3593a70e92dc12d9fd12f2a12a2c2d9f364f910",
+          "delivered": "55217152a55ad693ed0cab9b8ba331ec492af216b9d1341608147a5b8ca1440a"
+        },
+        "packages\\core\\src\\datascope_core\\workspace_storage.py": {
+          "measured": "d84d8ca941ad8a43eb406e0cf6f2ffce9e8c63ef289f3a1130f3e8b3b4a6baf3",
+          "delivered": "7c951a8e300c4260d7fa536c39dc4588a9170f45945841b48b29e0d466264e72"
+        }
+      },
+      "medium": {
+        "packages\\core\\src\\datascope_core\\workspace.py": {
+          "measured": "979c9d0eccc06a7e4ad8731cf1876bbae26929026b540cb718910689c665f86a",
+          "delivered": "0265d6299e1fa5833f10fac73e9cbb6136bdf1386474d3c8b1d9cb1e64f7c9bb"
+        },
+        "packages\\core\\src\\datascope_core\\workspace_jobs.py": {
+          "measured": "82b67a5a4c07dc52657f103ed3593a70e92dc12d9fd12f2a12a2c2d9f364f910",
+          "delivered": "55217152a55ad693ed0cab9b8ba331ec492af216b9d1341608147a5b8ca1440a"
+        },
+        "packages\\core\\src\\datascope_core\\workspace_storage.py": {
+          "measured": "d84d8ca941ad8a43eb406e0cf6f2ffce9e8c63ef289f3a1130f3e8b3b4a6baf3",
+          "delivered": "7c951a8e300c4260d7fa536c39dc4588a9170f45945841b48b29e0d466264e72"
+        }
+      },
+      "large": {
+        "packages\\core\\src\\datascope_core\\workspace.py": {
+          "measured": "979c9d0eccc06a7e4ad8731cf1876bbae26929026b540cb718910689c665f86a",
+          "delivered": "0265d6299e1fa5833f10fac73e9cbb6136bdf1386474d3c8b1d9cb1e64f7c9bb"
+        },
+        "packages\\core\\src\\datascope_core\\workspace_jobs.py": {
+          "measured": "82b67a5a4c07dc52657f103ed3593a70e92dc12d9fd12f2a12a2c2d9f364f910",
+          "delivered": "55217152a55ad693ed0cab9b8ba331ec492af216b9d1341608147a5b8ca1440a"
+        },
+        "packages\\core\\src\\datascope_core\\workspace_storage.py": {
+          "measured": "d84d8ca941ad8a43eb406e0cf6f2ffce9e8c63ef289f3a1130f3e8b3b4a6baf3",
+          "delivered": "7c951a8e300c4260d7fa536c39dc4588a9170f45945841b48b29e0d466264e72"
+        }
+      }
+    },
+    "reconstruction": "Reverse each recorded patch against its delivered file to recover measured code; measured hashes above are authoritative",
+    "performance_scope": "The writer, summaries, query execution, time conversion and Workspace.build_recording/_index_recording remain unchanged. Direct batch routing and disk preflight changed after formal measurements. Medium/Large were not rerun after these fixes; raw reports preserve original hashes and scope. Delivered source is verified by the complete regression suite and a separate standard Smoke protocol.",
+    "post_fix_smoke": {
+      "status": "pending"
+    }
+  },
+  "native_packaging": {
+    "status": "not_run",
+    "reason": "Rust/cargo unavailable on this Windows host; Linux/macOS native installers and external CI were not executed",
+    "configured_workflow": ".github/workflows/quality.yml storage-compatibility matrix"
+  },
+  "defaults": {
+    "core": "legacy",
+    "desktop": "legacy",
+    "switch_to_auto": false,
+    "reason": "Conditional default switch awaits all cross-platform/native release gates"
+  },
+  "non_acceptance_runs": [
+    {
+      "report": "initial_smoke_excluded.json",
+      "reason": "Harness initially applied Medium-only 3x gate to Smoke"
+    },
+    {
+      "report": "full_build_outlier_excluded.json",
+      "reason": "Aborted after a 466-second complete-build outlier; all formal timing workers rerun after cancellation DB polling fix"
+    },
+    {
+      "kind": "pytest",
+      "reason": "One pre-final run detected source edits during the benchmark harness test; fixed source was rerun as the final suite"
+    }
+  ]
+}

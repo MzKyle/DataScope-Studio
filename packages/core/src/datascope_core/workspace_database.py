@@ -5,10 +5,10 @@ from contextlib import closing
 from pathlib import Path
 from uuid import uuid4
 
-from datascope_core.query_typed import create_typed_registry
+from datascope_core.query_typed import create_typed_registry, create_summary_registry
 
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 
 class WorkspaceDatabaseMixin:
@@ -41,6 +41,12 @@ class WorkspaceDatabaseMixin:
                     conn.execute("BEGIN")
                     create_typed_registry(conn)
                     conn.execute("pragma user_version = 4")
+                    version = 4
+                if version == 4:
+                    if not conn.in_transaction:
+                        conn.execute('BEGIN')
+                    create_summary_registry(conn)
+                    conn.execute('pragma user_version = 5')
             conn.commit()
             conn.execute("pragma journal_mode = WAL")
             conn.execute("pragma synchronous = NORMAL")

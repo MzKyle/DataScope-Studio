@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 
 from datascope_core.mapping import mapping_from_yaml_dict, mapping_to_yaml_dict
 from datascope_core.mapping_validation import MappingValidationError
+from datascope_core.query_typed import DEFAULT_QUERY_STORAGE
 from datascope_core.recipes import list_builtin_recipes
 from datascope_core.rerun_artifacts import rerun_features, rerun_version
 from datascope_core.version import __version__
@@ -98,7 +99,7 @@ class BuildRecordingRequest(BaseModel):
     rrd_optimize_profile: str = "none"
     artifact_validation: str = "basic"
     catalog_registration: dict[str, Any] | None = None
-    query_storage: Literal["legacy", "typed_sqlite"] = "legacy"
+    query_storage: Literal["auto", "legacy", "typed_sqlite"] = DEFAULT_QUERY_STORAGE
 
 
 class QuickInspectBuildRequest(BaseModel):
@@ -109,6 +110,7 @@ class QuickInspectBuildRequest(BaseModel):
     rrd_optimize_profile: str = "none"
     artifact_validation: str = "basic"
     catalog_registration: dict[str, Any] | None = None
+    query_storage: Literal['auto', 'legacy', 'typed_sqlite'] = DEFAULT_QUERY_STORAGE
 
 
 class ViewerOpenRequest(BaseModel):
@@ -159,11 +161,13 @@ class BatchImportRequest(BaseModel):
     template_id: str = "sensor_monitor"
     output_prefix: str = "batch_run"
     storage_mode: str = "copy"
+    query_storage: Literal['auto', 'legacy', 'typed_sqlite'] = DEFAULT_QUERY_STORAGE
 
 
 class BatchEstimateRequest(BaseModel):
     patterns: list[str] = Field(min_length=1)
     storage_mode: str = "copy"
+    query_storage: Literal['auto', 'legacy', 'typed_sqlite'] = DEFAULT_QUERY_STORAGE
 
 
 class CompareRequest(BaseModel):
@@ -413,6 +417,7 @@ def create_app() -> FastAPI:
                 rrd_optimize_profile=payload.rrd_optimize_profile,
                 artifact_validation=payload.artifact_validation,
                 catalog_registration=catalog_registration or payload.catalog_registration,
+                query_storage=payload.query_storage,
             )
 
         return _guard(build)
@@ -553,12 +558,14 @@ def create_app() -> FastAPI:
         project_id: str,
         source_id: str,
         output_dir: str | None = None,
+        query_storage: Literal['auto', 'legacy', 'typed_sqlite'] = DEFAULT_QUERY_STORAGE,
     ) -> dict[str, Any]:
         return _guard(
             lambda: _workspace().estimate_build(
                 project_id,
                 source_id,
                 output_dir=output_dir,
+                query_storage=query_storage,
             )
         )
 
@@ -809,6 +816,7 @@ def create_app() -> FastAPI:
                 template_id=payload.template_id,
                 output_prefix=payload.output_prefix,
                 storage_mode=payload.storage_mode,
+                query_storage=payload.query_storage,
             )
             services.supervisor().wake()
             return job
@@ -833,6 +841,7 @@ def create_app() -> FastAPI:
                 project_id,
                 payload.patterns,
                 storage_mode=payload.storage_mode,
+                query_storage=payload.query_storage,
             )
         )
 

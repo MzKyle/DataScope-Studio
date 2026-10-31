@@ -10,6 +10,7 @@ from uuid import uuid4
 
 from datascope_core.mapping import mapping_from_yaml_dict
 from datascope_core.models import MappingSpec
+from datascope_core.query_typed import DEFAULT_QUERY_STORAGE
 from datascope_core.workspace import Workspace
 
 from datascope_api.workflows import run_import_workflow
@@ -166,6 +167,7 @@ class QuickInspectSessionManager:
         rrd_optimize_profile: str = "none",
         artifact_validation: str = "basic",
         catalog_registration: dict[str, Any] | None = None,
+        query_storage: str = DEFAULT_QUERY_STORAGE,
     ) -> dict[str, Any]:
         with self._lock:
             session = self._session_locked(session_id)
@@ -180,6 +182,7 @@ class QuickInspectSessionManager:
                 rrd_optimize_profile=rrd_optimize_profile,
                 artifact_validation=artifact_validation,
                 catalog_registration=catalog_registration,
+                query_storage=query_storage,
                 _manage_job=False,
             )
 

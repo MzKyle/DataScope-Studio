@@ -10,6 +10,7 @@ import typer
 
 from datascope_core.adapters.registry import adapter_for_path
 from datascope_core.mapping import mapping_to_yaml_dict
+from datascope_core.query_typed import DEFAULT_QUERY_STORAGE
 from datascope_core.job_supervisor import JobSupervisor
 from datascope_core.viewer import open_recording
 from datascope_core.workspace import Workspace
@@ -149,7 +150,7 @@ def import_source(
     ),
     json_output: bool = typer.Option(False, "--json", help="Print JSON."),
     query_storage: str = typer.Option(
-        "legacy", "--query-storage", help="Query index: legacy or typed_sqlite (CSV opt-in).",
+        DEFAULT_QUERY_STORAGE, "--query-storage", help="Query index: auto, legacy or typed_sqlite (CSV).",
     ),
 ) -> None:
     """Import a source into a project and build .rrd/.rbl artifacts."""
@@ -596,6 +597,8 @@ def batch_import(
     project: str = typer.Option(..., "--project", help="Project name or id."),
     template: str = typer.Option("sensor_monitor", "--template", help="Template id."),
     out: str = typer.Option("batch_run", "--out", help="Output recording prefix."),
+    query_storage: str = typer.Option(DEFAULT_QUERY_STORAGE, '--query-storage',
+        help='Query index: auto, legacy or typed_sqlite (CSV).'),
     storage_mode: str = typer.Option(
         "copy",
         "--storage-mode",
@@ -617,6 +620,7 @@ def batch_import(
         template_id=template,
         output_prefix=out,
         storage_mode=storage_mode,
+        query_storage=query_storage,
     )
     result = _run_job(workspace, job, no_wait=no_wait)
     if json_output:

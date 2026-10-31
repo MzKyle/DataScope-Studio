@@ -1,5 +1,12 @@
 # DataScope Studio 测试验收方法
 
+Phase E 的完整 CSV 性能验收为 opt-in：
+`python -m benchmarks.csv_performance --preset smoke`（再分别运行 `small`、`medium`）。
+普通 pytest 不生成大型数据。`--preset large` 仅运行新完整 Workspace 压力测量，子进程预算为
+30 分钟与 2 GiB RSS。精确摘要、v4→v5 迁移和自动策略的契约回归已进入普通测试；
+Windows/Linux/macOS 的存储兼容性矩阵见 Quality workflow。
+具体门槛与默认切换条件见 [Phase E](docs/architecture/csv-performance-phase-e.md)。
+
 Query Storage Benchmark 是独立的 opt-in 工作负载，普通 `python -m pytest -q`
 不会生成 Benchmark 数据。验证测量工具本身可执行
 `python -m pytest -q benchmarks/test_benchmark.py`（仅微型数据集）；运行真实规模

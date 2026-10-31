@@ -1,0 +1,8 @@
+{
+  "reason": "Deliberately stopped after full-build outlier; investigate and reduce cancellation database reads",
+  "report": "benchmarks\\results\\csv_performance_20261020_130027_ed483895.json",
+  "observed_full_build_ms": 466046.4,
+  "scope": "single observed third recording; not a three-run aggregate; current complete control/index/query data remain raw",
+  "host_cpu_percent_observed": 5.7,
+  "worker_rss_mb_observed": 206.1
+}

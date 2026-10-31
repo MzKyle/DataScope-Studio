@@ -1,0 +1,12 @@
+--- measured/packages/core/src/datascope_core/workspace_jobs.py
++++ delivered/packages/core/src/datascope_core/workspace_jobs.py
+@@ -106,7 +106,8 @@
+             raise ValueError("Batch import did not match any source paths")
+         if storage_mode not in {"copy", "reference"}:
+             raise ValueError(f"Unsupported storage mode: {storage_mode}")
+-        self._ensure_disk(self.estimate_batch_import(project_id, patterns, storage_mode=storage_mode))
++        self._ensure_disk(self.estimate_batch_import(project_id, patterns, storage_mode=storage_mode,
++                                                    query_storage=query_storage))
+         return self._create_job(
+             project_id,
+             "batch_import",

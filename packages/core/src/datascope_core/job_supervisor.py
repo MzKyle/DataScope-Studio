@@ -262,7 +262,16 @@ def _worker_is_live(job: dict[str, object], stale_seconds: float = 5.0) -> bool:
     if heartbeat_at.tzinfo is None:
         heartbeat_at = heartbeat_at.replace(tzinfo=timezone.utc)
     age = (datetime.now(timezone.utc) - heartbeat_at).total_seconds()
-    return age <= stale_seconds and _pid_exists(pid)
+    if age <= stale_seconds:
+        return _pid_exists(pid)
+    payload = job.get('payload')
+    job_id = job.get('id')
+    if (isinstance(job_id, str) and job_id and isinstance(payload, dict)
+            and payload.get('query_storage') in {'typed_sqlite', 'auto'}):
+        # SQLite's single writer can temporarily prevent heartbeat publication.
+        # PID existence alone is insufficient because Windows/Linux reuse PIDs.
+        return _pid_command_matches_job(pid, job_id)
+    return False
 
 
 def _pid_exists(pid: int) -> bool:
@@ -296,6 +305,9 @@ def _pid_command_matches_job(pid: int, job_id: str) -> bool:
     try:
         command_line = Path(f"/proc/{pid}/cmdline").read_bytes().replace(b"\0", b" ")
     except OSError:
-        return False
+        # macOS has no /proc; use the same command ownership check there.
+        result = subprocess.run(['ps', '-p', str(pid), '-o', 'command='],
+                                capture_output=True, text=True, check=False)
+        return job_id in result.stdout and 'datascope_core.job_executor' in result.stdout
     decoded = command_line.decode(errors="replace")
     return job_id in decoded and "datascope_core.job_executor" in decoded

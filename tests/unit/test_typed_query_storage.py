@@ -285,7 +285,7 @@ def test_additive_migration_preserves_old_eav(catalog, version):
     reopened = Workspace(workspace.root)
     assert_same(reopened._query_rows(project), expected)
     with reopened._connect() as conn:
-        assert conn.execute("PRAGMA user_version").fetchone()[0] == 4
+        assert conn.execute("PRAGMA user_version").fetchone()[0] == 5
 
 
 def test_storage_option_validation_and_retry(catalog):

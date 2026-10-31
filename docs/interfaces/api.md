@@ -130,3 +130,12 @@ CSV 实际列数一致且名称唯一。省略 `import_options` 时保持自动�
 
 构建前若存在 blocking error，API 返回 `409` 和
 `error.code = mapping_validation_failed`，响应内包含完整 validation report。
+
+Recording build、Quick Inspect build 和 batch import 接受可选
+`query_storage: "auto" | "legacy" | "typed_sqlite"`。`auto` 为 CSV 选择 typed，
+其余格式保留 legacy；默认切换仍受 [Phase E 验收](../architecture/csv-performance-phase-e.md)约束。
+单源 Job payload 保存解析后的策略，缺少字段的历史 Job 继续按 legacy 执行。
+BuildResult 的 `query_index` 及 Recording 参数中的同名字段记录实际布局、回退 stream
+与各索引阶段统计。构建磁盘估算接受同名 query 参数，跨设备时返回分别校验的 `volumes`。
+批量导入磁盘估算的 JSON body 同样接受 `query_storage`，桌面端与构建请求传递相同选择；
+Catalog/WAL、项目暂存与输出分别按实际设备校验，批量复制源文件的空间另行计入。

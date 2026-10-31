@@ -160,6 +160,13 @@ class TypedSQLiteBackend:
                         operator = {"gt": ">", "gte": ">=", "lt": "<", "lte": "<="}[op]
                         predicates.append(f"CAST(({numeric}) AS REAL) {operator} ?")
                         args.append(target)
+                        # Native index candidate bounds are widened by one float
+                        # ULP: integer -> float can round across the boundary.
+                        bound = math.nextafter(target, math.inf if op in {'lt', 'lte'} else -math.inf)
+                        predicates.append(f"({column} {'<=' if op in {'lt', 'lte'} else '>='} ? OR {column} >= ?)")
+                        # TEXT/BLOB encodings must still reach strict decoding,
+                        # including corrupt BLOBs which raise in the predicate.
+                        args.extend((bound, ''))
                     residual = bool(str(filters.get("text") or "").strip()) or any(
                         (bound := _filter_float(filters.get(name))) is not None and not math.isfinite(bound)
                         for name in ("time_start", "time_end"))
@@ -172,6 +179,8 @@ class TypedSQLiteBackend:
             if binding["family"] == "numeric" and math.isfinite(threshold):
                 predicates.append(f"({numeric}) < ?")
                 args.append(threshold)
+                predicates.append(f"({column} < ? OR {column} >= ?)")
+                args.extend((threshold, ''))
                 residual, reason = False, "native numeric/bool battery comparison"
         elif request.execute_template and request.template_id == "find_errors":
             if binding["family"] == "state":

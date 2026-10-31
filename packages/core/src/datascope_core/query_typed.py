@@ -21,9 +21,9 @@ import numpy as np
 import pandas as pd
 
 from datascope_core.models import MappingSpec, SourceInfo
-from datascope_core.query import _frame_records, _json_value, _row_time, _tabular_sample_values
+from datascope_core.query import _frame_records, _tabular_sample_values
 from datascope_core.query_sql import CustomQueryPlan
-from datascope_core.time_utils import prepare_tabular_frame
+from datascope_core.time_utils import prepare_tabular_frame, query_time_batch
 
 
 FORMAT_VERSION = 1
@@ -32,12 +32,30 @@ BATCH_SIZE = 10_000
 MAX_FIELDS = 128
 NEGATIVE_ZERO = b"\x80\x00\x00\x00\x00\x00\x00\x00"
 SUPPORTED = {"scalar", "scalar_group", "state"}
+WORK_BYTES = 64 * 1024 * 1024
+# Switch only after the independently measured release gates have passed.
+DEFAULT_QUERY_STORAGE = "legacy"
 
 
 def normalize_query_storage(value: str) -> str:
-    if value not in {"legacy", "typed_sqlite"}:
+    if value not in {"auto", "legacy", "typed_sqlite"}:
         raise ValueError(f"Unsupported query storage: {value}")
     return value
+
+
+def resolve_query_storage(value: str, source_type: str) -> str:
+    normalize_query_storage(value)
+    if value == "auto":
+        return "typed_sqlite" if source_type == "csv" else "legacy"
+    return value
+
+
+def create_summary_registry(conn):
+    conn.execute("""CREATE TABLE IF NOT EXISTS typed_summaries (
+        recording_id TEXT NOT NULL REFERENCES recordings(id),
+        entity_path TEXT NOT NULL, key TEXT NOT NULL,
+        algorithm TEXT NOT NULL, value_json TEXT NOT NULL,
+        PRIMARY KEY (recording_id, entity_path, key))""")
 
 
 def create_typed_registry(conn: sqlite3.Connection) -> None:
@@ -67,6 +85,7 @@ def create_typed_registry(conn: sqlite3.Connection) -> None:
     )
     for statement in statements:
         conn.execute(statement)
+    create_summary_registry(conn)
 
 
 def sample_table(schema_id: str) -> str:
@@ -78,6 +97,8 @@ def sample_table(schema_id: str) -> str:
 def clear_query_index(conn: sqlite3.Connection, recording_id: str) -> None:
     """Remove this recording's index without touching another schema user."""
     schemas = set()
+    if conn.execute("SELECT 1 FROM sqlite_master WHERE name='typed_summaries'").fetchone():
+        conn.execute("DELETE FROM typed_summaries WHERE recording_id = ?", (recording_id,))
     for dataset in conn.execute(
         "SELECT id, schema_id FROM typed_datasets WHERE recording_id = ?", (recording_id,)
     ).fetchall():
@@ -258,38 +279,56 @@ def build_typed_index(conn, recording_id: str, source: SourceInfo, spec: Mapping
     for binding in conn.execute("SELECT dataset_id, column_no, count(*) FROM typed_bindings "
                                 "WHERE recording_id = ? GROUP BY dataset_id, column_no", (recording_id,)):
         binding_counts[(binding[0], binding[1])] = binding[2]
+    width = sum(len(group['fields']) for group in groups) + sum(
+        len(stream.get('source_fields', [])) + 1 for i, stream in enumerate(spec.streams) if i in fallback) + 2
+    batch_size = max(1, min(BATCH_SIZE, WORK_BYTES // (256 * width)))
     for frame in _frames(source, spec):
-        cancel()
-        for row in _frame_records(frame):
-            timestamp = _row_time(row, spec.primary_timeline, spec.effective_timeline_unit or spec.timeline_unit)
+        for start in range(0, len(frame), batch_size):
+            cancel()
+            block = frame.iloc[start:start + batch_size]
+            times = query_time_batch(block[spec.primary_timeline],
+                spec.effective_timeline_unit or spec.timeline_unit) if spec.primary_timeline in block else [None] * len(block)
             for group in groups:
-                values = []
-                for column_no, field in enumerate(group["fields"]):
-                    raw = row.get(field)
-                    value = _json_value(raw) if pd.notna(raw) else None
-                    if value is not None:
-                        logical_rows += binding_counts[(group["id"], column_no)]
-                        if group["family"] == "state":
-                            value = state_code(group["id"], value)
-                        elif isinstance(value, float) and value == 0 and math.copysign(1, value) < 0:
-                            # REAL affinity erases the sign of zero. This one IEEE754 escape
-                            # preserves it without JSON or a second per-value sample table.
-                            value = NEGATIVE_ZERO
-                    values.append(value)
-                if any(value is not None for value in values):
-                    group["batch"].append((group["id"], timestamp, sample_seq, *values))
+                columns = []
+                present = np.zeros(len(block), dtype=bool)
+                for column_no, field in enumerate(group['fields']):
+                    series = block[field] if field in block else pd.Series([None] * len(block))
+                    mask = series.notna().to_numpy()
+                    present |= mask
+                    logical_rows += int(mask.sum()) * binding_counts[(group['id'], column_no)]
+                    values = series.tolist()
+                    if group['family'] == 'state':
+                        if group['kinds'][column_no] == 'float':
+                            # JSON distinguishes -0.0 from +0.0, unlike dict keys.
+                            values = [state_code(group['id'], value) if ok else None
+                                      for value, ok in zip(values, mask)]
+                        else:
+                            codes = {value: state_code(group['id'], value)
+                                     for value in series.dropna().unique().tolist()}
+                            values = [codes[value] if ok else None for value, ok in zip(values, mask)]
+                    else:
+                        for offset in np.flatnonzero(~mask):
+                            values[offset] = None
+                        if pd.api.types.is_float_dtype(series.dtype):
+                            raw = series.to_numpy()
+                            for offset in np.flatnonzero((raw == 0) & np.signbit(raw)):
+                                values[offset] = NEGATIVE_ZERO
+                    columns.append(values)
+                group['batch'].extend(
+                    (group['id'], timestamp, sample_seq + offset, *values)
+                    for offset, (timestamp, values) in enumerate(zip(times, zip(*columns)))
+                    if present[offset])
             if fallback:
-                for binding_seq, value in _tabular_sample_values(
-                    recording_id, source, spec, row, timestamp, fallback
-                ):
-                    legacy_batch.append((next_rowid, *value.db_tuple()))
-                    order_batch.append((next_rowid, recording_id, sample_seq, binding_seq))
-                    next_rowid += 1
-                    residual_rows += 1
-            sample_seq += 1
-            if sample_seq % BATCH_SIZE == 0:
-                flush()
-        flush()
+                for offset, row in enumerate(_frame_records(block)):
+                    for binding_seq, value in _tabular_sample_values(
+                        recording_id, source, spec, row, times[offset], fallback
+                    ):
+                        legacy_batch.append((next_rowid, *value.db_tuple()))
+                        order_batch.append((next_rowid, recording_id, sample_seq + offset, binding_seq))
+                        next_rowid += 1
+                        residual_rows += 1
+            sample_seq += len(block)
+            flush()
     if sample_seq != plan["rows"] or _stamp(source.path) != plan["stamp"]:
         raise RuntimeError("CSV changed during typed index write")
     write_ms = (perf_counter() - started) * 1000
@@ -298,6 +337,15 @@ def build_typed_index(conn, recording_id: str, source: SourceInfo, spec: Mapping
     for table in new_tables:
         cancel()
         conn.execute(f"CREATE INDEX {table}_time ON {table} (dataset_id, time, sample_seq)")
+    for binding in conn.execute("""SELECT DISTINCT d.schema_id, b.column_no
+        FROM typed_bindings b JOIN typed_datasets d ON d.id=b.dataset_id
+        JOIN typed_schemas s ON s.id=d.schema_id
+        WHERE b.recording_id=? AND s.family='numeric'
+        AND (lower(b.key) LIKE '%battery%' OR lower(b.entity_path) LIKE '%battery%')""", (recording_id,)):
+        cancel()
+        table, column = sample_table(binding[0]), f'c{binding[1]}'
+        conn.execute(f"CREATE INDEX IF NOT EXISTS {table}_value_{binding[1]} ON {table} "
+                     f"(dataset_id, {column}, time, sample_seq)")
     for table in {group["table"] for group in groups}:
         conn.execute(f"ANALYZE {table}")
     pages_after = conn.execute("PRAGMA page_count").fetchone()[0] - conn.execute("PRAGMA freelist_count").fetchone()[0]
@@ -315,6 +363,16 @@ def build_typed_index(conn, recording_id: str, source: SourceInfo, spec: Mapping
                   json.dumps({"streams": spec.streams, "timeline": spec.primary_timeline,
                               "unit": spec.effective_timeline_unit or spec.timeline_unit,
                               "sort": spec.timeline_sort}, ensure_ascii=False), json.dumps(stats)))
+    from datascope_core.query_aggregate import build_summaries
+    summary_started = perf_counter()
+    stats['summary_groups'] = build_summaries(conn, recording_id, cancel,
+                                            directory=plan.get('temporary_directory'))
+    stats['summary_ms'] = (perf_counter() - summary_started) * 1000
+    if _stamp(source.path) != plan['stamp']:
+        raise RuntimeError('CSV changed during typed summary build')
+    cancel()
+    conn.execute('UPDATE typed_indexes SET stats_json=? WHERE recording_id=?',
+                 (json.dumps(stats), recording_id))
     return stats
 
 

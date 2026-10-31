@@ -1,5 +1,27 @@
 # Query storage benchmarks
 
+## Phase E: CSV end-to-end performance
+
+`python -m benchmarks.csv_performance --preset smoke` (also `small` or `medium`) measures three
+paired primary index builds against the git-archived `ab84733` core, new builds of
+two equal-sized/different-seed CSVs, all-field exact compare, seven queries and
+full diagnostics. Query timing uses one warm-up and five measured runs. Every
+worker runs in a fresh process, sequentially. A raw CSV oracle independently
+checks every aggregate; the frozen C3 implementation checks the complete report.
+The final typed catalog and raw reports are retained for read-only audit.
+
+`--rows N --build-runs 1 --query-runs 1` is a development check only, and cannot
+authorize the default switch. Exit code 2 means a resource/performance gate was
+not met; failures and incomplete workers remain visible in the report. See the
+[Phase E contract](../docs/architecture/csv-performance-phase-e.md) for targets,
+exact summation, v5 compatibility and the rollout gate.
+
+`--preset large` runs only the new complete Workspace as a resource pressure
+case, with a 30-minute child-process limit and 2 GiB process-tree RSS limit.
+It does not run the frozen writer or claim interactive latency gates. Source
+generation is outside that child-process limit. Inputs and incomplete runs are
+retained in the owned `.work` directory for audit.
+
 This directory is opt-in. Root `pytest` only collects `tests/`; ordinary CI does
 not generate benchmark datasets. No generated CSV, SQLite, RRD or RBL belongs in Git.
 Curated JSON/Markdown results may be saved under `results/baselines/`.

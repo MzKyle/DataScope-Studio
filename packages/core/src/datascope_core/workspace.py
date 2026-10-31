@@ -57,7 +57,9 @@ from datascope_core.query import (
     iter_query_rows,
     run_query_template,
 )
-from datascope_core.query_typed import clear_query_index, normalize_query_storage
+from datascope_core.query_typed import (
+    DEFAULT_QUERY_STORAGE, clear_query_index, normalize_query_storage, resolve_query_storage,
+)
 from datascope_core.rerun_artifacts import (
     normalize_artifact_validation,
     normalize_catalog_registration,
@@ -485,14 +487,16 @@ class Workspace(
         artifact_validation: str = "basic",
         catalog_registration: dict[str, Any] | None = None,
         *,
-        query_storage: str = "legacy",
+        query_storage: str = DEFAULT_QUERY_STORAGE,
         _job_id: str | None = None,
         _manage_job: bool = True,
         _cache_dir: str | Path | None = None,
         _cancel_check: Callable[[], None] | None = None,
+        _cancel_signal: Callable[[], bool] | None = None,
         _background_job: bool = False,
     ) -> dict[str, Any]:
         query_storage = normalize_query_storage(query_storage)
+        query_storage = resolve_query_storage(query_storage, self.get_source(source_id)['type'])
         mcap_decoders = normalize_mcap_decoders(mcap_decoders)
         rrd_optimize_profile = normalize_rrd_optimize_profile(rrd_optimize_profile)
         artifact_validation = normalize_artifact_validation(artifact_validation)
@@ -509,7 +513,8 @@ class Workspace(
         project = self.get_project(project_id)
         source_row = self.get_source(source_id)
         self._assert_source_available(source_row)
-        self._ensure_disk(self.estimate_build(project_id, source_id, output_dir=output_dir))
+        self._ensure_disk(self.estimate_build(project_id, source_id, output_dir=output_dir,
+                                              query_storage=query_storage))
         requested_output_name = output_name.strip() if output_name else ""
         output_base = (
             _safe_output_name(requested_output_name or _source_output_name(source_row["uri"]))
@@ -580,13 +585,19 @@ class Workspace(
             if query_storage == "typed_sqlite" and job_id else None
         )
 
-        def check_cancel() -> None:
+        last_job_poll = float('-inf')
+
+        def check_cancel(*, force_db: bool = False) -> None:
+            nonlocal last_job_poll
             if cancel_marker is not None and cancel_marker.exists():
                 raise JobCancelled(f"Job cancellation requested: {job_id}")
             if _cancel_check is not None:
                 _cancel_check()
             if job_id is not None:
-                self._check_job_cancelled(job_id)
+                now = time.monotonic()
+                if force_db or cancel_marker is None or now - last_job_poll >= 0.25:
+                    self._check_job_cancelled(job_id)
+                    last_job_poll = now
 
         def report_progress(stage: str, progress: float) -> None:
             nonlocal last_progress_at, last_progress_stage, last_progress_value
@@ -716,10 +727,20 @@ class Workspace(
                         _now(),
                     ),
                 )
-            self._index_recording(recording_db_id, self.get_source(source_id), spec,
+            query_index = self._index_recording(recording_db_id, self.get_source(source_id), spec,
                                   query_storage=query_storage, cancel_check=check_cancel,
-                                  cancel_signal=(lambda: cancel_marker.exists()) if cancel_marker else None)
+                                  cache_dir=cache_dir,
+                                  cancel_signal=(lambda: bool(
+                                      (cancel_marker and cancel_marker.exists())
+                                      or (_cancel_signal and _cancel_signal())))
+                                      if cancel_marker or _cancel_signal else None)
+            check_cancel(force_db=True)
             with self._connect() as conn:
+                params = json.loads(conn.execute('SELECT params_json FROM recordings WHERE id=?',
+                                                (recording_db_id,)).fetchone()[0] or '{}')
+                params['query_index'] = query_index or {'storage': 'legacy'}
+                conn.execute('UPDATE recordings SET params_json=? WHERE id=?',
+                             (json.dumps(params, ensure_ascii=False), recording_db_id))
                 conn.execute(
                     "update sources set status = ?, updated_at = ? where id = ?",
                     ("converted", _now(), source_id),
@@ -731,6 +752,7 @@ class Workspace(
                 "recording_path": str(recording_path),
                 "blueprint_path": str(blueprint_path),
                 "artifact_info": artifact_info,
+                "query_index": query_index or {"storage": "legacy"},
             }
             if _manage_job and job_id is not None:
                 self._update_job(
@@ -899,15 +921,26 @@ class Workspace(
         output_prefix: str = "batch_run",
         storage_mode: str = "copy",
         *,
+        query_storage: str = DEFAULT_QUERY_STORAGE,
         _job_id: str | None = None,
         _resume_batch_id: str | None = None,
     ) -> dict[str, Any]:
+        normalize_query_storage(query_storage)
         self.get_project(project_id)
         if storage_mode not in {"copy", "reference"}:
             raise ValueError(f"Unsupported storage mode: {storage_mode}")
         paths = _resolve_patterns(patterns)
         if not paths:
             raise ValueError("Batch import did not match any source paths")
+        if _job_id is None and _resume_batch_id is None and query_storage != 'legacy':
+            # Direct Core callers need the same durable policy/ownership as API
+            # and CLI jobs, including when an item fails before any Recording.
+            job = self.enqueue_batch_import(project_id, patterns, template_id=template_id,
+                output_prefix=output_prefix, storage_mode=storage_mode, query_storage=query_storage)
+            token = uuid4().hex
+            if not self.claim_job(job['id'], token):
+                raise RuntimeError(f"Batch job was claimed by another worker: {job['id']}")
+            return self.execute_job(job['id'], token)
 
         if _resume_batch_id:
             batch_id = _resume_batch_id
@@ -1006,6 +1039,7 @@ class Workspace(
                 storage_mode=storage_mode,
                 increment_attempt=bool(_resume_batch_id),
                 job_id=_job_id,
+                query_storage=query_storage,
             )
             self._refresh_batch_counts(batch_id)
             if _job_id is not None:
@@ -1065,12 +1099,15 @@ class Workspace(
             self._refresh_batch_counts(batch_id)
             return self.get_batch(batch_id)
         if item["status"] == "running":
+            marker = self._batch_item_cancel_marker(batch['project_id'], item_id)
+            marker.parent.mkdir(parents=True, exist_ok=True)
+            marker.touch()
             with self._connect() as conn:
                 conn.execute(
                     """
                     update batch_items
                     set status = 'cancel_requested', cancel_requested_at = ?, updated_at = ?
-                    where id = ?
+                    where id = ? and status = 'running'
                     """,
                     (_now(), _now(), item_id),
                 )
@@ -1116,6 +1153,8 @@ class Workspace(
             storage_mode=batch.get("storage_mode") or "copy",
             increment_attempt=True,
             job_id=_job_id,
+            query_storage=(self.get_job(_job_id)['payload'].get('query_storage', 'legacy')
+                           if _job_id else DEFAULT_QUERY_STORAGE),
         )
         self._refresh_batch_counts(batch_id)
         return self.get_batch(batch_id)
@@ -1134,11 +1173,15 @@ class Workspace(
         storage_mode: str,
         increment_attempt: bool,
         job_id: str | None,
+        query_storage: str = DEFAULT_QUERY_STORAGE,
     ) -> None:
         current_status = self._batch_item_status(item_id)
         if current_status in {"cancelled", "cancel_requested"}:
-            self._mark_batch_item_cancelled(item_id)
-            return
+            if not increment_attempt:
+                self._mark_batch_item_cancelled(item_id)
+                return
+        item_cancel = self._batch_item_cancel_marker(project_id, item_id)
+        item_cancel.unlink(missing_ok=True)
         with self._connect() as conn:
             conn.execute(
                 """
@@ -1152,6 +1195,8 @@ class Workspace(
             )
         source: dict[str, Any] | None = None
         created_source = existing_source_id is None
+        last_cancel_poll = float('-inf')
+        parent_cancel = self._typed_cancel_marker(self.get_job(job_id)) if job_id else None
 
         def discard_failed_source() -> None:
             if created_source and source is not None:
@@ -1161,9 +1206,17 @@ class Workspace(
                     pass
 
         def check_cancelled() -> None:
-            if job_id is not None:
-                self._check_job_cancelled(job_id)
-            self._check_batch_item_cancelled(item_id)
+            nonlocal last_cancel_poll
+            if item_cancel.exists():
+                raise BatchItemCancelled(f'Batch item cancellation requested: {item_id}')
+            if parent_cancel is not None and parent_cancel.exists():
+                raise JobCancelled(f'Job cancellation requested: {job_id}')
+            now = time.monotonic()
+            if now - last_cancel_poll >= 0.25:
+                if job_id is not None:
+                    self._check_job_cancelled(job_id)
+                self._check_batch_item_cancelled(item_id)
+                last_cancel_poll = now
 
         try:
             check_cancelled()
@@ -1184,7 +1237,10 @@ class Workspace(
                 template_id=template_id,
                 output_name=f"{output_prefix}_{index:03d}",
                 _manage_job=False,
+                query_storage=query_storage,
+                _job_id=job_id,
                 _cancel_check=check_cancelled,
+                _cancel_signal=item_cancel.exists,
             )
             with self._connect() as conn:
                 conn.execute(
@@ -1218,6 +1274,12 @@ class Workspace(
                     """,
                     ("failed", str(exc), _now(), item_id),
                 )
+        finally:
+            item_cancel.unlink(missing_ok=True)
+
+    def _batch_item_cancel_marker(self, project_id: str, item_id: str) -> Path:
+        project = self.get_project(project_id)
+        return Path(project['workspace_path']) / 'cache' / 'batch-items' / (item_id + '.cancel')
 
     def _batch_item_status(self, item_id: str) -> str:
         with self._connect() as conn:

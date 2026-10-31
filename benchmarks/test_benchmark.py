@@ -352,7 +352,7 @@ def test_production_typed_storage_runner(tmp_path: Path) -> None:
         assert storage["writer_counts_match_sql"]
         assert storage["physical_sample_rows"] == 128
         assert storage["typed_logical_rows"] == 2048
-        assert len(storage["sample_indexes"]) == (2 if name == "typed_time" else 0)
+        assert len(storage["sample_indexes"]) == (3 if name == "typed_time" else 0)
     for name in report["backends"]["eav"]["queries"]:
         assert len({item["queries"][name]["result_sha256"] for item in report["backends"].values()}) == 1
     assert not list((tmp_path / ".work").iterdir())
@@ -452,3 +452,35 @@ def test_rerun_medium_reports_integrity_without_paired_parity(tmp_path, monkeypa
     assert report['acceptance']['sdk_decode_complete'] is True
     assert report['acceptance']['sdk_parity'] is None
     assert report['schemes']['new']['samples'][0]['validation']['business']['logical_component_rows'] == 640
+
+
+def test_csv_performance_oracle_and_read_only_queries(tmp_path):
+    from benchmarks.csv_performance import inputs
+    from benchmarks.custom_query_pushdown import ReadOnlyWorkspace, sha256
+    from benchmarks.typed_storage import copy_metadata
+    from datascope_core.workspace import Workspace
+    from datascope_core.models import MappingSpec
+    manifest = inputs(tmp_path, DatasetConfig(rows=67))
+    workspace = Workspace(tmp_path / 'indexed')
+    copy_metadata(workspace, manifest)
+    for rec in manifest['records']:
+        workspace._index_recording(rec['recording_id'], workspace.get_source(rec['source_id']),
+                                   MappingSpec(**rec['spec']), query_storage='typed_sqlite')
+    with workspace._connect() as conn:
+        conn.execute('PRAGMA wal_checkpoint(TRUNCATE)')
+    before = sha256(workspace.db_path)
+    result = ReadOnlyWorkspace(workspace.root).compare(manifest['project_id'],
+        [r['recording_id'] for r in manifest['records']])
+    assert result['rows'] == manifest['oracle']
+    assert sha256(workspace.db_path) == before
+
+
+def test_rerun_cache_sampling_tolerates_deleted_directories(tmp_path):
+    from benchmarks.rerun_build import cache_bytes
+    root = tmp_path / 'gone'
+    assert cache_bytes(root, sort_only=True) == 0
+    root.mkdir()
+    (root / 'tabular-sort.sqlite').write_bytes(b'123')
+    (root / 'recording.rrd').write_bytes(b'1234567')
+    assert cache_bytes(root, sort_only=True) == 3
+    assert cache_bytes(root) == 10

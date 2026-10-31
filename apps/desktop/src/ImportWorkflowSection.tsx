@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { BuildJobStatus, isActiveBuildJob } from "./BuildJobStatus";
+import { DEFAULT_QUERY_STORAGE, type QueryStorage } from "./query-storage";
 import {
   deriveMappingReadiness,
   type MappingReadiness,
@@ -79,6 +80,7 @@ type ImportWorkflowSectionProps = {
   mcapDecoders: string;
   rrdOptimizeProfile: string;
   artifactValidation: string;
+  queryStorage?: QueryStorage;
   catalogEnabled: boolean;
   catalogDataset: string;
   catalogManagedLocal: boolean;
@@ -116,6 +118,7 @@ type ImportWorkflowSectionProps = {
   onMcapDecodersChange: (value: string) => void;
   onRrdOptimizeProfileChange: (value: string) => void;
   onArtifactValidationChange: (value: string) => void;
+  onQueryStorageChange?: (value: QueryStorage) => void;
   onCatalogEnabledChange: (value: boolean) => void;
   onCatalogDatasetChange: (value: string) => void;
   onCatalogManagedLocalChange: (value: boolean) => void;
@@ -152,6 +155,7 @@ export function ImportWorkflowSection({
   mcapDecoders,
   rrdOptimizeProfile,
   artifactValidation,
+  queryStorage = DEFAULT_QUERY_STORAGE,
   catalogEnabled,
   catalogDataset,
   catalogManagedLocal,
@@ -185,6 +189,7 @@ export function ImportWorkflowSection({
   onMcapDecodersChange,
   onRrdOptimizeProfileChange,
   onArtifactValidationChange,
+  onQueryStorageChange,
   onCatalogEnabledChange,
   onCatalogDatasetChange,
   onCatalogManagedLocalChange,
@@ -768,6 +773,14 @@ export function ImportWorkflowSection({
               <span>{t("advancedBuildOptions")}</span>
             </summary>
             <div className="advanced-build-options">
+              <label className="field">
+                <span>{t("queryStorage")}</span>
+                <select value={queryStorage} disabled={buildControlsLocked}
+                  onChange={(event) => onQueryStorageChange?.(event.target.value as QueryStorage)}>
+                  <option value="auto">{t("automaticQueryStorage")}</option>
+                  <option value="legacy">{t("legacyQueryStorage")}</option>
+                </select>
+              </label>
               {isQuickInspect && (
                 <>
                   <label>
@@ -912,6 +925,13 @@ export function ImportWorkflowSection({
                   <dt>{t("blueprint")}</dt>
                   <dd>{buildResult.blueprint_path}</dd>
                 </div>
+                {buildResult.query_index ? (
+                  <div>
+                    <dt>{t("queryStorage")}</dt>
+                    <dd>{t(buildResult.query_index.storage === "typed_sqlite"
+                      ? "optimizedQueryStorage" : "legacyQueryStorage")}</dd>
+                  </div>
+                ) : null}
                 {buildResult.artifact_info ? (
                   <>
                     <div>

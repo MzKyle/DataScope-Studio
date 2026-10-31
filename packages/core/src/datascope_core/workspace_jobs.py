@@ -6,7 +6,9 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from datascope_core.query_typed import clear_query_index, normalize_query_storage
+from datascope_core.query_typed import (
+    DEFAULT_QUERY_STORAGE, clear_query_index, normalize_query_storage, resolve_query_storage,
+)
 from datascope_core.rerun_artifacts import (
     normalize_artifact_validation,
     normalize_catalog_registration,
@@ -46,7 +48,7 @@ class WorkspaceJobsMixin:
         artifact_validation: str = "basic",
         catalog_registration: dict[str, Any] | None = None,
         *,
-        query_storage: str = "legacy",
+        query_storage: str = DEFAULT_QUERY_STORAGE,
     ) -> dict[str, Any]:
         query_storage = normalize_query_storage(query_storage)
         self.get_project(project_id)
@@ -61,8 +63,10 @@ class WorkspaceJobsMixin:
             catalog_registration=catalog_registration,
         )
         source = self.get_source(source_id)
+        query_storage = resolve_query_storage(query_storage, source['type'])
         self._assert_source_available(source)
-        self._ensure_disk(self.estimate_build(project_id, source_id, output_dir=output_dir))
+        self._ensure_disk(self.estimate_build(project_id, source_id, output_dir=output_dir,
+                                              query_storage=query_storage))
         if mapping_id is not None:
             self.get_mapping(mapping_id)
         return self._create_job(
@@ -92,14 +96,18 @@ class WorkspaceJobsMixin:
         template_id: str = "sensor_monitor",
         output_prefix: str = "batch_run",
         storage_mode: str = "copy",
+        *,
+        query_storage: str = DEFAULT_QUERY_STORAGE,
     ) -> dict[str, Any]:
+        normalize_query_storage(query_storage)
         self.get_project(project_id)
         paths = resolve_patterns(patterns)
         if not paths:
             raise ValueError("Batch import did not match any source paths")
         if storage_mode not in {"copy", "reference"}:
             raise ValueError(f"Unsupported storage mode: {storage_mode}")
-        self._ensure_disk(self.estimate_batch_import(project_id, patterns, storage_mode=storage_mode))
+        self._ensure_disk(self.estimate_batch_import(project_id, patterns, storage_mode=storage_mode,
+                                                    query_storage=query_storage))
         return self._create_job(
             project_id,
             "batch_import",
@@ -109,6 +117,7 @@ class WorkspaceJobsMixin:
                 "template_id": template_id,
                 "output_prefix": output_prefix,
                 "storage_mode": storage_mode,
+                "query_storage": query_storage,
             },
             resource_type="batch",
         )
@@ -131,11 +140,9 @@ class WorkspaceJobsMixin:
         return self._create_job(
             project_id,
             "batch_item_retry",
-            {
-                "project_id": project_id,
-                "batch_id": batch_id,
-                "item_id": item_id,
-            },
+            {"project_id": project_id, "batch_id": batch_id, "item_id": item_id,
+             "query_storage": (self.get_job(batch['job_id'])['payload'].get('query_storage', 'legacy')
+                               if batch.get('job_id') else DEFAULT_QUERY_STORAGE)},
             resource_type="batch_item",
             resource_id=item_id,
         )
@@ -308,6 +315,7 @@ class WorkspaceJobsMixin:
                     storage_mode=payload.get("storage_mode", "copy"),
                     _job_id=job_id,
                     _resume_batch_id=payload.get("resume_batch_id"),
+                    query_storage=payload.get('query_storage', 'legacy'),
                 )
                 failed = int(result.get("failed") or 0)
                 if failed:
@@ -411,7 +419,7 @@ class WorkspaceJobsMixin:
         job = self.get_job(job_id)
         if job["status"] in TERMINAL_JOB_STATUSES:
             return job
-        if job["payload"].get("query_storage") == "typed_sqlite":
+        if job["payload"].get("query_storage") in {"typed_sqlite", "auto"}:
             # The index owns SQLite's single writer transaction. Deliver intent
             # before waiting for that lock so the worker can roll it back.
             marker = self._typed_cancel_marker(job)
@@ -558,6 +566,22 @@ class WorkspaceJobsMixin:
             Path(project["workspace_path"]) / "cache" / "jobs" / job_id,
             ignore_errors=True,
         )
+        if job['type'] in {'batch_import', 'batch_item_retry'} and job['status'] in {
+            'failed', 'cancelled', 'interrupted'
+        }:
+            removals = []
+            with self._connect() as conn:
+                candidates = conn.execute('SELECT id,path,blueprint_path,params_json FROM recordings '
+                    'WHERE project_id=? AND id NOT IN (SELECT recording_id FROM batch_items '
+                    "WHERE status='succeeded' AND recording_id IS NOT NULL)", (job['project_id'],)).fetchall()
+                for candidate in candidates:
+                    owner = json.loads(candidate['params_json'] or '{}').get('query_index_build', {})
+                    if owner.get('job_id') == job_id:
+                        clear_query_index(conn, candidate['id'])
+                        conn.execute('DELETE FROM recordings WHERE id=?', (candidate['id'],))
+                        removals.extend(p for p in (candidate['path'], candidate['blueprint_path']) if p)
+            for path in removals:
+                Path(path).unlink(missing_ok=True)
         if job["type"] != "conversion":
             return
         payload = job["payload"]
@@ -598,7 +622,7 @@ class WorkspaceJobsMixin:
     def _check_job_cancelled(self, job_id: str) -> None:
         job = self.get_job(job_id)
         if job["status"] in {"cancel_requested", "cancelled"} or (
-            job["payload"].get("query_storage") == "typed_sqlite"
+            job["payload"].get("query_storage") in {"typed_sqlite", "auto"}
             and self._typed_cancel_marker(job).exists()
         ):
             raise JobCancelled(f"Job cancellation requested: {job_id}")

@@ -53,6 +53,11 @@ DataScope Studio Exports/
 
 # Benchmark working data and ad-hoc reports; curated JSON/Markdown baselines are trackable.
 benchmarks/results/.work/
+benchmarks/results/**/.work/
+benchmarks/results/csv_performance_*.json
+benchmarks/results/csv_performance_*.md
+benchmarks/results/phase-e-d-validation/*.json
+benchmarks/results/phase-e-d-validation/*.md
 benchmarks/results/benchmark_*.json
 benchmarks/results/benchmark_*.md
 benchmarks/results/duckdb_poc_*.json

@@ -11,6 +11,15 @@ afterEach(() => cleanup());
 const t = createTranslator("en");
 
 describe("ImportWorkflowSection build feedback", () => {
+  it("passes an explicit query storage choice and locks it during a build", () => {
+    const onQueryStorageChange = vi.fn();
+    renderSection({ queryStorage: "legacy", onQueryStorageChange });
+    fireEvent.change(screen.getByLabelText("Query storage"), { target: { value: "auto" } });
+    expect(onQueryStorageChange).toHaveBeenCalledWith("auto");
+    cleanup();
+    renderSection({ queryStorage: "auto", buildJob: makeJob({ status: "running" }) });
+    expect(screen.getByLabelText("Query storage")).toBeDisabled();
+  });
   it("shows the guided import workflow and advanced build entry", () => {
     renderSection();
 

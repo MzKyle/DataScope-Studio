@@ -58,3 +58,13 @@ datascope batch import "<glob>" --project demo --template sensor_monitor
 datascope project export --project demo --out ~/DataScopeExports
 datascope project import ~/DataScopeExports/demo.zip
 ```
+
+CSV 优化路径可显式选择：
+
+```bash
+datascope import telemetry.csv --project demo --query-storage auto
+datascope batch import "data/*.csv" --project demo --query-storage auto
+```
+
+`--query-storage` 支持 `auto`、`legacy` 和 `typed_sqlite`。完整性能与跨平台门槛通过前，
+默认仍为 `legacy`；使用 `legacy` 可为新构建选择兼容布局，已有 Recording 仍按其实际布局读取。

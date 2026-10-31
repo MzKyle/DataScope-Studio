@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from datascope_api.main import app
@@ -97,9 +98,11 @@ def test_quick_inspect_import_reuses_mapping_preview_and_validation(
     assert "valid" in payload["validation"]
 
 
+@pytest.mark.parametrize('storage', ['legacy', 'auto'])
 def test_quick_inspect_confirm_and_build_artifacts(
     tmp_path: Path,
     monkeypatch,
+    storage: str,
 ) -> None:
     monkeypatch.setenv("DATASCOPE_WORKSPACE", str(tmp_path / "workspace"))
     monkeypatch.setenv("DATASCOPE_QUICK_INSPECT_ROOT", str(tmp_path / "quick-inspect"))
@@ -122,6 +125,7 @@ def test_quick_inspect_confirm_and_build_artifacts(
                 json={
                     "template_id": started["template_id"],
                     "output_name": "quick_run",
+                    "query_storage": storage,
                 },
             )
             result = build.json()
@@ -135,6 +139,7 @@ def test_quick_inspect_confirm_and_build_artifacts(
     assert build.status_code == 200
     assert result["status"] == "succeeded"
     assert result["job_id"] == ""
+    assert result['query_index']['storage'] == ('typed_sqlite' if storage == 'auto' else 'legacy')
     assert recording_exists
     assert blueprint_exists
 

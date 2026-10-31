@@ -4,6 +4,9 @@
 - Status: Accepted; C2b opt-in implemented, default production switch remains gated
 - Decision: **A. Keep optimized SQLite**
 - Scope: Phase C Query Storage Architecture Decision Validation
+- Follow-up: [Phase E CSV performance](../csv-performance-phase-e.md) adds v5 exact summaries,
+  batch CSV writes and explicit `auto` selection; the default remains gated by
+  full-scale and cross-platform acceptance.
 - History: supersedes the 2026-10-06 Phase B recommendation, “C. Plan DuckDB / Parquet migration”. That historical C label differs from Phase C's “C. Evidence still insufficient”.
 
 Implementation follow-up：[Phase C2a](../query-storage-phase-c2a.md)已将 Custom Query 的字段、路径和有限时间筛选接入生产 EAV 路径。

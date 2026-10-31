@@ -7,6 +7,7 @@ from typing import Any
 from uuid import uuid4
 
 from datascope_core.models import detect_source_type
+from datascope_core.query_typed import DEFAULT_QUERY_STORAGE, resolve_query_storage
 from datascope_core.workspace_utils import (
     artifact_paths,
     copy_parent_sidecars,
@@ -16,6 +17,35 @@ from datascope_core.workspace_utils import (
     source_size,
     utc_now,
 )
+
+
+def _disk_device(path: Path):
+    probe = path.expanduser().resolve()
+    while not probe.exists() and probe != probe.parent:
+        probe = probe.parent
+    return probe.stat().st_dev
+
+
+def _volume_budget(operation, components, warnings):
+    budgets = {}
+    for name, path, size in components:
+        budget = budgets.setdefault(_disk_device(path), {'path': path, 'components': {}})
+        budget['components'][name] = budget['components'].get(name, 0) + size
+    volumes = []
+    for budget in budgets.values():
+        estimate = disk_estimate(operation, sum(budget['components'].values()),
+            budget['path'], confidence='medium', warnings=warnings)
+        volumes.append({**estimate, 'destination': str(budget['path'].resolve()),
+                        'components': budget['components']})
+    result = volumes[0].copy()
+    if len(volumes) > 1:
+        result.update(volumes=volumes, free=None,
+            components={name: sum(v['components'].get(name, 0) for v in volumes)
+                        for name in dict.fromkeys(name for name, _, _ in components)},
+            **{key: sum(v[key] for v in volumes) for key in ('estimated', 'required', 'margin')})
+        result['sufficient'] = (False if any(v['sufficient'] is False for v in volumes)
+                               else None if any(v['sufficient'] is None for v in volumes) else True)
+    return result
 
 
 class DiskSpaceError(RuntimeError):
@@ -188,11 +218,24 @@ class WorkspaceStorageMixin:
         project_id: str,
         source_id: str,
         output_dir: str | None = None,
+        *,
+        query_storage: str = DEFAULT_QUERY_STORAGE,
     ) -> dict[str, Any]:
         project = self.get_project(project_id)
         source = self.get_source(source_id)
         self._assert_source_available(source)
         source_bytes = int(source.get("size_bytes") or 0)
+        storage = resolve_query_storage(query_storage, source['type'])
+        if storage == 'typed_sqlite' and source['type'] == 'csv':
+            # A custom project path, Catalog and output can occupy three disks.
+            workspace_path = Path(project['workspace_path'])
+            output_path = Path(output_dir).expanduser() if output_dir else workspace_path
+            components = [('query_index_and_journal', self.db_path.parent, source_bytes * 5),
+                          ('query_temporary', workspace_path, source_bytes * 2),
+                          ('rerun_artifacts', output_path, source_bytes * 2)]
+            result = _volume_budget('build', components, [])
+            result['query_storage'] = storage
+            return result
         warnings: list[str] = []
         confidence = "medium"
         if source["type"] == "ros2_db3":
@@ -227,6 +270,8 @@ class WorkspaceStorageMixin:
         project_id: str,
         patterns: list[str],
         storage_mode: str = "copy",
+        *,
+        query_storage: str = DEFAULT_QUERY_STORAGE,
     ) -> dict[str, Any]:
         project = self.get_project(project_id)
         if storage_mode not in {"copy", "reference"}:
@@ -236,6 +281,22 @@ class WorkspaceStorageMixin:
         paths = resolve_patterns(patterns)
         if not paths:
             raise ValueError("Batch import did not match any source paths")
+        sizes = [(path, source_size(path), detect_source_type(path)) for path in paths]
+        typed_bytes = sum(size for path, size, kind in sizes
+            if resolve_query_storage(query_storage, kind) == 'typed_sqlite' and kind == 'csv')
+        if typed_bytes:
+            project_path = Path(project['workspace_path'])
+            legacy_artifacts = sum(max(size * 2, 64 * 1024 * 1024) for _, size, kind in sizes
+                if not (kind == 'csv' and resolve_query_storage(query_storage, kind) == 'typed_sqlite'))
+            components = [('query_index_and_journal', self.db_path.parent, typed_bytes * 5),
+                          ('query_temporary', project_path, typed_bytes * 2),
+                          ('rerun_artifacts', project_path, typed_bytes * 2 + legacy_artifacts)]
+            if storage_mode == 'copy':
+                components.append(('source_copy', project_path, sum(size for _, size, _ in sizes)))
+            result = _volume_budget('batch_import', components,
+                ['Reference mode does not reserve space for external sources.'] if storage_mode == 'reference' else [])
+            result['query_storage'] = query_storage
+            return result
         estimated = 0
         warnings: list[str] = []
         for path in paths:

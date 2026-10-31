@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import { apiErrorLogContext, logDiagnostic } from "./diagnostic-log";
+import type { QueryStorage } from "./query-storage";
 import type {
   DiagnosticReport,
   DiagnosticExport,
@@ -346,6 +347,7 @@ export const api = {
       mcap_decoders?: string[] | null;
       rrd_optimize_profile?: string;
       artifact_validation?: string;
+      query_storage?: QueryStorage;
       catalog_registration?: Record<string, unknown> | null;
     }
   ) =>
@@ -358,6 +360,7 @@ export const api = {
         mcap_decoders: options?.mcap_decoders ?? null,
         rrd_optimize_profile: options?.rrd_optimize_profile ?? "none",
         artifact_validation: options?.artifact_validation ?? "basic",
+        ...(options?.query_storage ? { query_storage: options.query_storage } : {}),
         catalog_registration: options?.catalog_registration ?? null
       })
     }),
@@ -427,6 +430,7 @@ export const api = {
       mcap_decoders?: string[] | null;
       rrd_optimize_profile?: string;
       artifact_validation?: string;
+      query_storage?: QueryStorage;
       catalog_registration?: Record<string, unknown> | null;
     }
   ) =>
@@ -442,6 +446,7 @@ export const api = {
         mcap_decoders: options?.mcap_decoders ?? null,
         rrd_optimize_profile: options?.rrd_optimize_profile ?? "none",
         artifact_validation: options?.artifact_validation ?? "basic",
+        ...(options?.query_storage ? { query_storage: options.query_storage } : {}),
         catalog_registration: options?.catalog_registration ?? null
       })
     }),
@@ -642,7 +647,8 @@ export const api = {
     patterns: string[],
     templateId: string,
     outputPrefix: string,
-    storageMode: "copy" | "reference" = "copy"
+    storageMode: "copy" | "reference" = "copy",
+    queryStorage?: QueryStorage
   ) =>
     request<Job>("/api/batch/import", {
       method: "POST",
@@ -651,7 +657,8 @@ export const api = {
         patterns,
         template_id: templateId,
         output_prefix: outputPrefix,
-        storage_mode: storageMode
+        storage_mode: storageMode,
+        ...(queryStorage ? { query_storage: queryStorage } : {})
       })
     }),
   batches: (projectId: string) =>
@@ -660,11 +667,13 @@ export const api = {
   estimateBatchImport: (
     projectId: string,
     patterns: string[],
-    storageMode: "copy" | "reference" = "copy"
+    storageMode: "copy" | "reference" = "copy",
+    queryStorage?: QueryStorage
   ) =>
     request<DiskEstimate>(`/api/projects/${projectId}/estimates/batch-import`, {
       method: "POST",
-      body: JSON.stringify({ patterns, storage_mode: storageMode })
+      body: JSON.stringify({ patterns, storage_mode: storageMode,
+        ...(queryStorage ? { query_storage: queryStorage } : {}) })
     }),
   retryBatchItem: (batchId: string, itemId: string) =>
     request<Job>(`/api/batch/${batchId}/items/${itemId}/retry`, {

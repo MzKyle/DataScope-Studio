@@ -1,0 +1,4368 @@
+{
+  "status": "succeeded",
+  "preset": "small",
+  "work": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\csv_performance_20261020_134433_e0300f84",
+  "environment": {
+    "platform": "Windows-10-10.0.26300-SP0",
+    "python": "3.11.5 (tags/v3.11.5:cce6ba9, Aug 24 2023, 14:38:34) [MSC v.1936 64 bit (AMD64)]",
+    "cpu": "13th Gen Intel(R) Core(TM) i9-13900HX",
+    "logical_cpus": 32,
+    "physical_cpus": 24,
+    "memory_gb": 16.90710016,
+    "available_memory_gb_at_start": 6.195204096,
+    "datascope_version": "0.4.0",
+    "git_commit": "ab8473317b904388448bb3b5c83cc01bede35e30",
+    "git_dirty": true,
+    "benchmark_code_sha256": "69d43ffb8dca2204f0a229733dd7d0a7a1de8334bb7431233c83dc244127861e",
+    "packages": {
+      "datascope-core": "0.4.0",
+      "pandas": "2.3.3",
+      "numpy": "2.4.6",
+      "rerun-sdk": "0.33.1",
+      "psutil": "7.2.2",
+      "pyarrow": "25.0.1"
+    },
+    "sqlite_version": "3.42.0"
+  },
+  "source_files_sha256": {
+    "packages\\core\\src\\datascope_core\\csv_rerun.py": "63d053ff28096a144156d905362239ddf683942e3600e58933cdc0a17a748a30",
+    "packages\\core\\src\\datascope_core\\cv_schema.py": "0f3835176b0a1b906e99196d348e5bdf2e57fb116f7665ca11edf88b41700087",
+    "packages\\core\\src\\datascope_core\\diagnostic_reader.py": "14e22e7ec0b74aaf42bc14f992e9ffde030920065bd0ef233f9d068b1067d2d3",
+    "packages\\core\\src\\datascope_core\\diagnostic_stats.py": "e358ffefa26b226663979d1bcd16c1668b1cc6a18f196b87ffd273573613ad31",
+    "packages\\core\\src\\datascope_core\\inference.py": "c950c3aa282203e6337851d65b38f578dda3009e678020afab30c841a1da2401",
+    "packages\\core\\src\\datascope_core\\job_executor.py": "eb880ca168dd938b2f7a19888decdd075c23fb4369f3e42ea6c3762ed85958fc",
+    "packages\\core\\src\\datascope_core\\job_supervisor.py": "18a53c2e7254fd9782cf9aad15901e8d820c616fe06fc1871bd842cb155d57a5",
+    "packages\\core\\src\\datascope_core\\mapping.py": "0eafd0cf64ad4a00259939983bf023e87f1b317b40240faa979af3946931e3d4",
+    "packages\\core\\src\\datascope_core\\mapping_templates.py": "d0471d26840ca35a54fa812d2787af9920a6a1130b7bbd25c72888da1af68154",
+    "packages\\core\\src\\datascope_core\\mapping_validation.py": "58024d3178ab83553cfa332088c24ee18ce9fa09c48e2fe51a00bdb4e9ff28e8",
+    "packages\\core\\src\\datascope_core\\models.py": "80925f6ae74797d12ef6b726d8cd04fb2ff1304c15f3e691c1de89dd0d43fb83",
+    "packages\\core\\src\\datascope_core\\plugin_registry.py": "f2bed9cabe7dec07106a4c9741e1d13c3f30b91443b91e6527c73b2939983132",
+    "packages\\core\\src\\datascope_core\\query.py": "aa29fd585bcc6c7fcf89607271d8ec90ff08285b2f7e3ee40a925ad80b28299c",
+    "packages\\core\\src\\datascope_core\\query_aggregate.py": "efad560d848bb268712d5a77531a3106a7b87e140d589ed457c5c1d1a2ea172a",
+    "packages\\core\\src\\datascope_core\\query_backend.py": "ecf38878e6d539a4b000f2b5d0c18d6d00cdf9a86640d7799e54c5a4ed2da25a",
+    "packages\\core\\src\\datascope_core\\query_sql.py": "bd143745c2f33ad6060bf959d1ab48cb76c7da681f7736583c16413c7fb62255",
+    "packages\\core\\src\\datascope_core\\query_typed.py": "51469c787cd03afd3f5426b6827606ba2727fdbd8e4a0191e3ba7a409e9252d0",
+    "packages\\core\\src\\datascope_core\\recipes.py": "a974e27d602c2cfba2afcd4234cda22063e84e2a49174f7589b78694f940d677",
+    "packages\\core\\src\\datascope_core\\rerun_artifacts.py": "97500c84e02a2530521a89834159b2abeaa119c8dff9502bdfebf017fb104089",
+    "packages\\core\\src\\datascope_core\\rerun_cli.py": "4ff9128c5fa71c665965bc8b40c138ec776834a7acee99d48232c1a64d99919d",
+    "packages\\core\\src\\datascope_core\\rerun_writer.py": "30554b77baad21e939c07d224415f6b72a91bd13994a6a70014c2d30d5222bb6",
+    "packages\\core\\src\\datascope_core\\robot_diagnostics.py": "d7e808b1abdd627509a10d9ed4dd58e3a46e88c3ab9321016fe2b45b787f2072",
+    "packages\\core\\src\\datascope_core\\schema_profile.py": "055dc9e01700aff44239cac9edbe58c91a19f88aefff0a3096680f464cd46530",
+    "packages\\core\\src\\datascope_core\\templates.py": "2b6c46a9f920b61d9af07566b7a24780426dfb472e025d99f0bb10f20c8214d0",
+    "packages\\core\\src\\datascope_core\\template_registry.py": "241c3de7f6c8b1e6db4d1ad0f2de8f040ea14eabd4e24f065461b7d8487866c6",
+    "packages\\core\\src\\datascope_core\\time_utils.py": "17aafa806f07c364e051fa0c6cff93127e5fa68d48d6817a5577f1ef37cc7ede",
+    "packages\\core\\src\\datascope_core\\version.py": "d1c8db447654f12a4f4fefbcce8fb061a1955df61964143d02925d2818deb0c9",
+    "packages\\core\\src\\datascope_core\\viewer.py": "5963b4f2adb7d2810ee724beb4dc0f7427ade0081fc530fac594a722f604a824",
+    "packages\\core\\src\\datascope_core\\workspace.py": "979c9d0eccc06a7e4ad8731cf1876bbae26929026b540cb718910689c665f86a",
+    "packages\\core\\src\\datascope_core\\workspace_database.py": "649c74266fbbc05e426669dcfb5a8bb2424d6fd9e27f51d11c8d2b793d0361a4",
+    "packages\\core\\src\\datascope_core\\workspace_diagnostics.py": "1080130f8564f5e4dbe8f7dd3076d2249c8c0155ffdd1b068e12dd542dbfb460",
+    "packages\\core\\src\\datascope_core\\workspace_jobs.py": "82b67a5a4c07dc52657f103ed3593a70e92dc12d9fd12f2a12a2c2d9f364f910",
+    "packages\\core\\src\\datascope_core\\workspace_package.py": "448efaa6e0bb05a6215e5d251804f438dd85365d31a02db0211f29af82e3c516",
+    "packages\\core\\src\\datascope_core\\workspace_query.py": "38f7e75916c224d20035f325c93569c26c88d3b56c69b48d9db215a854e3907e",
+    "packages\\core\\src\\datascope_core\\workspace_registry.py": "f73245e45853b5ff0f21d2c76bd79d3779758677d42fa22cd798ce4b8aaea2a2",
+    "packages\\core\\src\\datascope_core\\workspace_storage.py": "d84d8ca941ad8a43eb406e0cf6f2ffce9e8c63ef289f3a1130f3e8b3b4a6baf3",
+    "packages\\core\\src\\datascope_core\\workspace_utils.py": "d2d6083dd564eba8a42977b0357b12513e7ffb2a1c815b48e370f5cb307d0867",
+    "packages\\core\\src\\datascope_core\\__init__.py": "0b0f13682644fe426695f5b760ee56eafabb20f6b527fe7799bcbfbfdf620e20",
+    "packages\\core\\src\\datascope_core\\adapters\\base.py": "e74b93b55b09e3b54a56e71c641610e90be7b9c571eded7d59572cc422cd356b",
+    "packages\\core\\src\\datascope_core\\adapters\\csv_adapter.py": "ec8273ccdfcc1e0daf8e3687f4ad9706ce3a4225a722437c04c1d29402977215",
+    "packages\\core\\src\\datascope_core\\adapters\\image_folder_adapter.py": "d93151e774de9dc50632c71c6865b2fd2561b938b35595c35d5149b29b72fbbd",
+    "packages\\core\\src\\datascope_core\\adapters\\jsonl_adapter.py": "c4f822364ce48d0b99a4f29c61c09ba8da27ab5030f6413eb19f02bed80bf76b",
+    "packages\\core\\src\\datascope_core\\adapters\\mcap_adapter.py": "812267a31ea9b328b55c70c4451767d0dbb43569f22e80c783dfded62f02031b",
+    "packages\\core\\src\\datascope_core\\adapters\\point_cloud_adapter.py": "6e3d9e1e0641ec15439597ecbb7c416803a47d470183fa12a5d508693593f419",
+    "packages\\core\\src\\datascope_core\\adapters\\registry.py": "3be930c2610b11899aadb2bf91ef3cf808ee1fff04cb7871302d2fd508c2c81a",
+    "packages\\core\\src\\datascope_core\\adapters\\ros2_db3_adapter.py": "fc27163285b640c49238ec43082be8ec0495a8cc8fd35b07fde5431e38953b74",
+    "packages\\core\\src\\datascope_core\\adapters\\text_table_adapter.py": "33c22b64287352377bc4035c936d48acc90801817a0929410a3d038b32222fe4",
+    "benchmarks\\csv_performance.py": "da4d81ddfd06b902371e35b069e838e73378f690dec560187336c7cba39bdddd"
+  },
+  "workers": {
+    "control": {
+      "status": "succeeded",
+      "builds": [
+        {
+          "index_ms": [
+            18052.276400001574
+          ]
+        },
+        {
+          "index_ms": [
+            17846.6212000003
+          ]
+        },
+        {
+          "index_ms": [
+            18047.32519999925
+          ]
+        }
+      ],
+      "environment": {
+        "platform": "Windows-10-10.0.26300-SP0",
+        "python": "3.11.5 (tags/v3.11.5:cce6ba9, Aug 24 2023, 14:38:34) [MSC v.1936 64 bit (AMD64)]",
+        "cpu": "13th Gen Intel(R) Core(TM) i9-13900HX",
+        "logical_cpus": 32,
+        "physical_cpus": 24,
+        "memory_gb": 16.90710016,
+        "available_memory_gb_at_start": 6.045433856,
+        "datascope_version": "0.4.0",
+        "git_commit": "ab8473317b904388448bb3b5c83cc01bede35e30",
+        "git_dirty": true,
+        "benchmark_code_sha256": "69d43ffb8dca2204f0a229733dd7d0a7a1de8334bb7431233c83dc244127861e",
+        "packages": {
+          "datascope-core": "0.4.0",
+          "pandas": "2.3.3",
+          "numpy": "2.4.6",
+          "rerun-sdk": "0.33.1",
+          "psutil": "7.2.2",
+          "pyarrow": "25.0.1"
+        },
+        "sqlite_version": "3.42.0"
+      },
+      "imported_core": {
+        "workspace": {
+          "path": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\csv_performance_20261020_134433_e0300f84\\control_source\\packages\\core\\src\\datascope_core\\workspace.py",
+          "sha256": "04547b9a3b4a86e1bf7c28ebacb6f9f6039f4d50f06a4c87eb9600ce987eb7f9"
+        },
+        "query_typed": {
+          "path": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\csv_performance_20261020_134433_e0300f84\\control_source\\packages\\core\\src\\datascope_core\\query_typed.py",
+          "sha256": "ea12d59a06c5159dd956a1624a55f1deb944b7bbc7dbc2a1675af520aa4bb49a"
+        },
+        "time_utils": {
+          "path": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\csv_performance_20261020_134433_e0300f84\\control_source\\packages\\core\\src\\datascope_core\\time_utils.py",
+          "sha256": "8e282cb7203853d1ca837e901c9e87797be3a6371ce8d02894d0289cbaba1dcd"
+        }
+      },
+      "memory": {
+        "method": "psutil process RSS polling; includes native allocations",
+        "sample_interval_ms": 10.0,
+        "peak_rss_mb": 168.886272,
+        "os_peak_rss_mb": 169.381888,
+        "rss_before_mb": 101.51936,
+        "rss_after_mb": 110.268416,
+        "stages": {},
+        "scope": "this process; child processes and system page cache are excluded"
+      },
+      "process_tree_peak_rss_bytes": 171716608,
+      "temporary_usage": {
+        "peak_bytes_sampled": 115306472,
+        "interval_ms": 100,
+        "scope": "owned float spools, SQLite WAL/journals and CSV sort cache; excludes source CSV, main catalog, RRD/RBL and unobservable SQLite native temp I/O"
+      }
+    },
+    "index": {
+      "status": "succeeded",
+      "builds": [
+        {
+          "index_ms": [
+            5767.491299999165,
+            6048.966199999995
+          ]
+        },
+        {
+          "index_ms": [
+            5728.6456000001635,
+            5945.076100000733
+          ]
+        },
+        {
+          "index_ms": [
+            5699.424999998882,
+            5959.818999999698
+          ]
+        }
+      ],
+      "environment": {
+        "platform": "Windows-10-10.0.26300-SP0",
+        "python": "3.11.5 (tags/v3.11.5:cce6ba9, Aug 24 2023, 14:38:34) [MSC v.1936 64 bit (AMD64)]",
+        "cpu": "13th Gen Intel(R) Core(TM) i9-13900HX",
+        "logical_cpus": 32,
+        "physical_cpus": 24,
+        "memory_gb": 16.90710016,
+        "available_memory_gb_at_start": 6.211805184,
+        "datascope_version": "0.4.0",
+        "git_commit": "ab8473317b904388448bb3b5c83cc01bede35e30",
+        "git_dirty": true,
+        "benchmark_code_sha256": "69d43ffb8dca2204f0a229733dd7d0a7a1de8334bb7431233c83dc244127861e",
+        "packages": {
+          "datascope-core": "0.4.0",
+          "pandas": "2.3.3",
+          "numpy": "2.4.6",
+          "rerun-sdk": "0.33.1",
+          "psutil": "7.2.2",
+          "pyarrow": "25.0.1"
+        },
+        "sqlite_version": "3.42.0"
+      },
+      "imported_core": {
+        "workspace": {
+          "path": "D:\\Programme\\DataScope-Studio\\packages\\core\\src\\datascope_core\\workspace.py",
+          "sha256": "979c9d0eccc06a7e4ad8731cf1876bbae26929026b540cb718910689c665f86a"
+        },
+        "query_typed": {
+          "path": "D:\\Programme\\DataScope-Studio\\packages\\core\\src\\datascope_core\\query_typed.py",
+          "sha256": "51469c787cd03afd3f5426b6827606ba2727fdbd8e4a0191e3ba7a409e9252d0"
+        },
+        "time_utils": {
+          "path": "D:\\Programme\\DataScope-Studio\\packages\\core\\src\\datascope_core\\time_utils.py",
+          "sha256": "17aafa806f07c364e051fa0c6cff93127e5fa68d48d6817a5577f1ef37cc7ede"
+        }
+      },
+      "storage": {
+        "database_bytes": 261230592,
+        "objects": null,
+        "sample_indexes": [
+          {
+            "name": "typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1_time",
+            "sql": "CREATE INDEX typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1_time ON typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1 (dataset_id, time, sample_seq)"
+          },
+          {
+            "name": "typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time",
+            "sql": "CREATE INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time ON typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad (dataset_id, time, sample_seq)"
+          },
+          {
+            "name": "typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_value_7",
+            "sql": "CREATE INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_value_7 ON typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad (dataset_id, c7, time, sample_seq)"
+          }
+        ],
+        "builds": [
+          {
+            "storage": "typed_sqlite",
+            "format_version": 1,
+            "preflight_ms": 564.9486000002071,
+            "write_ms": 1881.0496000005514,
+            "index_ms": 490.2745999988838,
+            "index_build_allocated_bytes": 22704128,
+            "source_samples": 300000,
+            "physical_sample_rows": 600000,
+            "typed_logical_rows": 9600000,
+            "eav_rows": 0,
+            "fallback_streams": {},
+            "sample_tables": [
+              "typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad",
+              "typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1"
+            ],
+            "summary_groups": 32,
+            "summary_ms": 2223.6009999996895
+          },
+          {
+            "storage": "typed_sqlite",
+            "format_version": 1,
+            "preflight_ms": 553.6898999998812,
+            "write_ms": 2480.7186999987607,
+            "index_ms": 121.27289999989443,
+            "index_build_allocated_bytes": 0,
+            "source_samples": 300000,
+            "physical_sample_rows": 600000,
+            "typed_logical_rows": 9600000,
+            "eav_rows": 0,
+            "fallback_streams": {},
+            "sample_tables": [
+              "typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad",
+              "typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1"
+            ],
+            "summary_groups": 32,
+            "summary_ms": 2199.251500000173
+          }
+        ],
+        "eav_rows": 0,
+        "physical_sample_rows": 1200000,
+        "typed_logical_rows": 19200000,
+        "writer_counts_match_sql": true,
+        "scope": "checkpointed whole catalog; includes metadata, registry, dictionaries and all indexes; excludes CSV/RRD/RBL"
+      },
+      "catalog": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\csv_performance_20261020_134433_e0300f84\\index\\2",
+      "queries": {
+        "find_errors": {
+          "runs": 5,
+          "min_ms": 34.27020000162884,
+          "mean_ms": 34.70862000067427,
+          "median_ms": 34.498000000894535,
+          "p95_ms": 35.87680000055116,
+          "max_ms": 35.87680000055116,
+          "samples_ms": [
+            34.27020000162884,
+            34.498000000894535,
+            35.87680000055116,
+            34.38889999961248,
+            34.50920000068436
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "99de231a63c7039eed312fbfa82a8ff01904bca4c3b4339ab0292952d247f3c1",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256"
+        },
+        "low_battery": {
+          "runs": 5,
+          "min_ms": 67.58179999997083,
+          "mean_ms": 69.0705799999705,
+          "median_ms": 69.78280000112136,
+          "p95_ms": 70.18009999956121,
+          "max_ms": 70.18009999956121,
+          "samples_ms": [
+            70.18009999956121,
+            67.58179999997083,
+            67.92039999891131,
+            69.78280000112136,
+            69.88780000028783
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "a11c70b7a0613f26d7fdc78a1a9d4ce2746cae34507d4ea1de27e6631245c9b5",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256"
+        },
+        "state_duration": {
+          "runs": 5,
+          "min_ms": 4.441700000825222,
+          "mean_ms": 4.672559999744408,
+          "median_ms": 4.689299999881769,
+          "p95_ms": 4.979899998943438,
+          "max_ms": 4.979899998943438,
+          "samples_ms": [
+            4.460499998458545,
+            4.791400000613066,
+            4.441700000825222,
+            4.979899998943438,
+            4.689299999881769
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "3ba14d62b1620968a5ffeff510b17d703516ea2325bc1ff14fbacf36d64fd699",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256"
+        },
+        "custom_scalar_key": {
+          "runs": 5,
+          "min_ms": 7.043600000542938,
+          "mean_ms": 7.455879999906756,
+          "median_ms": 7.344999999986612,
+          "p95_ms": 8.025999999517808,
+          "max_ms": 8.025999999517808,
+          "samples_ms": [
+            7.293099999515107,
+            8.025999999517808,
+            7.571699999971315,
+            7.344999999986612,
+            7.043600000542938
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "79fa74e7b8350e81bc49d892157d6dcacdfcaac60b75b020c46c6a357eb4e40e",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256"
+        },
+        "custom_time_range": {
+          "runs": 5,
+          "min_ms": 4.243999999744119,
+          "mean_ms": 4.628499999307678,
+          "median_ms": 4.6963000004325295,
+          "p95_ms": 5.010199998650933,
+          "max_ms": 5.010199998650933,
+          "samples_ms": [
+            5.010199998650933,
+            4.307699999117176,
+            4.243999999744119,
+            4.6963000004325295,
+            4.884299998593633
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 352,
+          "result_sha256": "1f21ed07d18e84054050dbcda796c0db6d9496aa1772e76668c5fe65216aba3d",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256"
+        },
+        "custom_numeric_threshold": {
+          "runs": 5,
+          "min_ms": 76.14350000039849,
+          "mean_ms": 77.13629999998375,
+          "median_ms": 77.02470000003814,
+          "p95_ms": 78.22229999874253,
+          "max_ms": 78.22229999874253,
+          "samples_ms": [
+            78.22229999874253,
+            77.02470000003814,
+            76.48990000052436,
+            77.80110000021523,
+            76.14350000039849
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 1000,
+          "result_sha256": "07869b6787725bb88d60853dc995cd9a46f426f6e3848656663f31c36edf39f9",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256"
+        },
+        "compare": {
+          "runs": 5,
+          "min_ms": 2.0017999995616265,
+          "mean_ms": 2.2908599999936996,
+          "median_ms": 2.0953000002918998,
+          "p95_ms": 2.9499000011128373,
+          "max_ms": 2.9499000011128373,
+          "samples_ms": [
+            2.0898000002489425,
+            2.317499998753192,
+            2.0017999995616265,
+            2.0953000002918998,
+            2.9499000011128373
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 4,
+          "result_sha256": "4860ed826855c06b0afbbee66c1668239c526fc5cf80e57ab01f313085867a55",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256"
+        },
+        "compare_all": {
+          "runs": 5,
+          "min_ms": 2.706400000533904,
+          "mean_ms": 2.817500000310247,
+          "median_ms": 2.76540000049863,
+          "p95_ms": 2.9787000003125286,
+          "max_ms": 2.9787000003125286,
+          "samples_ms": [
+            2.706400000533904,
+            2.8787999999622116,
+            2.75820000024396,
+            2.76540000049863,
+            2.9787000003125286
+          ],
+          "percentile_method": "nearest-rank",
+          "warmups": 1,
+          "result_rows": 64,
+          "result_sha256": "decd0c944c27c88590eca6eefbfb27e8c9aa27ce3ddc521af4d0c65f15a9be20",
+          "distinct_result_hashes": 1,
+          "repeat_check": "exact_sha256"
+        }
+      },
+      "diagnostics": {
+        "runs": 5,
+        "min_ms": 1560.1836999994703,
+        "mean_ms": 1566.9506000002002,
+        "median_ms": 1567.196199999671,
+        "p95_ms": 1575.7160000011936,
+        "max_ms": 1575.7160000011936,
+        "samples_ms": [
+          1575.7160000011936,
+          1568.849200000841,
+          1567.196199999671,
+          1562.8078999998252,
+          1560.1836999994703
+        ],
+        "percentile_method": "nearest-rank",
+        "warmups": 1,
+        "result_rows": 1000,
+        "result_sha256": "56df45b8782f4f0bca06e88e46f9cdd12dea509c4a66f35e6909f5329f58699b",
+        "distinct_result_hashes": 1,
+        "repeat_check": "exact_sha256"
+      },
+      "execution": {
+        "find_errors": {
+          "counts": {
+            "bindings": 1,
+            "routes": [
+              {
+                "binding": 32,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "bounded state dictionary error codes"
+              }
+            ],
+            "state_dictionary_decodes": 4,
+            "typed_fetched": 1000,
+            "logical_yielded": 1000,
+            "business_json_decodes": 2000,
+            "distinct_time_candidate_samples": 300000,
+            "sqlite_rows_examined": null,
+            "scope": "separate untimed pass; fetched projection rows can repeat samples across fields; SQLite rows/pages examined unavailable"
+          },
+          "statements": [
+            {
+              "sql": "select * from projects where id = 'project_a8c5865bb94e'",
+              "explain": [
+                [
+                  3,
+                  0,
+                  0,
+                  "SEARCH projects USING INDEX sqlite_autoindex_projects_1 (id=?)"
+                ]
+              ]
+            },
+            {
+              "sql": "SELECT i.* FROM typed_indexes i JOIN recordings r ON r.id = i.recording_id WHERE r.project_id = 'project_a8c5865bb94e' AND i.recording_id IN ('recording_0')",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                ],
+                [
+                  14,
+                  0,
+                  0,
+                  "SEARCH i USING INDEX sqlite_autoindex_typed_indexes_1 (recording_id=?)"
+                ]
+              ]
+            },
+            {
+              "sql": "SELECT qr.*, d.schema_id, s.family FROM typed_bindings qr JOIN recordings r ON r.id = qr.recording_id JOIN typed_datasets d ON d.id = qr.dataset_id JOIN typed_schemas s ON s.id = d.schema_id WHERE r.project_id = 'project_a8c5865bb94e' AND qr.recording_id in ('recording_0') AND qr.semantic_type in ('text_log', 'state')",
+              "explain": [
+                [
+                  7,
+                  0,
+                  0,
+                  "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                ],
+                [
+                  15,
+                  0,
+                  0,
+                  "SCAN qr"
+                ],
+                [
+                  22,
+                  0,
+                  0,
+                  "SEARCH d USING INTEGER PRIMARY KEY (rowid=?)"
+                ],
+                [
+                  25,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX sqlite_autoindex_typed_schemas_1 (id=?)"
+                ]
+              ]
+            },
+            {
+              "sql": "SELECT id,value_json FROM typed_states WHERE dataset_id = 2 ORDER BY id LIMIT 4097",
+              "explain": [
+                [
+                  4,
+                  0,
+                  0,
+                  "SEARCH typed_states USING COVERING INDEX sqlite_autoindex_typed_states_1 (dataset_id=?)"
+                ],
+                [
+                  18,
+                  0,
+                  0,
+                  "USE TEMP B-TREE FOR ORDER BY"
+                ]
+              ]
+            },
+            {
+              "sql": "select qr.*, coalesce(o.sample_seq, qr.rowid) AS _sample_seq, coalesce(o.binding_seq, 0) AS _binding_seq from query_rows qr join recordings r on r.id = qr.recording_id LEFT JOIN typed_legacy_order o ON o.query_rowid = qr.rowid where r.project_id = 'project_a8c5865bb94e' and qr.recording_id in ('recording_0') and qr.semantic_type in ('text_log', 'state') order by qr.recording_id, qr.time, qr.entity_path, qr.key, _sample_seq, _binding_seq",
+              "explain": [
+                [
+                  7,
+                  0,
+                  0,
+                  "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                ],
+                [
+                  15,
+                  0,
+                  0,
+                  "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)"
+                ],
+                [
+                  37,
+                  0,
+                  0,
+                  "SEARCH o USING INTEGER PRIMARY KEY (rowid=?) LEFT-JOIN"
+                ],
+                [
+                  71,
+                  0,
+                  0,
+                  "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+                ]
+              ],
+              "matching_candidates_without_limit": 0
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, v.value_json AS value FROM typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1 s LEFT JOIN typed_states v ON v.id = s.c0 AND v.dataset_id = s.dataset_id WHERE s.dataset_id = 2 AND s.c0 IS NOT NULL AND (v.id IS NULL OR s.c0 IN (2,4)) ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  6,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1_time (dataset_id=?)"
+                ],
+                [
+                  13,
+                  0,
+                  0,
+                  "SEARCH v USING INTEGER PRIMARY KEY (rowid=?) LEFT-JOIN"
+                ]
+              ],
+              "matching_candidates_without_limit": 45025
+            }
+          ]
+        },
+        "low_battery": {
+          "counts": {
+            "bindings": 1,
+            "routes": [
+              {
+                "binding": 8,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "native numeric/bool battery comparison"
+              }
+            ],
+            "state_dictionary_decodes": 0,
+            "typed_fetched": 1000,
+            "typed_numeric_decodes": 1000,
+            "logical_yielded": 1000,
+            "business_json_decodes": 2000,
+            "distinct_time_candidate_samples": 300000,
+            "sqlite_rows_examined": null,
+            "scope": "separate untimed pass; fetched projection rows can repeat samples across fields; SQLite rows/pages examined unavailable"
+          },
+          "statements": [
+            {
+              "sql": "select * from projects where id = 'project_a8c5865bb94e'",
+              "explain": [
+                [
+                  3,
+                  0,
+                  0,
+                  "SEARCH projects USING INDEX sqlite_autoindex_projects_1 (id=?)"
+                ]
+              ]
+            },
+            {
+              "sql": "SELECT i.* FROM typed_indexes i JOIN recordings r ON r.id = i.recording_id WHERE r.project_id = 'project_a8c5865bb94e' AND i.recording_id IN ('recording_0')",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                ],
+                [
+                  14,
+                  0,
+                  0,
+                  "SEARCH i USING INDEX sqlite_autoindex_typed_indexes_1 (recording_id=?)"
+                ]
+              ]
+            },
+            {
+              "sql": "SELECT qr.*, d.schema_id, s.family FROM typed_bindings qr JOIN recordings r ON r.id = qr.recording_id JOIN typed_datasets d ON d.id = qr.dataset_id JOIN typed_schemas s ON s.id = d.schema_id WHERE r.project_id = 'project_a8c5865bb94e' AND qr.recording_id in ('recording_0') AND qr.semantic_type in ('scalar', 'scalar_group') AND (lower(qr.key) like '%battery%' or lower(qr.entity_path) like '%battery%')",
+              "explain": [
+                [
+                  7,
+                  0,
+                  0,
+                  "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                ],
+                [
+                  15,
+                  0,
+                  0,
+                  "SCAN qr"
+                ],
+                [
+                  30,
+                  0,
+                  0,
+                  "SEARCH d USING INTEGER PRIMARY KEY (rowid=?)"
+                ],
+                [
+                  33,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX sqlite_autoindex_typed_schemas_1 (id=?)"
+                ]
+              ]
+            },
+            {
+              "sql": "select qr.*, coalesce(o.sample_seq, qr.rowid) AS _sample_seq, coalesce(o.binding_seq, 0) AS _binding_seq from query_rows qr join recordings r on r.id = qr.recording_id LEFT JOIN typed_legacy_order o ON o.query_rowid = qr.rowid where r.project_id = 'project_a8c5865bb94e' and qr.recording_id in ('recording_0') and qr.semantic_type in ('scalar', 'scalar_group') and (lower(qr.key) like '%battery%' or lower(qr.entity_path) like '%battery%') order by qr.recording_id, qr.time, qr.entity_path, qr.key, _sample_seq, _binding_seq",
+              "explain": [
+                [
+                  7,
+                  0,
+                  0,
+                  "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                ],
+                [
+                  15,
+                  0,
+                  0,
+                  "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)"
+                ],
+                [
+                  45,
+                  0,
+                  0,
+                  "SEARCH o USING INTEGER PRIMARY KEY (rowid=?) LEFT-JOIN"
+                ],
+                [
+                  79,
+                  0,
+                  0,
+                  "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+                ]
+              ],
+              "matching_candidates_without_limit": 0
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c7 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c7 IS NOT NULL AND (CASE WHEN typeof(s.c7) = 'blob' THEN datascope_float_blob(s.c7) ELSE s.c7 END) < 0.2 AND (s.c7 < 0.2 OR s.c7 >= '') ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 50000
+            }
+          ]
+        },
+        "state_duration": {
+          "counts": {
+            "business_json_decodes": 0,
+            "distinct_time_candidate_samples": 300000,
+            "sqlite_rows_examined": null,
+            "scope": "separate untimed pass; fetched projection rows can repeat samples across fields; SQLite rows/pages examined unavailable"
+          },
+          "statements": [
+            {
+              "sql": "select * from projects where id = 'project_a8c5865bb94e'",
+              "explain": [
+                [
+                  3,
+                  0,
+                  0,
+                  "SEARCH projects USING INDEX sqlite_autoindex_projects_1 (id=?)"
+                ]
+              ]
+            },
+            {
+              "sql": "SELECT i.* FROM typed_indexes i JOIN recordings r ON r.id = i.recording_id WHERE r.project_id = 'project_a8c5865bb94e' AND i.recording_id IN ('recording_0')",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                ],
+                [
+                  14,
+                  0,
+                  0,
+                  "SEARCH i USING INDEX sqlite_autoindex_typed_indexes_1 (recording_id=?)"
+                ]
+              ]
+            },
+            {
+              "sql": "SELECT qr.*, d.schema_id, s.family FROM typed_bindings qr JOIN recordings r ON r.id = qr.recording_id JOIN typed_datasets d ON d.id = qr.dataset_id JOIN typed_schemas s ON s.id = d.schema_id WHERE r.project_id = 'project_a8c5865bb94e' AND qr.recording_id in ('recording_0') AND qr.semantic_type in ('state')",
+              "explain": [
+                [
+                  7,
+                  0,
+                  0,
+                  "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                ],
+                [
+                  15,
+                  0,
+                  0,
+                  "SCAN qr"
+                ],
+                [
+                  21,
+                  0,
+                  0,
+                  "SEARCH d USING INTEGER PRIMARY KEY (rowid=?)"
+                ],
+                [
+                  24,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX sqlite_autoindex_typed_schemas_1 (id=?)"
+                ]
+              ]
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, v.value_json AS value FROM typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1 s LEFT JOIN typed_states v ON v.id = s.c0 AND v.dataset_id = s.dataset_id WHERE s.dataset_id = 2 AND s.c0 IS NOT NULL ORDER BY s.time, s.sample_seq LIMIT 0",
+              "explain": [
+                [
+                  7,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1_time (dataset_id=?)"
+                ],
+                [
+                  14,
+                  0,
+                  0,
+                  "SEARCH v USING INTEGER PRIMARY KEY (rowid=?) LEFT-JOIN"
+                ]
+              ],
+              "matching_candidates_without_limit": 300000
+            },
+            {
+              "sql": "SELECT DISTINCT qr.recording_id,qr.entity_path,qr.key FROM query_rows qr JOIN recordings r ON r.id=qr.recording_id WHERE r.project_id = 'project_a8c5865bb94e' AND qr.recording_id in ('recording_0') AND qr.semantic_type in ('state')",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                ],
+                [
+                  13,
+                  0,
+                  0,
+                  "SEARCH qr USING COVERING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 0
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, v.value_json AS value FROM typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1 s LEFT JOIN typed_states v ON v.id = s.c0 AND v.dataset_id = s.dataset_id WHERE s.dataset_id = 2 AND s.c0 IS NOT NULL AND s.time IS NOT NULL ORDER BY s.time, s.sample_seq",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1_time (dataset_id=? AND time>?)"
+                ],
+                [
+                  14,
+                  0,
+                  0,
+                  "SEARCH v USING INTEGER PRIMARY KEY (rowid=?) LEFT-JOIN"
+                ]
+              ],
+              "matching_candidates_without_limit": 300000
+            }
+          ]
+        },
+        "custom_scalar_key": {
+          "counts": {
+            "bindings": 1,
+            "routes": [
+              {
+                "binding": 11,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "metadata/time predicates complete"
+              }
+            ],
+            "state_dictionary_decodes": 0,
+            "typed_fetched": 1000,
+            "typed_numeric_decodes": 1000,
+            "logical_yielded": 1000,
+            "business_json_decodes": 1000,
+            "distinct_time_candidate_samples": 300000,
+            "sqlite_rows_examined": null,
+            "scope": "separate untimed pass; fetched projection rows can repeat samples across fields; SQLite rows/pages examined unavailable"
+          },
+          "statements": [
+            {
+              "sql": "select * from projects where id = 'project_a8c5865bb94e'",
+              "explain": [
+                [
+                  3,
+                  0,
+                  0,
+                  "SEARCH projects USING INDEX sqlite_autoindex_projects_1 (id=?)"
+                ]
+              ]
+            },
+            {
+              "sql": "SELECT i.* FROM typed_indexes i JOIN recordings r ON r.id = i.recording_id WHERE r.project_id = 'project_a8c5865bb94e' AND i.recording_id IN ('recording_0')",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                ],
+                [
+                  14,
+                  0,
+                  0,
+                  "SEARCH i USING INDEX sqlite_autoindex_typed_indexes_1 (recording_id=?)"
+                ]
+              ]
+            },
+            {
+              "sql": "SELECT qr.*, d.schema_id, s.family FROM typed_bindings qr JOIN recordings r ON r.id = qr.recording_id JOIN typed_datasets d ON d.id = qr.dataset_id JOIN typed_schemas s ON s.id = d.schema_id WHERE r.project_id = 'project_a8c5865bb94e' AND qr.recording_id in ('recording_0') AND qr.semantic_type in ('scalar','scalar_group') AND instr(datascope_lower(qr.key), 'scalar_000') > 0",
+              "explain": [
+                [
+                  7,
+                  0,
+                  0,
+                  "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                ],
+                [
+                  15,
+                  0,
+                  0,
+                  "SCAN qr"
+                ],
+                [
+                  26,
+                  0,
+                  0,
+                  "SEARCH d USING INTEGER PRIMARY KEY (rowid=?)"
+                ],
+                [
+                  29,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX sqlite_autoindex_typed_schemas_1 (id=?)"
+                ]
+              ]
+            },
+            {
+              "sql": "select qr.*, coalesce(o.sample_seq, qr.rowid) AS _sample_seq, coalesce(o.binding_seq, 0) AS _binding_seq from query_rows qr join recordings r on r.id = qr.recording_id LEFT JOIN typed_legacy_order o ON o.query_rowid = qr.rowid where r.project_id = 'project_a8c5865bb94e' and qr.recording_id in ('recording_0') and qr.semantic_type in ('scalar','scalar_group') and instr(datascope_lower(qr.key), 'scalar_000') > 0 order by qr.recording_id, qr.time, qr.entity_path, qr.key, _sample_seq, _binding_seq limit 1000",
+              "explain": [
+                [
+                  8,
+                  0,
+                  0,
+                  "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                ],
+                [
+                  16,
+                  0,
+                  0,
+                  "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)"
+                ],
+                [
+                  42,
+                  0,
+                  0,
+                  "SEARCH o USING INTEGER PRIMARY KEY (rowid=?) LEFT-JOIN"
+                ],
+                [
+                  82,
+                  0,
+                  0,
+                  "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+                ]
+              ],
+              "matching_candidates_without_limit": 0
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c10 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c10 IS NOT NULL ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 300000
+            }
+          ]
+        },
+        "custom_time_range": {
+          "counts": {
+            "bindings": 32,
+            "routes": [
+              {
+                "binding": 1,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "metadata/time predicates complete"
+              },
+              {
+                "binding": 2,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "metadata/time predicates complete"
+              },
+              {
+                "binding": 3,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "metadata/time predicates complete"
+              },
+              {
+                "binding": 4,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "metadata/time predicates complete"
+              },
+              {
+                "binding": 5,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "metadata/time predicates complete"
+              },
+              {
+                "binding": 6,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "metadata/time predicates complete"
+              },
+              {
+                "binding": 7,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "metadata/time predicates complete"
+              },
+              {
+                "binding": 8,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "metadata/time predicates complete"
+              },
+              {
+                "binding": 9,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "metadata/time predicates complete"
+              },
+              {
+                "binding": 10,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "metadata/time predicates complete"
+              },
+              {
+                "binding": 11,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "metadata/time predicates complete"
+              },
+              {
+                "binding": 12,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "metadata/time predicates complete"
+              },
+              {
+                "binding": 13,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "metadata/time predicates complete"
+              },
+              {
+                "binding": 14,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "metadata/time predicates complete"
+              },
+              {
+                "binding": 15,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "metadata/time predicates complete"
+              },
+              {
+                "binding": 16,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "metadata/time predicates complete"
+              },
+              {
+                "binding": 17,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "metadata/time predicates complete"
+              },
+              {
+                "binding": 18,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "metadata/time predicates complete"
+              },
+              {
+                "binding": 19,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "metadata/time predicates complete"
+              },
+              {
+                "binding": 20,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "metadata/time predicates complete"
+              },
+              {
+                "binding": 21,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "metadata/time predicates complete"
+              },
+              {
+                "binding": 22,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "metadata/time predicates complete"
+              },
+              {
+                "binding": 23,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "metadata/time predicates complete"
+              },
+              {
+                "binding": 24,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "metadata/time predicates complete"
+              },
+              {
+                "binding": 25,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "metadata/time predicates complete"
+              },
+              {
+                "binding": 26,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "metadata/time predicates complete"
+              },
+              {
+                "binding": 27,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "metadata/time predicates complete"
+              },
+              {
+                "binding": 28,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "metadata/time predicates complete"
+              },
+              {
+                "binding": 29,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "metadata/time predicates complete"
+              },
+              {
+                "binding": 30,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "metadata/time predicates complete"
+              },
+              {
+                "binding": 31,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "metadata/time predicates complete"
+              },
+              {
+                "binding": 32,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "metadata/time predicates complete"
+              }
+            ],
+            "state_dictionary_decodes": 0,
+            "typed_fetched": 352,
+            "typed_numeric_decodes": 341,
+            "logical_yielded": 352,
+            "business_json_decodes": 352,
+            "distinct_time_candidate_samples": 22,
+            "sqlite_rows_examined": null,
+            "scope": "separate untimed pass; fetched projection rows can repeat samples across fields; SQLite rows/pages examined unavailable"
+          },
+          "statements": [
+            {
+              "sql": "select * from projects where id = 'project_a8c5865bb94e'",
+              "explain": [
+                [
+                  3,
+                  0,
+                  0,
+                  "SEARCH projects USING INDEX sqlite_autoindex_projects_1 (id=?)"
+                ]
+              ]
+            },
+            {
+              "sql": "SELECT i.* FROM typed_indexes i JOIN recordings r ON r.id = i.recording_id WHERE r.project_id = 'project_a8c5865bb94e' AND i.recording_id IN ('recording_0')",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                ],
+                [
+                  14,
+                  0,
+                  0,
+                  "SEARCH i USING INDEX sqlite_autoindex_typed_indexes_1 (recording_id=?)"
+                ]
+              ]
+            },
+            {
+              "sql": "SELECT qr.*, d.schema_id, s.family FROM typed_bindings qr JOIN recordings r ON r.id = qr.recording_id JOIN typed_datasets d ON d.id = qr.dataset_id JOIN typed_schemas s ON s.id = d.schema_id WHERE r.project_id = 'project_a8c5865bb94e' AND qr.recording_id in ('recording_0')",
+              "explain": [
+                [
+                  7,
+                  0,
+                  0,
+                  "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                ],
+                [
+                  15,
+                  0,
+                  0,
+                  "SCAN qr"
+                ],
+                [
+                  19,
+                  0,
+                  0,
+                  "SEARCH d USING INTEGER PRIMARY KEY (rowid=?)"
+                ],
+                [
+                  22,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX sqlite_autoindex_typed_schemas_1 (id=?)"
+                ]
+              ]
+            },
+            {
+              "sql": "select qr.*, coalesce(o.sample_seq, qr.rowid) AS _sample_seq, coalesce(o.binding_seq, 0) AS _binding_seq from query_rows qr join recordings r on r.id = qr.recording_id LEFT JOIN typed_legacy_order o ON o.query_rowid = qr.rowid where r.project_id = 'project_a8c5865bb94e' and qr.recording_id in ('recording_0') and qr.time >= 1349.995 and qr.time <= 1350.045 order by qr.recording_id, qr.time, qr.entity_path, qr.key, _sample_seq, _binding_seq limit 1000",
+              "explain": [
+                [
+                  8,
+                  0,
+                  0,
+                  "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                ],
+                [
+                  16,
+                  0,
+                  0,
+                  "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=?)"
+                ],
+                [
+                  27,
+                  0,
+                  0,
+                  "SEARCH o USING INTEGER PRIMARY KEY (rowid=?) LEFT-JOIN"
+                ],
+                [
+                  65,
+                  0,
+                  0,
+                  "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+                ]
+              ],
+              "matching_candidates_without_limit": 0
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c0 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c0 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 11
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c1 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c1 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 11
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c2 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c2 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 11
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c3 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c3 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 11
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c4 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c4 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 11
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c5 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c5 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 11
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c6 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c6 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 11
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c7 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c7 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 11
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c8 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c8 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 11
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c9 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c9 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 11
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c10 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c10 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 11
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c11 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c11 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 11
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c12 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c12 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 11
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c13 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c13 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 11
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c14 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c14 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 11
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c15 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c15 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 11
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c16 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c16 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 11
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c17 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c17 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 11
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c18 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c18 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 11
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c19 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c19 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 11
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c20 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c20 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 11
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c21 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c21 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 11
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c22 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c22 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 11
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c23 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c23 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 11
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c24 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c24 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 11
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c25 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c25 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 11
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c26 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c26 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 11
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c27 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c27 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 11
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c28 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c28 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 11
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c29 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c29 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 11
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c30 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c30 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=? AND time>? AND time<?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 11
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, v.value_json AS value FROM typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1 s LEFT JOIN typed_states v ON v.id = s.c0 AND v.dataset_id = s.dataset_id WHERE s.dataset_id = 2 AND s.c0 IS NOT NULL AND s.time >= 1349.995 AND s.time <= 1350.045 ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  6,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1_time (dataset_id=? AND time>? AND time<?)"
+                ],
+                [
+                  15,
+                  0,
+                  0,
+                  "SEARCH v USING INTEGER PRIMARY KEY (rowid=?) LEFT-JOIN"
+                ]
+              ],
+              "matching_candidates_without_limit": 11
+            }
+          ]
+        },
+        "custom_numeric_threshold": {
+          "counts": {
+            "bindings": 1,
+            "routes": [
+              {
+                "binding": 8,
+                "source": "typed_sql",
+                "residual": false,
+                "reason": "custom floating comparison; bool excluded"
+              }
+            ],
+            "state_dictionary_decodes": 0,
+            "typed_fetched": 1000,
+            "typed_numeric_decodes": 1000,
+            "logical_yielded": 1000,
+            "business_json_decodes": 1000,
+            "distinct_time_candidate_samples": 300000,
+            "sqlite_rows_examined": null,
+            "scope": "separate untimed pass; fetched projection rows can repeat samples across fields; SQLite rows/pages examined unavailable"
+          },
+          "statements": [
+            {
+              "sql": "select * from projects where id = 'project_a8c5865bb94e'",
+              "explain": [
+                [
+                  3,
+                  0,
+                  0,
+                  "SEARCH projects USING INDEX sqlite_autoindex_projects_1 (id=?)"
+                ]
+              ]
+            },
+            {
+              "sql": "SELECT i.* FROM typed_indexes i JOIN recordings r ON r.id = i.recording_id WHERE r.project_id = 'project_a8c5865bb94e' AND i.recording_id IN ('recording_0')",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                ],
+                [
+                  14,
+                  0,
+                  0,
+                  "SEARCH i USING INDEX sqlite_autoindex_typed_indexes_1 (recording_id=?)"
+                ]
+              ]
+            },
+            {
+              "sql": "SELECT qr.*, d.schema_id, s.family FROM typed_bindings qr JOIN recordings r ON r.id = qr.recording_id JOIN typed_datasets d ON d.id = qr.dataset_id JOIN typed_schemas s ON s.id = d.schema_id WHERE r.project_id = 'project_a8c5865bb94e' AND qr.recording_id in ('recording_0') AND qr.semantic_type in ('scalar','scalar_group') AND instr(datascope_lower(qr.key), 'battery') > 0",
+              "explain": [
+                [
+                  7,
+                  0,
+                  0,
+                  "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                ],
+                [
+                  15,
+                  0,
+                  0,
+                  "SCAN qr"
+                ],
+                [
+                  26,
+                  0,
+                  0,
+                  "SEARCH d USING INTEGER PRIMARY KEY (rowid=?)"
+                ],
+                [
+                  29,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX sqlite_autoindex_typed_schemas_1 (id=?)"
+                ]
+              ]
+            },
+            {
+              "sql": "select qr.*, coalesce(o.sample_seq, qr.rowid) AS _sample_seq, coalesce(o.binding_seq, 0) AS _binding_seq from query_rows qr join recordings r on r.id = qr.recording_id LEFT JOIN typed_legacy_order o ON o.query_rowid = qr.rowid where r.project_id = 'project_a8c5865bb94e' and qr.recording_id in ('recording_0') and qr.semantic_type in ('scalar','scalar_group') and instr(datascope_lower(qr.key), 'battery') > 0 order by qr.recording_id, qr.time, qr.entity_path, qr.key, _sample_seq, _binding_seq",
+              "explain": [
+                [
+                  7,
+                  0,
+                  0,
+                  "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                ],
+                [
+                  15,
+                  0,
+                  0,
+                  "SEARCH qr USING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)"
+                ],
+                [
+                  41,
+                  0,
+                  0,
+                  "SEARCH o USING INTEGER PRIMARY KEY (rowid=?) LEFT-JOIN"
+                ],
+                [
+                  75,
+                  0,
+                  0,
+                  "USE TEMP B-TREE FOR RIGHT PART OF ORDER BY"
+                ]
+              ],
+              "matching_candidates_without_limit": 0
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c7 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c7 IS NOT NULL AND CAST((CASE WHEN typeof(s.c7) = 'blob' THEN datascope_float_blob(s.c7) ELSE s.c7 END) AS REAL) < 0.1 AND (s.c7 <= 0.1 OR s.c7 >= '') ORDER BY s.time, s.sample_seq LIMIT 1000",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 16667
+            }
+          ]
+        },
+        "compare": {
+          "counts": {
+            "business_json_decodes": 0,
+            "distinct_time_candidate_samples": 600000,
+            "sqlite_rows_examined": null,
+            "scope": "separate untimed pass; fetched projection rows can repeat samples across fields; SQLite rows/pages examined unavailable"
+          },
+          "statements": [
+            {
+              "sql": "select * from projects where id = 'project_a8c5865bb94e'",
+              "explain": [
+                [
+                  3,
+                  0,
+                  0,
+                  "SEARCH projects USING INDEX sqlite_autoindex_projects_1 (id=?)"
+                ]
+              ]
+            },
+            {
+              "sql": "SELECT i.* FROM typed_indexes i JOIN recordings r ON r.id = i.recording_id WHERE r.project_id = 'project_a8c5865bb94e' AND i.recording_id IN ('recording_0','recording_1')",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                ],
+                [
+                  29,
+                  0,
+                  0,
+                  "SEARCH i USING INDEX sqlite_autoindex_typed_indexes_1 (recording_id=?)"
+                ]
+              ]
+            },
+            {
+              "sql": "SELECT qr.*, d.schema_id, s.family FROM typed_bindings qr JOIN recordings r ON r.id = qr.recording_id JOIN typed_datasets d ON d.id = qr.dataset_id JOIN typed_schemas s ON s.id = d.schema_id WHERE r.project_id = 'project_a8c5865bb94e' AND qr.recording_id in ('recording_0','recording_1') AND qr.semantic_type in ('scalar','scalar_group','state') AND ((lower(qr.key) like '%battery%' or lower(qr.entity_path) like '%battery%') or (lower(qr.key) like '%temperature%' or lower(qr.entity_path) like '%temperature%'))",
+              "explain": [
+                [
+                  7,
+                  0,
+                  0,
+                  "SCAN qr"
+                ],
+                [
+                  45,
+                  0,
+                  0,
+                  "SEARCH d USING INTEGER PRIMARY KEY (rowid=?)"
+                ],
+                [
+                  48,
+                  0,
+                  0,
+                  "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                ],
+                [
+                  55,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX sqlite_autoindex_typed_schemas_1 (id=?)"
+                ]
+              ]
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c6 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c6 IS NOT NULL ORDER BY s.time, s.sample_seq LIMIT 0",
+              "explain": [
+                [
+                  6,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 300000
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c7 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 1 AND s.c7 IS NOT NULL ORDER BY s.time, s.sample_seq LIMIT 0",
+              "explain": [
+                [
+                  6,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 300000
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c6 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 3 AND s.c6 IS NOT NULL ORDER BY s.time, s.sample_seq LIMIT 0",
+              "explain": [
+                [
+                  6,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 300000
+            },
+            {
+              "sql": "SELECT s.time, s.sample_seq, s.c7 AS value FROM typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad s WHERE s.dataset_id = 3 AND s.c7 IS NOT NULL ORDER BY s.time, s.sample_seq LIMIT 0",
+              "explain": [
+                [
+                  6,
+                  0,
+                  0,
+                  "SEARCH s USING INDEX typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad_time (dataset_id=?)"
+                ]
+              ],
+              "matching_candidates_without_limit": 300000
+            },
+            {
+              "sql": "SELECT DISTINCT qr.recording_id,qr.entity_path,qr.key FROM query_rows qr JOIN recordings r ON r.id=qr.recording_id WHERE r.project_id = 'project_a8c5865bb94e' AND qr.recording_id in ('recording_0','recording_1') AND qr.semantic_type in ('scalar','scalar_group','state') AND ((lower(qr.key) like '%battery%' or lower(qr.entity_path) like '%battery%') or (lower(qr.key) like '%temperature%' or lower(qr.entity_path) like '%temperature%'))",
+              "explain": [
+                [
+                  5,
+                  0,
+                  0,
+                  "SEARCH r USING INDEX sqlite_autoindex_recordings_1 (id=?)"
+                ],
+                [
+                  29,
+                  0,
+                  0,
+                  "SEARCH qr USING COVERING INDEX idx_query_rows_recording_semantic_key (recording_id=? AND semantic_type=?)"
+                ],
+                [
+                  82,
+                  0,
+                  0,
+                  "USE TEMP B-TREE FOR DISTINCT"
+                ]
+              ],
+              "matching_candidates_without_limit": 0
+            },
+            {
+              "sql": "SELECT algorithm,value_json FROM typed_summaries WHERE recording_id='recording_0' AND entity_path='/metrics/battery' AND key='battery'",
+              "explain": [
+                [
+                  3,
+                  0,
+                  0,
+                  "SEARCH typed_summaries USING INDEX sqlite_autoindex_typed_summaries_1 (recording_id=? AND entity_path=? AND key=?)"
+                ]
+              ]
+            },
+            {
+              "sql": "SELECT algorithm,value_json FROM typed_summaries WHERE recording_id='recording_0' AND entity_path='/metrics/temperature' AND key='temperature'",
+              "explain": [
+                [
+                  3,
+                  0,
+                  0,
+                  "SEARCH typed_summaries USING INDEX sqlite_autoindex_typed_summaries_1 (recording_id=? AND entity_path=? AND key=?)"
+                ]
+              ]
+            },
+            {
+              "sql": "SELECT algorithm,value_json FROM typed_summaries WHERE recording_id='recording_1' AND entity_path='/metrics/battery' AND key='battery'",
+              "explain": [
+                [
+                  3,
+                  0,
+                  0,
+                  "SEARCH typed_summaries USING INDEX sqlite_autoindex_typed_summaries_1 (recording_id=? AND entity_path=? AND key=?)"
+                ]
+              ]
+            },
+            {
+              "sql": "SELECT algorithm,value_json FROM typed_summaries WHERE recording_id='recording_1' AND entity_path='/metrics/temperature' AND key='temperature'",
+              "explain": [
+                [
+                  3,
+                  0,
+                  0,
+                  "SEARCH typed_summaries USING INDEX sqlite_autoindex_typed_summaries_1 (recording_id=? AND entity_path=? AND key=?)"
+                ]
+              ]
+            }
+          ]
+        }
+      },
+      "memory": {
+        "method": "psutil process RSS polling; includes native allocations",
+        "sample_interval_ms": 10.0,
+        "peak_rss_mb": 170.115072,
+        "os_peak_rss_mb": 170.63936,
+        "rss_before_mb": 98.844672,
+        "rss_after_mb": 122.834944,
+        "stages": {
+          "query/find_errors": {
+            "elapsed_ms": 219.6592000000237,
+            "rss_before_mb": 121.454592,
+            "rss_after_mb": 121.135104,
+            "peak_rss_mb": 123.568128
+          },
+          "query/low_battery": {
+            "elapsed_ms": 425.43839999962074,
+            "rss_before_mb": 121.143296,
+            "rss_after_mb": 121.266176,
+            "peak_rss_mb": 122.658816
+          },
+          "query/state_duration": {
+            "elapsed_ms": 41.71710000082385,
+            "rss_before_mb": 121.270272,
+            "rss_after_mb": 121.450496,
+            "peak_rss_mb": 121.454592
+          },
+          "query/custom_scalar_key": {
+            "elapsed_ms": 53.8261000001512,
+            "rss_before_mb": 121.450496,
+            "rss_after_mb": 121.5488,
+            "peak_rss_mb": 121.5488
+          },
+          "query/custom_time_range": {
+            "elapsed_ms": 31.724800001029507,
+            "rss_before_mb": 121.552896,
+            "rss_after_mb": 121.61024,
+            "peak_rss_mb": 121.61024
+          },
+          "query/custom_numeric_threshold": {
+            "elapsed_ms": 475.28179999972053,
+            "rss_before_mb": 121.61024,
+            "rss_after_mb": 121.114624,
+            "peak_rss_mb": 123.305984
+          },
+          "query/compare": {
+            "elapsed_ms": 14.341699999931734,
+            "rss_before_mb": 121.131008,
+            "rss_after_mb": 121.626624,
+            "peak_rss_mb": 121.626624
+          },
+          "query/compare_all": {
+            "elapsed_ms": 17.902700001286576,
+            "rss_before_mb": 121.626624,
+            "rss_after_mb": 122.810368,
+            "peak_rss_mb": 122.810368
+          },
+          "query/diagnostics": {
+            "elapsed_ms": 9451.803300000392,
+            "rss_before_mb": 122.810368,
+            "rss_after_mb": 123.265024,
+            "peak_rss_mb": 153.419776
+          }
+        },
+        "scope": "this process; child processes and system page cache are excluded"
+      },
+      "process_tree_peak_rss_bytes": 174010368,
+      "temporary_usage": {
+        "peak_bytes_sampled": 210747312,
+        "interval_ms": 100,
+        "scope": "owned float spools, SQLite WAL/journals and CSV sort cache; excludes source CSV, main catalog, RRD/RBL and unobservable SQLite native temp I/O"
+      }
+    },
+    "diagnostic_control": {
+      "status": "succeeded",
+      "builds": [],
+      "environment": {
+        "platform": "Windows-10-10.0.26300-SP0",
+        "python": "3.11.5 (tags/v3.11.5:cce6ba9, Aug 24 2023, 14:38:34) [MSC v.1936 64 bit (AMD64)]",
+        "cpu": "13th Gen Intel(R) Core(TM) i9-13900HX",
+        "logical_cpus": 32,
+        "physical_cpus": 24,
+        "memory_gb": 16.90710016,
+        "available_memory_gb_at_start": 6.107451392,
+        "datascope_version": "0.4.0",
+        "git_commit": "ab8473317b904388448bb3b5c83cc01bede35e30",
+        "git_dirty": true,
+        "benchmark_code_sha256": "69d43ffb8dca2204f0a229733dd7d0a7a1de8334bb7431233c83dc244127861e",
+        "packages": {
+          "datascope-core": "0.4.0",
+          "pandas": "2.3.3",
+          "numpy": "2.4.6",
+          "rerun-sdk": "0.33.1",
+          "psutil": "7.2.2",
+          "pyarrow": "25.0.1"
+        },
+        "sqlite_version": "3.42.0"
+      },
+      "imported_core": {
+        "workspace": {
+          "path": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\csv_performance_20261020_134433_e0300f84\\control_source\\packages\\core\\src\\datascope_core\\workspace.py",
+          "sha256": "04547b9a3b4a86e1bf7c28ebacb6f9f6039f4d50f06a4c87eb9600ce987eb7f9"
+        },
+        "query_typed": {
+          "path": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\csv_performance_20261020_134433_e0300f84\\control_source\\packages\\core\\src\\datascope_core\\query_typed.py",
+          "sha256": "ea12d59a06c5159dd956a1624a55f1deb944b7bbc7dbc2a1675af520aa4bb49a"
+        },
+        "time_utils": {
+          "path": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\csv_performance_20261020_134433_e0300f84\\control_source\\packages\\core\\src\\datascope_core\\time_utils.py",
+          "sha256": "8e282cb7203853d1ca837e901c9e87797be3a6371ce8d02894d0289cbaba1dcd"
+        }
+      },
+      "report_sha256": "56df45b8782f4f0bca06e88e46f9cdd12dea509c4a66f35e6909f5329f58699b",
+      "process_tree_peak_rss_bytes": 147525632,
+      "temporary_usage": {
+        "peak_bytes_sampled": 0,
+        "interval_ms": 100,
+        "scope": "owned float spools, SQLite WAL/journals and CSV sort cache; excludes source CSV, main catalog, RRD/RBL and unobservable SQLite native temp I/O"
+      }
+    },
+    "full": {
+      "status": "succeeded",
+      "builds": [
+        {
+          "workspace_ms": [
+            15761.515700000018,
+            15674.51869999968
+          ],
+          "phases": [
+            {
+              "import_ms": 78.12980000016978,
+              "inspect_ms": 2841.649399999369,
+              "mapping_ms": 12.209099999381579,
+              "cancellation_db_checks": 56,
+              "rerun_ms": 9329.076299998633,
+              "cleanup_ms": 0.16309999955410603,
+              "blueprint_ms": 2.3593000005348586,
+              "validation_ms": 0.31090000084077474,
+              "query_index": {
+                "storage": "typed_sqlite",
+                "format_version": 1,
+                "preflight_ms": 589.9477999992087,
+                "write_ms": 2072.280899999896,
+                "index_ms": 575.7668999995076,
+                "index_build_allocated_bytes": 22704128,
+                "source_samples": 300000,
+                "physical_sample_rows": 600000,
+                "typed_logical_rows": 9600000,
+                "eav_rows": 0,
+                "fallback_streams": {},
+                "sample_tables": [
+                  "typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad",
+                  "typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1"
+                ],
+                "summary_groups": 32,
+                "summary_ms": 2440.93520000024
+              }
+            },
+            {
+              "import_ms": 79.96079999975336,
+              "inspect_ms": 2828.480500000296,
+              "mapping_ms": 11.790900000050897,
+              "cancellation_db_checks": 57,
+              "rerun_ms": 8985.281600000235,
+              "cleanup_ms": 0.32279999868478626,
+              "blueprint_ms": 2.3956000004545785,
+              "validation_ms": 0.6702999999106396,
+              "query_index": {
+                "storage": "typed_sqlite",
+                "format_version": 1,
+                "preflight_ms": 578.1642999991163,
+                "write_ms": 2659.3212999996467,
+                "index_ms": 192.93540000035136,
+                "index_build_allocated_bytes": 0,
+                "source_samples": 300000,
+                "physical_sample_rows": 600000,
+                "typed_logical_rows": 9600000,
+                "eav_rows": 0,
+                "fallback_streams": {},
+                "sample_tables": [
+                  "typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad",
+                  "typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1"
+                ],
+                "summary_groups": 32,
+                "summary_ms": 2460.7412000004842
+              }
+            }
+          ]
+        },
+        {
+          "workspace_ms": [
+            15432.413999998971,
+            15959.084599999187
+          ],
+          "phases": [
+            {
+              "import_ms": 74.98090000080992,
+              "inspect_ms": 2817.3898000004556,
+              "mapping_ms": 11.7272999996203,
+              "cancellation_db_checks": 56,
+              "rerun_ms": 9069.856199999776,
+              "cleanup_ms": 0.5030000011174707,
+              "blueprint_ms": 2.5577000014891382,
+              "validation_ms": 0.3130999994027661,
+              "query_index": {
+                "storage": "typed_sqlite",
+                "format_version": 1,
+                "preflight_ms": 553.1071000004886,
+                "write_ms": 2063.5208999992756,
+                "index_ms": 578.1281999989005,
+                "index_build_allocated_bytes": 22704128,
+                "source_samples": 300000,
+                "physical_sample_rows": 600000,
+                "typed_logical_rows": 9600000,
+                "eav_rows": 0,
+                "fallback_streams": {},
+                "sample_tables": [
+                  "typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad",
+                  "typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1"
+                ],
+                "summary_groups": 32,
+                "summary_ms": 2423.122799998964
+              }
+            },
+            {
+              "import_ms": 71.97780000024068,
+              "inspect_ms": 2766.728200000216,
+              "mapping_ms": 12.114900000597117,
+              "cancellation_db_checks": 58,
+              "rerun_ms": 9239.116099999592,
+              "cleanup_ms": 0.45649999992747325,
+              "blueprint_ms": 3.5081999994872604,
+              "validation_ms": 0.37850000080652535,
+              "query_index": {
+                "storage": "typed_sqlite",
+                "format_version": 1,
+                "preflight_ms": 565.0139999997918,
+                "write_ms": 2678.3980000000156,
+                "index_ms": 205.19969999986643,
+                "index_build_allocated_bytes": 0,
+                "source_samples": 300000,
+                "physical_sample_rows": 600000,
+                "typed_logical_rows": 9600000,
+                "eav_rows": 0,
+                "fallback_streams": {},
+                "sample_tables": [
+                  "typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad",
+                  "typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1"
+                ],
+                "summary_groups": 32,
+                "summary_ms": 2476.7410999993444
+              }
+            }
+          ]
+        },
+        {
+          "workspace_ms": [
+            15220.693900000697,
+            15619.643599999108
+          ],
+          "phases": [
+            {
+              "import_ms": 75.9436000007554,
+              "inspect_ms": 2820.1093999996374,
+              "mapping_ms": 12.595399999554502,
+              "cancellation_db_checks": 55,
+              "rerun_ms": 8940.033900000344,
+              "cleanup_ms": 0.3770000002987217,
+              "blueprint_ms": 2.3289000000659144,
+              "validation_ms": 0.3431999994063517,
+              "query_index": {
+                "storage": "typed_sqlite",
+                "format_version": 1,
+                "preflight_ms": 546.430499998678,
+                "write_ms": 2017.0727999993687,
+                "index_ms": 570.0765000001411,
+                "index_build_allocated_bytes": 22704128,
+                "source_samples": 300000,
+                "physical_sample_rows": 600000,
+                "typed_logical_rows": 9600000,
+                "eav_rows": 0,
+                "fallback_streams": {},
+                "sample_tables": [
+                  "typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad",
+                  "typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1"
+                ],
+                "summary_groups": 32,
+                "summary_ms": 2411.6176000006817
+              }
+            },
+            {
+              "import_ms": 73.60789999984263,
+              "inspect_ms": 2783.648799999355,
+              "mapping_ms": 11.691900001096656,
+              "cancellation_db_checks": 57,
+              "rerun_ms": 9028.984799999307,
+              "cleanup_ms": 0.5612999993900303,
+              "blueprint_ms": 2.708100000745617,
+              "validation_ms": 0.29320000066945795,
+              "query_index": {
+                "storage": "typed_sqlite",
+                "format_version": 1,
+                "preflight_ms": 547.8093999990961,
+                "write_ms": 2653.6794000003283,
+                "index_ms": 185.00669999957609,
+                "index_build_allocated_bytes": 0,
+                "source_samples": 300000,
+                "physical_sample_rows": 600000,
+                "typed_logical_rows": 9600000,
+                "eav_rows": 0,
+                "fallback_streams": {},
+                "sample_tables": [
+                  "typed_samples_debb3619a864e9df5958dbdeb7915945c58ab0c5eaf7245bb05dc303e63969ad",
+                  "typed_samples_ea398769abcdfd3d45be050d41d5fe311727e431b54cfc1a81a714643f9fa9f1"
+                ],
+                "summary_groups": 32,
+                "summary_ms": 2427.7978999998595
+              }
+            }
+          ]
+        }
+      ],
+      "environment": {
+        "platform": "Windows-10-10.0.26300-SP0",
+        "python": "3.11.5 (tags/v3.11.5:cce6ba9, Aug 24 2023, 14:38:34) [MSC v.1936 64 bit (AMD64)]",
+        "cpu": "13th Gen Intel(R) Core(TM) i9-13900HX",
+        "logical_cpus": 32,
+        "physical_cpus": 24,
+        "memory_gb": 16.90710016,
+        "available_memory_gb_at_start": 6.216413184,
+        "datascope_version": "0.4.0",
+        "git_commit": "ab8473317b904388448bb3b5c83cc01bede35e30",
+        "git_dirty": true,
+        "benchmark_code_sha256": "69d43ffb8dca2204f0a229733dd7d0a7a1de8334bb7431233c83dc244127861e",
+        "packages": {
+          "datascope-core": "0.4.0",
+          "pandas": "2.3.3",
+          "numpy": "2.4.6",
+          "rerun-sdk": "0.33.1",
+          "psutil": "7.2.2",
+          "pyarrow": "25.0.1"
+        },
+        "sqlite_version": "3.42.0"
+      },
+      "imported_core": {
+        "workspace": {
+          "path": "D:\\Programme\\DataScope-Studio\\packages\\core\\src\\datascope_core\\workspace.py",
+          "sha256": "979c9d0eccc06a7e4ad8731cf1876bbae26929026b540cb718910689c665f86a"
+        },
+        "query_typed": {
+          "path": "D:\\Programme\\DataScope-Studio\\packages\\core\\src\\datascope_core\\query_typed.py",
+          "sha256": "51469c787cd03afd3f5426b6827606ba2727fdbd8e4a0191e3ba7a409e9252d0"
+        },
+        "time_utils": {
+          "path": "D:\\Programme\\DataScope-Studio\\packages\\core\\src\\datascope_core\\time_utils.py",
+          "sha256": "17aafa806f07c364e051fa0c6cff93127e5fa68d48d6817a5577f1ef37cc7ede"
+        }
+      },
+      "memory": {
+        "method": "psutil process RSS polling; includes native allocations",
+        "sample_interval_ms": 10.0,
+        "peak_rss_mb": 229.326848,
+        "os_peak_rss_mb": 247.267328,
+        "rss_before_mb": 98.79552,
+        "rss_after_mb": 154.734592,
+        "stages": {},
+        "scope": "this process; child processes and system page cache are excluded"
+      },
+      "process_tree_peak_rss_bytes": 233492480,
+      "temporary_usage": {
+        "peak_bytes_sampled": 210767912,
+        "interval_ms": 100,
+        "scope": "owned float spools, SQLite WAL/journals and CSV sort cache; excludes source CSV, main catalog, RRD/RBL and unobservable SQLite native temp I/O"
+      }
+    }
+  },
+  "development": false,
+  "standard_protocol": true,
+  "input_provenance": {
+    "manifest": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\csv_performance_20261020_125615_2df1373a\\manifest.json",
+    "sha256": "fc5bc3e0900b63eb7a7abe31d9b7d885c24f4553d597c098435889c372ef0a51",
+    "scope": "complete retained standard inputs and independent oracle; CSVs rehashed; all timing workers run afresh"
+  },
+  "input": {
+    "project_id": "project_a8c5865bb94e",
+    "records": [
+      {
+        "recording_id": "recording_0",
+        "source_id": "source_470886aa542e",
+        "spec": {
+          "mapping_id": "mapping_00514c109441",
+          "source_id": "source_470886aa542e",
+          "app_id": "datascope.sensor_monitor.v1",
+          "recording_id": "recording_2b1293550784",
+          "primary_timeline": "timestamp",
+          "streams": [
+            {
+              "stream_id": "stream_position",
+              "source_fields": [
+                "position_x",
+                "position_y",
+                "position_z"
+              ],
+              "semantic_type": "scalar_group",
+              "entity_path": "/metrics/position",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.86,
+              "name": "position",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_position",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_velocity",
+              "source_fields": [
+                "velocity_x",
+                "velocity_y",
+                "velocity_z"
+              ],
+              "semantic_type": "scalar_group",
+              "entity_path": "/metrics/velocity",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.86,
+              "name": "velocity",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_velocity",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_temperature",
+              "source_fields": [
+                "temperature"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/temperature",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.86,
+              "name": "temperature",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_temperature",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_battery",
+              "source_fields": [
+                "battery"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/battery",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.9,
+              "name": "battery",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_battery",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_current",
+              "source_fields": [
+                "current"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/current",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "current",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_current",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_voltage",
+              "source_fields": [
+                "voltage"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/voltage",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "voltage",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_voltage",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_000",
+              "source_fields": [
+                "scalar_000"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_000",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_000",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_000",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_001",
+              "source_fields": [
+                "scalar_001"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_001",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_001",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_001",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_002",
+              "source_fields": [
+                "scalar_002"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_002",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_002",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_002",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_003",
+              "source_fields": [
+                "scalar_003"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_003",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_003",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_003",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_004",
+              "source_fields": [
+                "scalar_004"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_004",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_004",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_004",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_005",
+              "source_fields": [
+                "scalar_005"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_005",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_005",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_005",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_006",
+              "source_fields": [
+                "scalar_006"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_006",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_006",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_006",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_007",
+              "source_fields": [
+                "scalar_007"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_007",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_007",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_007",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_008",
+              "source_fields": [
+                "scalar_008"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_008",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_008",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_008",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_009",
+              "source_fields": [
+                "scalar_009"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_009",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_009",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_009",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_010",
+              "source_fields": [
+                "scalar_010"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_010",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_010",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_010",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_011",
+              "source_fields": [
+                "scalar_011"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_011",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_011",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_011",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_012",
+              "source_fields": [
+                "scalar_012"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_012",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_012",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_012",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_013",
+              "source_fields": [
+                "scalar_013"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_013",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_013",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_013",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_014",
+              "source_fields": [
+                "scalar_014"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_014",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_014",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_014",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_015",
+              "source_fields": [
+                "scalar_015"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_015",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_015",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_015",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_016",
+              "source_fields": [
+                "scalar_016"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_016",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_016",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_016",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_017",
+              "source_fields": [
+                "scalar_017"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_017",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_017",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_017",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_018",
+              "source_fields": [
+                "scalar_018"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_018",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_018",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_018",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_019",
+              "source_fields": [
+                "scalar_019"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_019",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_019",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_019",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_error_code",
+              "source_fields": [
+                "error_code"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/error_code",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.76,
+              "name": "error_code",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_error_code",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_robot_state",
+              "source_fields": [
+                "robot_state"
+              ],
+              "semantic_type": "state",
+              "entity_path": "/states/robot_state",
+              "archetype": "StateChange",
+              "view": "StateTimelineView",
+              "confidence": 0.88,
+              "name": "robot_state",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_robot_state",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            }
+          ],
+          "schema_version": 2,
+          "timeline_unit": "relative_s",
+          "timeline_sort": "source",
+          "effective_timeline_unit": "relative_s",
+          "template_id": "sensor_monitor",
+          "mapping_template_id": null,
+          "status": "draft"
+        },
+        "rows": 300000,
+        "path": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\csv_performance_20261020_125615_2df1373a\\input_0.csv",
+        "sha256": "81fbed270f445e4d1b4bf0a7c81409b92dc25a1f4e2ef3ad25382cfa3c36a2e3"
+      },
+      {
+        "recording_id": "recording_1",
+        "source_id": "source_18f9b9767f73",
+        "spec": {
+          "mapping_id": "mapping_72b57f59238d",
+          "source_id": "source_18f9b9767f73",
+          "app_id": "datascope.sensor_monitor.v1",
+          "recording_id": "recording_b751093c6091",
+          "primary_timeline": "timestamp",
+          "streams": [
+            {
+              "stream_id": "stream_position",
+              "source_fields": [
+                "position_x",
+                "position_y",
+                "position_z"
+              ],
+              "semantic_type": "scalar_group",
+              "entity_path": "/metrics/position",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.86,
+              "name": "position",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_position",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_velocity",
+              "source_fields": [
+                "velocity_x",
+                "velocity_y",
+                "velocity_z"
+              ],
+              "semantic_type": "scalar_group",
+              "entity_path": "/metrics/velocity",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.86,
+              "name": "velocity",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_velocity",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_temperature",
+              "source_fields": [
+                "temperature"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/temperature",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.86,
+              "name": "temperature",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_temperature",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_battery",
+              "source_fields": [
+                "battery"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/battery",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.9,
+              "name": "battery",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_battery",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_current",
+              "source_fields": [
+                "current"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/current",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "current",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_current",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_voltage",
+              "source_fields": [
+                "voltage"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/voltage",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "voltage",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_voltage",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_000",
+              "source_fields": [
+                "scalar_000"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_000",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_000",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_000",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_001",
+              "source_fields": [
+                "scalar_001"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_001",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_001",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_001",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_002",
+              "source_fields": [
+                "scalar_002"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_002",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_002",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_002",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_003",
+              "source_fields": [
+                "scalar_003"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_003",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_003",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_003",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_004",
+              "source_fields": [
+                "scalar_004"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_004",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_004",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_004",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_005",
+              "source_fields": [
+                "scalar_005"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_005",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_005",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_005",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_006",
+              "source_fields": [
+                "scalar_006"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_006",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_006",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_006",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_007",
+              "source_fields": [
+                "scalar_007"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_007",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_007",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_007",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_008",
+              "source_fields": [
+                "scalar_008"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_008",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_008",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_008",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_009",
+              "source_fields": [
+                "scalar_009"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_009",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_009",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_009",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_010",
+              "source_fields": [
+                "scalar_010"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_010",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_010",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_010",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_011",
+              "source_fields": [
+                "scalar_011"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_011",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_011",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_011",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_012",
+              "source_fields": [
+                "scalar_012"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_012",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_012",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_012",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_013",
+              "source_fields": [
+                "scalar_013"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_013",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_013",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_013",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_014",
+              "source_fields": [
+                "scalar_014"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_014",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_014",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_014",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_015",
+              "source_fields": [
+                "scalar_015"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_015",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_015",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_015",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_016",
+              "source_fields": [
+                "scalar_016"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_016",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_016",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_016",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_017",
+              "source_fields": [
+                "scalar_017"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_017",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_017",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_017",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_018",
+              "source_fields": [
+                "scalar_018"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_018",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_018",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_018",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_scalar_019",
+              "source_fields": [
+                "scalar_019"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/scalar_019",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.72,
+              "name": "scalar_019",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_scalar_019",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_error_code",
+              "source_fields": [
+                "error_code"
+              ],
+              "semantic_type": "scalar",
+              "entity_path": "/metrics/error_code",
+              "archetype": "Scalars",
+              "view": "TimeSeriesView",
+              "confidence": 0.76,
+              "name": "error_code",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_error_code",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            },
+            {
+              "stream_id": "stream_robot_state",
+              "source_fields": [
+                "robot_state"
+              ],
+              "semantic_type": "state",
+              "entity_path": "/states/robot_state",
+              "archetype": "StateChange",
+              "view": "StateTimelineView",
+              "confidence": 0.88,
+              "name": "robot_state",
+              "enabled": true,
+              "required": false,
+              "origin": "inferred",
+              "rule_key": "inferred:stream_robot_state",
+              "time_key": "timestamp",
+              "timeline_source_field": "timestamp"
+            }
+          ],
+          "schema_version": 2,
+          "timeline_unit": "relative_s",
+          "timeline_sort": "source",
+          "effective_timeline_unit": "relative_s",
+          "template_id": "sensor_monitor",
+          "mapping_template_id": null,
+          "status": "draft"
+        },
+        "rows": 300000,
+        "path": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\csv_performance_20261020_125615_2df1373a\\input_1.csv",
+        "sha256": "7523123003e2a021a286139b409020b11c224076b7395343112f0c30eee60da6"
+      }
+    ],
+    "oracle": [
+      {
+        "recording_id": "recording_0",
+        "time": null,
+        "entity_path": "/metrics/battery",
+        "key": "battery",
+        "value": {
+          "count": 300000,
+          "min": 0.05,
+          "max": 0.95,
+          "latest": 0.05,
+          "mean": 0.49999999999999983
+        }
+      },
+      {
+        "recording_id": "recording_0",
+        "time": null,
+        "entity_path": "/metrics/current",
+        "key": "current",
+        "value": {
+          "count": 300000,
+          "min": 2.5,
+          "max": 3.5,
+          "latest": 2.500133,
+          "mean": 3.0017043277599176
+        }
+      },
+      {
+        "recording_id": "recording_0",
+        "time": null,
+        "entity_path": "/metrics/error_code",
+        "key": "error_code",
+        "value": {
+          "count": 300000,
+          "min": 0.0,
+          "max": 42.0,
+          "latest": 42,
+          "mean": 0.00434
+        }
+      },
+      {
+        "recording_id": "recording_0",
+        "time": null,
+        "entity_path": "/metrics/position/position_x",
+        "key": "position_x",
+        "value": {
+          "count": 300000,
+          "min": -2.0,
+          "max": 2.0,
+          "latest": -1.999466,
+          "mean": 0.006817310050000007
+        }
+      },
+      {
+        "recording_id": "recording_0",
+        "time": null,
+        "entity_path": "/metrics/position/position_y",
+        "key": "position_y",
+        "value": {
+          "count": 300000,
+          "min": -2.0,
+          "max": 2.0,
+          "latest": -0.046193,
+          "mean": -0.006661631180000095
+        }
+      },
+      {
+        "recording_id": "recording_0",
+        "time": null,
+        "entity_path": "/metrics/position/position_z",
+        "key": "position_z",
+        "value": {
+          "count": 300000,
+          "min": -0.2,
+          "max": 0.2,
+          "latest": -0.143045,
+          "mean": 0.00040123807333333533
+        }
+      },
+      {
+        "recording_id": "recording_0",
+        "time": null,
+        "entity_path": "/metrics/scalar_000",
+        "key": "scalar_000",
+        "value": {
+          "count": 300000,
+          "min": 9.0,
+          "max": 11.0,
+          "latest": 9.011953,
+          "mean": 10.02819326493991
+        }
+      },
+      {
+        "recording_id": "recording_0",
+        "time": null,
+        "entity_path": "/metrics/scalar_001",
+        "key": "scalar_001",
+        "value": {
+          "count": 300000,
+          "min": 9.1,
+          "max": 11.1,
+          "latest": 10.983821,
+          "mean": 10.102303754310181
+        }
+      },
+      {
+        "recording_id": "recording_0",
+        "time": null,
+        "entity_path": "/metrics/scalar_002",
+        "key": "scalar_002",
+        "value": {
+          "count": 300000,
+          "min": 9.2,
+          "max": 11.2,
+          "latest": 9.771917,
+          "mean": 10.214776331240044
+        }
+      },
+      {
+        "recording_id": "recording_0",
+        "time": null,
+        "entity_path": "/metrics/scalar_003",
+        "key": "scalar_003",
+        "value": {
+          "count": 300000,
+          "min": 9.3,
+          "max": 11.3,
+          "latest": 10.102088,
+          "mean": 10.242892300569789
+        }
+      },
+      {
+        "recording_id": "recording_0",
+        "time": null,
+        "entity_path": "/metrics/scalar_004",
+        "key": "scalar_004",
+        "value": {
+          "count": 300000,
+          "min": 9.4,
+          "max": 11.4,
+          "latest": 11.145193,
+          "mean": 10.400366786853212
+        }
+      },
+      {
+        "recording_id": "recording_0",
+        "time": null,
+        "entity_path": "/metrics/scalar_005",
+        "key": "scalar_005",
+        "value": {
+          "count": 300000,
+          "min": 9.5,
+          "max": 11.5,
+          "latest": 9.503902,
+          "mean": 10.50520748859328
+        }
+      },
+      {
+        "recording_id": "recording_0",
+        "time": null,
+        "entity_path": "/metrics/scalar_006",
+        "key": "scalar_006",
+        "value": {
+          "count": 300000,
+          "min": 9.6,
+          "max": 11.6,
+          "latest": 11.450835,
+          "mean": 10.61114807254005
+        }
+      },
+      {
+        "recording_id": "recording_0",
+        "time": null,
+        "entity_path": "/metrics/scalar_007",
+        "key": "scalar_007",
+        "value": {
+          "count": 300000,
+          "min": 9.7,
+          "max": 11.7,
+          "latest": 10.33282,
+          "mean": 10.741582020286458
+        }
+      },
+      {
+        "recording_id": "recording_0",
+        "time": null,
+        "entity_path": "/metrics/scalar_008",
+        "key": "scalar_008",
+        "value": {
+          "count": 300000,
+          "min": 9.8,
+          "max": 11.8,
+          "latest": 10.53749,
+          "mean": 10.773562417566684
+        }
+      },
+      {
+        "recording_id": "recording_0",
+        "time": null,
+        "entity_path": "/metrics/scalar_009",
+        "key": "scalar_009",
+        "value": {
+          "count": 300000,
+          "min": 9.9,
+          "max": 11.9,
+          "latest": 11.687795,
+          "mean": 10.893215973670136
+        }
+      },
+      {
+        "recording_id": "recording_0",
+        "time": null,
+        "entity_path": "/metrics/scalar_010",
+        "key": "scalar_010",
+        "value": {
+          "count": 300000,
+          "min": 10.0,
+          "max": 12.0,
+          "latest": 10.000242,
+          "mean": 10.980863020399923
+        }
+      },
+      {
+        "recording_id": "recording_0",
+        "time": null,
+        "entity_path": "/metrics/scalar_011",
+        "key": "scalar_011",
+        "value": {
+          "count": 300000,
+          "min": 10.1,
+          "max": 12.1,
+          "latest": 11.9141,
+          "mean": 11.08760615462663
+        }
+      },
+      {
+        "recording_id": "recording_0",
+        "time": null,
+        "entity_path": "/metrics/scalar_012",
+        "key": "scalar_012",
+        "value": {
+          "count": 300000,
+          "min": 10.2,
+          "max": 12.2,
+          "latest": 10.895342,
+          "mean": 11.237421840849692
+        }
+      },
+      {
+        "recording_id": "recording_0",
+        "time": null,
+        "entity_path": "/metrics/scalar_013",
+        "key": "scalar_013",
+        "value": {
+          "count": 300000,
+          "min": 10.3,
+          "max": 12.3,
+          "latest": 10.974048,
+          "mean": 11.29923369879008
+        }
+      },
+      {
+        "recording_id": "recording_0",
+        "time": null,
+        "entity_path": "/metrics/scalar_014",
+        "key": "scalar_014",
+        "value": {
+          "count": 300000,
+          "min": 10.4,
+          "max": 12.4,
+          "latest": 12.226924,
+          "mean": 11.41370990194344
+        }
+      },
+      {
+        "recording_id": "recording_0",
+        "time": null,
+        "entity_path": "/metrics/scalar_015",
+        "key": "scalar_015",
+        "value": {
+          "count": 300000,
+          "min": 10.5,
+          "max": 12.5,
+          "latest": 10.500986,
+          "mean": 11.48637493399335
+        }
+      },
+      {
+        "recording_id": "recording_0",
+        "time": null,
+        "entity_path": "/metrics/scalar_016",
+        "key": "scalar_016",
+        "value": {
+          "count": 300000,
+          "min": 10.6,
+          "max": 12.6,
+          "latest": 12.373777,
+          "mean": 11.570535662653496
+        }
+      },
+      {
+        "recording_id": "recording_0",
+        "time": null,
+        "entity_path": "/metrics/scalar_017",
+        "key": "scalar_017",
+        "value": {
+          "count": 300000,
+          "min": 10.7,
+          "max": 12.7,
+          "latest": 11.459206,
+          "mean": 11.71252795798981
+        }
+      },
+      {
+        "recording_id": "recording_0",
+        "time": null,
+        "entity_path": "/metrics/scalar_018",
+        "key": "scalar_018",
+        "value": {
+          "count": 300000,
+          "min": 10.8,
+          "max": 12.8,
+          "latest": 11.412043,
+          "mean": 11.795412824116747
+        }
+      },
+      {
+        "recording_id": "recording_0",
+        "time": null,
+        "entity_path": "/metrics/scalar_019",
+        "key": "scalar_019",
+        "value": {
+          "count": 300000,
+          "min": 10.9,
+          "max": 12.9,
+          "latest": 12.76241,
+          "mean": 11.925555790953487
+        }
+      },
+      {
+        "recording_id": "recording_0",
+        "time": null,
+        "entity_path": "/metrics/temperature",
+        "key": "temperature",
+        "value": {
+          "count": 300000,
+          "min": 32.950212,
+          "max": 37.04986,
+          "latest": 36.769389,
+          "mean": 35.35076524526996
+        }
+      },
+      {
+        "recording_id": "recording_0",
+        "time": null,
+        "entity_path": "/metrics/velocity/velocity_x",
+        "key": "velocity_x",
+        "value": {
+          "count": 300000,
+          "min": -0.4,
+          "max": 0.4,
+          "latest": -0.009239,
+          "mean": -0.0013323264566666648
+        }
+      },
+      {
+        "recording_id": "recording_0",
+        "time": null,
+        "entity_path": "/metrics/velocity/velocity_y",
+        "key": "velocity_y",
+        "value": {
+          "count": 300000,
+          "min": -0.4,
+          "max": 0.4,
+          "latest": 0.399893,
+          "mean": -0.001363462046666675
+        }
+      },
+      {
+        "recording_id": "recording_0",
+        "time": null,
+        "entity_path": "/metrics/velocity/velocity_z",
+        "key": "velocity_z",
+        "value": {
+          "count": 300000,
+          "min": -0.02,
+          "max": 0.02,
+          "latest": 0.013978,
+          "mean": -9.530703666666652e-05
+        }
+      },
+      {
+        "recording_id": "recording_0",
+        "time": null,
+        "entity_path": "/metrics/voltage",
+        "key": "voltage",
+        "value": {
+          "count": 300000,
+          "min": 23.6,
+          "max": 24.0,
+          "latest": 23.6,
+          "mean": 23.799999999999986
+        }
+      },
+      {
+        "recording_id": "recording_0",
+        "time": null,
+        "entity_path": "/states/robot_state",
+        "key": "robot_state",
+        "value": {
+          "count": 300000,
+          "states": {
+            "idle": 29997,
+            "error": 31,
+            "running": 224978,
+            "warning": 44994
+          },
+          "latest": "error"
+        }
+      },
+      {
+        "recording_id": "recording_1",
+        "time": null,
+        "entity_path": "/metrics/battery",
+        "key": "battery",
+        "value": {
+          "count": 300000,
+          "min": 0.05,
+          "max": 0.95,
+          "latest": 0.05,
+          "mean": 0.49999999999999983
+        }
+      },
+      {
+        "recording_id": "recording_1",
+        "time": null,
+        "entity_path": "/metrics/current",
+        "key": "current",
+        "value": {
+          "count": 300000,
+          "min": 2.5,
+          "max": 3.5,
+          "latest": 2.500133,
+          "mean": 3.0017043277599176
+        }
+      },
+      {
+        "recording_id": "recording_1",
+        "time": null,
+        "entity_path": "/metrics/error_code",
+        "key": "error_code",
+        "value": {
+          "count": 300000,
+          "min": 0.0,
+          "max": 42.0,
+          "latest": 42,
+          "mean": 0.00434
+        }
+      },
+      {
+        "recording_id": "recording_1",
+        "time": null,
+        "entity_path": "/metrics/position/position_x",
+        "key": "position_x",
+        "value": {
+          "count": 300000,
+          "min": -2.0,
+          "max": 2.0,
+          "latest": -1.999466,
+          "mean": 0.006817310050000007
+        }
+      },
+      {
+        "recording_id": "recording_1",
+        "time": null,
+        "entity_path": "/metrics/position/position_y",
+        "key": "position_y",
+        "value": {
+          "count": 300000,
+          "min": -2.0,
+          "max": 2.0,
+          "latest": -0.046193,
+          "mean": -0.006661631180000095
+        }
+      },
+      {
+        "recording_id": "recording_1",
+        "time": null,
+        "entity_path": "/metrics/position/position_z",
+        "key": "position_z",
+        "value": {
+          "count": 300000,
+          "min": -0.2,
+          "max": 0.2,
+          "latest": -0.143045,
+          "mean": 0.00040123807333333533
+        }
+      },
+      {
+        "recording_id": "recording_1",
+        "time": null,
+        "entity_path": "/metrics/scalar_000",
+        "key": "scalar_000",
+        "value": {
+          "count": 300000,
+          "min": 9.0,
+          "max": 11.0,
+          "latest": 9.011953,
+          "mean": 10.02819326493991
+        }
+      },
+      {
+        "recording_id": "recording_1",
+        "time": null,
+        "entity_path": "/metrics/scalar_001",
+        "key": "scalar_001",
+        "value": {
+          "count": 300000,
+          "min": 9.1,
+          "max": 11.1,
+          "latest": 10.983821,
+          "mean": 10.102303754310181
+        }
+      },
+      {
+        "recording_id": "recording_1",
+        "time": null,
+        "entity_path": "/metrics/scalar_002",
+        "key": "scalar_002",
+        "value": {
+          "count": 300000,
+          "min": 9.2,
+          "max": 11.2,
+          "latest": 9.771917,
+          "mean": 10.214776331240044
+        }
+      },
+      {
+        "recording_id": "recording_1",
+        "time": null,
+        "entity_path": "/metrics/scalar_003",
+        "key": "scalar_003",
+        "value": {
+          "count": 300000,
+          "min": 9.3,
+          "max": 11.3,
+          "latest": 10.102088,
+          "mean": 10.242892300569789
+        }
+      },
+      {
+        "recording_id": "recording_1",
+        "time": null,
+        "entity_path": "/metrics/scalar_004",
+        "key": "scalar_004",
+        "value": {
+          "count": 300000,
+          "min": 9.4,
+          "max": 11.4,
+          "latest": 11.145193,
+          "mean": 10.400366786853212
+        }
+      },
+      {
+        "recording_id": "recording_1",
+        "time": null,
+        "entity_path": "/metrics/scalar_005",
+        "key": "scalar_005",
+        "value": {
+          "count": 300000,
+          "min": 9.5,
+          "max": 11.5,
+          "latest": 9.503902,
+          "mean": 10.50520748859328
+        }
+      },
+      {
+        "recording_id": "recording_1",
+        "time": null,
+        "entity_path": "/metrics/scalar_006",
+        "key": "scalar_006",
+        "value": {
+          "count": 300000,
+          "min": 9.6,
+          "max": 11.6,
+          "latest": 11.450835,
+          "mean": 10.61114807254005
+        }
+      },
+      {
+        "recording_id": "recording_1",
+        "time": null,
+        "entity_path": "/metrics/scalar_007",
+        "key": "scalar_007",
+        "value": {
+          "count": 300000,
+          "min": 9.7,
+          "max": 11.7,
+          "latest": 10.33282,
+          "mean": 10.741582020286458
+        }
+      },
+      {
+        "recording_id": "recording_1",
+        "time": null,
+        "entity_path": "/metrics/scalar_008",
+        "key": "scalar_008",
+        "value": {
+          "count": 300000,
+          "min": 9.8,
+          "max": 11.8,
+          "latest": 10.53749,
+          "mean": 10.773562417566684
+        }
+      },
+      {
+        "recording_id": "recording_1",
+        "time": null,
+        "entity_path": "/metrics/scalar_009",
+        "key": "scalar_009",
+        "value": {
+          "count": 300000,
+          "min": 9.9,
+          "max": 11.9,
+          "latest": 11.687795,
+          "mean": 10.893215973670136
+        }
+      },
+      {
+        "recording_id": "recording_1",
+        "time": null,
+        "entity_path": "/metrics/scalar_010",
+        "key": "scalar_010",
+        "value": {
+          "count": 300000,
+          "min": 10.0,
+          "max": 12.0,
+          "latest": 10.000242,
+          "mean": 10.980863020399923
+        }
+      },
+      {
+        "recording_id": "recording_1",
+        "time": null,
+        "entity_path": "/metrics/scalar_011",
+        "key": "scalar_011",
+        "value": {
+          "count": 300000,
+          "min": 10.1,
+          "max": 12.1,
+          "latest": 11.9141,
+          "mean": 11.08760615462663
+        }
+      },
+      {
+        "recording_id": "recording_1",
+        "time": null,
+        "entity_path": "/metrics/scalar_012",
+        "key": "scalar_012",
+        "value": {
+          "count": 300000,
+          "min": 10.2,
+          "max": 12.2,
+          "latest": 10.895342,
+          "mean": 11.237421840849692
+        }
+      },
+      {
+        "recording_id": "recording_1",
+        "time": null,
+        "entity_path": "/metrics/scalar_013",
+        "key": "scalar_013",
+        "value": {
+          "count": 300000,
+          "min": 10.3,
+          "max": 12.3,
+          "latest": 10.974048,
+          "mean": 11.29923369879008
+        }
+      },
+      {
+        "recording_id": "recording_1",
+        "time": null,
+        "entity_path": "/metrics/scalar_014",
+        "key": "scalar_014",
+        "value": {
+          "count": 300000,
+          "min": 10.4,
+          "max": 12.4,
+          "latest": 12.226924,
+          "mean": 11.41370990194344
+        }
+      },
+      {
+        "recording_id": "recording_1",
+        "time": null,
+        "entity_path": "/metrics/scalar_015",
+        "key": "scalar_015",
+        "value": {
+          "count": 300000,
+          "min": 10.5,
+          "max": 12.5,
+          "latest": 10.500986,
+          "mean": 11.48637493399335
+        }
+      },
+      {
+        "recording_id": "recording_1",
+        "time": null,
+        "entity_path": "/metrics/scalar_016",
+        "key": "scalar_016",
+        "value": {
+          "count": 300000,
+          "min": 10.6,
+          "max": 12.6,
+          "latest": 12.373777,
+          "mean": 11.570535662653496
+        }
+      },
+      {
+        "recording_id": "recording_1",
+        "time": null,
+        "entity_path": "/metrics/scalar_017",
+        "key": "scalar_017",
+        "value": {
+          "count": 300000,
+          "min": 10.7,
+          "max": 12.7,
+          "latest": 11.459206,
+          "mean": 11.71252795798981
+        }
+      },
+      {
+        "recording_id": "recording_1",
+        "time": null,
+        "entity_path": "/metrics/scalar_018",
+        "key": "scalar_018",
+        "value": {
+          "count": 300000,
+          "min": 10.8,
+          "max": 12.8,
+          "latest": 11.412043,
+          "mean": 11.795412824116747
+        }
+      },
+      {
+        "recording_id": "recording_1",
+        "time": null,
+        "entity_path": "/metrics/scalar_019",
+        "key": "scalar_019",
+        "value": {
+          "count": 300000,
+          "min": 10.9,
+          "max": 12.9,
+          "latest": 12.76241,
+          "mean": 11.925555790953487
+        }
+      },
+      {
+        "recording_id": "recording_1",
+        "time": null,
+        "entity_path": "/metrics/temperature",
+        "key": "temperature",
+        "value": {
+          "count": 300000,
+          "min": 32.950061,
+          "max": 37.049816,
+          "latest": 36.777543,
+          "mean": 35.350613040290256
+        }
+      },
+      {
+        "recording_id": "recording_1",
+        "time": null,
+        "entity_path": "/metrics/velocity/velocity_x",
+        "key": "velocity_x",
+        "value": {
+          "count": 300000,
+          "min": -0.4,
+          "max": 0.4,
+          "latest": -0.009239,
+          "mean": -0.0013323264566666648
+        }
+      },
+      {
+        "recording_id": "recording_1",
+        "time": null,
+        "entity_path": "/metrics/velocity/velocity_y",
+        "key": "velocity_y",
+        "value": {
+          "count": 300000,
+          "min": -0.4,
+          "max": 0.4,
+          "latest": 0.399893,
+          "mean": -0.001363462046666675
+        }
+      },
+      {
+        "recording_id": "recording_1",
+        "time": null,
+        "entity_path": "/metrics/velocity/velocity_z",
+        "key": "velocity_z",
+        "value": {
+          "count": 300000,
+          "min": -0.02,
+          "max": 0.02,
+          "latest": 0.013978,
+          "mean": -9.530703666666652e-05
+        }
+      },
+      {
+        "recording_id": "recording_1",
+        "time": null,
+        "entity_path": "/metrics/voltage",
+        "key": "voltage",
+        "value": {
+          "count": 300000,
+          "min": 23.6,
+          "max": 24.0,
+          "latest": 23.6,
+          "mean": 23.799999999999986
+        }
+      },
+      {
+        "recording_id": "recording_1",
+        "time": null,
+        "entity_path": "/states/robot_state",
+        "key": "robot_state",
+        "value": {
+          "count": 300000,
+          "states": {
+            "idle": 29997,
+            "error": 31,
+            "running": 224978,
+            "warning": 44994
+          },
+          "latest": "error"
+        }
+      }
+    ],
+    "profiles": [
+      {
+        "checksum": "a6ec810f6303e46b55effca183bb4485ad019dfa700a5434e542d53f1f890c60",
+        "source_type": "csv",
+        "profile_json": "{\"schema_version\": 1, \"source_id\": \"source_470886aa542e\", \"source_type\": \"csv\", \"source_family\": \"tabular\", \"sample_rows\": 1000, \"fields\": [{\"name\": \"timestamp\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": true, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"position_x\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": \"x\", \"time_parse_ratio\": 1.0, \"time_monotonic\": true, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"position_y\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": \"y\", \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"position_z\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": \"z\", \"time_parse_ratio\": 1.0, \"time_monotonic\": true, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"velocity_x\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": \"x\", \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"velocity_y\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": \"y\", \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"velocity_z\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": \"z\", \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"temperature\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"battery\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"current\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": true, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"voltage\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_000\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": true, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_001\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": true, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_002\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_003\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_004\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_005\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": true, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_006\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": true, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_007\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": true, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_008\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_009\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_010\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_011\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": true, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_012\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": true, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_013\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": true, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_014\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_015\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_016\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_017\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_018\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": true, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_019\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": true, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"robot_state\", \"dtype\": \"object\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 0.0, \"time_monotonic\": null, \"inferred_time_unit\": null, \"first_time_unit\": null}, {\"name\": \"error_code\", \"dtype\": \"int64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": true, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}], \"field_names\": [\"timestamp\", \"position_x\", \"position_y\", \"position_z\", \"velocity_x\", \"velocity_y\", \"velocity_z\", \"temperature\", \"battery\", \"current\", \"voltage\", \"scalar_000\", \"scalar_001\", \"scalar_002\", \"scalar_003\", \"scalar_004\", \"scalar_005\", \"scalar_006\", \"scalar_007\", \"scalar_008\", \"scalar_009\", \"scalar_010\", \"scalar_011\", \"scalar_012\", \"scalar_013\", \"scalar_014\", \"scalar_015\", \"scalar_016\", \"scalar_017\", \"scalar_018\", \"scalar_019\", \"robot_state\", \"error_code\"], \"timeline\": {\"field\": \"timestamp\", \"present\": true, \"null_count\": 0, \"null_ratio\": 0.0, \"monotonic\": true, \"parse_ratio\": 1.0, \"inferred_unit\": \"seconds\", \"first_unit\": \"seconds\", \"mixed_units\": false}, \"adapter_metadata\": {\"columns\": [\"timestamp\", \"position_x\", \"position_y\", \"position_z\", \"velocity_x\", \"velocity_y\", \"velocity_z\", \"temperature\", \"battery\", \"current\", \"voltage\", \"scalar_000\", \"scalar_001\", \"scalar_002\", \"scalar_003\", \"scalar_004\", \"scalar_005\", \"scalar_006\", \"scalar_007\", \"scalar_008\", \"scalar_009\", \"scalar_010\", \"scalar_011\", \"scalar_012\", \"scalar_013\", \"scalar_014\", \"scalar_015\", \"scalar_016\", \"scalar_017\", \"scalar_018\", \"scalar_019\", \"robot_state\", \"error_code\"], \"dtypes\": {\"timestamp\": \"float64\", \"position_x\": \"float64\", \"position_y\": \"float64\", \"position_z\": \"float64\", \"velocity_x\": \"float64\", \"velocity_y\": \"float64\", \"velocity_z\": \"float64\", \"temperature\": \"float64\", \"battery\": \"float64\", \"current\": \"float64\", \"voltage\": \"float64\", \"scalar_000\": \"float64\", \"scalar_001\": \"float64\", \"scalar_002\": \"float64\", \"scalar_003\": \"float64\", \"scalar_004\": \"float64\", \"scalar_005\": \"float64\", \"scalar_006\": \"float64\", \"scalar_007\": \"float64\", \"scalar_008\": \"float64\", \"scalar_009\": \"float64\", \"scalar_010\": \"float64\", \"scalar_011\": \"float64\", \"scalar_012\": \"float64\", \"scalar_013\": \"float64\", \"scalar_014\": \"float64\", \"scalar_015\": \"float64\", \"scalar_016\": \"float64\", \"scalar_017\": \"float64\", \"scalar_018\": \"float64\", \"scalar_019\": \"float64\", \"robot_state\": \"object\", \"error_code\": \"int64\"}, \"rows\": 300000, \"sample_rows\": 1000, \"size_bytes\": 94672760, \"import_options\": {\"csv\": {\"header_mode\": \"auto\", \"resolved_header_mode\": \"header\", \"column_names\": []}}, \"csv\": {\"header_mode\": \"auto\", \"resolved_header_mode\": \"header\", \"column_names\": []}}}",
+        "created_at": "2026-10-20T12:56:20.171480+00:00",
+        "updated_at": "2026-10-20T12:56:20.171480+00:00"
+      },
+      {
+        "checksum": "bd1a1195a1b57ca2f78dd626d610c9c7267688d022ee3e6613e820e19d8929ae",
+        "source_type": "csv",
+        "profile_json": "{\"schema_version\": 1, \"source_id\": \"source_18f9b9767f73\", \"source_type\": \"csv\", \"source_family\": \"tabular\", \"sample_rows\": 1000, \"fields\": [{\"name\": \"timestamp\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": true, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"position_x\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": \"x\", \"time_parse_ratio\": 1.0, \"time_monotonic\": true, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"position_y\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": \"y\", \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"position_z\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": \"z\", \"time_parse_ratio\": 1.0, \"time_monotonic\": true, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"velocity_x\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": \"x\", \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"velocity_y\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": \"y\", \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"velocity_z\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": \"z\", \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"temperature\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"battery\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"current\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": true, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"voltage\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_000\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": true, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_001\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": true, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_002\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_003\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_004\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_005\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": true, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_006\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": true, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_007\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": true, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_008\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_009\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_010\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_011\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": true, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_012\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": true, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_013\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": true, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_014\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_015\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_016\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_017\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": false, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_018\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": true, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"scalar_019\", \"dtype\": \"float64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": true, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}, {\"name\": \"robot_state\", \"dtype\": \"object\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 0.0, \"time_monotonic\": null, \"inferred_time_unit\": null, \"first_time_unit\": null}, {\"name\": \"error_code\", \"dtype\": \"int64\", \"null_count\": 0, \"null_ratio\": 0.0, \"non_null_count\": 1000, \"axis\": null, \"time_parse_ratio\": 1.0, \"time_monotonic\": true, \"inferred_time_unit\": \"seconds\", \"first_time_unit\": \"seconds\"}], \"field_names\": [\"timestamp\", \"position_x\", \"position_y\", \"position_z\", \"velocity_x\", \"velocity_y\", \"velocity_z\", \"temperature\", \"battery\", \"current\", \"voltage\", \"scalar_000\", \"scalar_001\", \"scalar_002\", \"scalar_003\", \"scalar_004\", \"scalar_005\", \"scalar_006\", \"scalar_007\", \"scalar_008\", \"scalar_009\", \"scalar_010\", \"scalar_011\", \"scalar_012\", \"scalar_013\", \"scalar_014\", \"scalar_015\", \"scalar_016\", \"scalar_017\", \"scalar_018\", \"scalar_019\", \"robot_state\", \"error_code\"], \"timeline\": {\"field\": \"timestamp\", \"present\": true, \"null_count\": 0, \"null_ratio\": 0.0, \"monotonic\": true, \"parse_ratio\": 1.0, \"inferred_unit\": \"seconds\", \"first_unit\": \"seconds\", \"mixed_units\": false}, \"adapter_metadata\": {\"columns\": [\"timestamp\", \"position_x\", \"position_y\", \"position_z\", \"velocity_x\", \"velocity_y\", \"velocity_z\", \"temperature\", \"battery\", \"current\", \"voltage\", \"scalar_000\", \"scalar_001\", \"scalar_002\", \"scalar_003\", \"scalar_004\", \"scalar_005\", \"scalar_006\", \"scalar_007\", \"scalar_008\", \"scalar_009\", \"scalar_010\", \"scalar_011\", \"scalar_012\", \"scalar_013\", \"scalar_014\", \"scalar_015\", \"scalar_016\", \"scalar_017\", \"scalar_018\", \"scalar_019\", \"robot_state\", \"error_code\"], \"dtypes\": {\"timestamp\": \"float64\", \"position_x\": \"float64\", \"position_y\": \"float64\", \"position_z\": \"float64\", \"velocity_x\": \"float64\", \"velocity_y\": \"float64\", \"velocity_z\": \"float64\", \"temperature\": \"float64\", \"battery\": \"float64\", \"current\": \"float64\", \"voltage\": \"float64\", \"scalar_000\": \"float64\", \"scalar_001\": \"float64\", \"scalar_002\": \"float64\", \"scalar_003\": \"float64\", \"scalar_004\": \"float64\", \"scalar_005\": \"float64\", \"scalar_006\": \"float64\", \"scalar_007\": \"float64\", \"scalar_008\": \"float64\", \"scalar_009\": \"float64\", \"scalar_010\": \"float64\", \"scalar_011\": \"float64\", \"scalar_012\": \"float64\", \"scalar_013\": \"float64\", \"scalar_014\": \"float64\", \"scalar_015\": \"float64\", \"scalar_016\": \"float64\", \"scalar_017\": \"float64\", \"scalar_018\": \"float64\", \"scalar_019\": \"float64\", \"robot_state\": \"object\", \"error_code\": \"int64\"}, \"rows\": 300000, \"sample_rows\": 1000, \"size_bytes\": 94672760, \"import_options\": {\"csv\": {\"header_mode\": \"auto\", \"resolved_header_mode\": \"header\", \"column_names\": []}}, \"csv\": {\"header_mode\": \"auto\", \"resolved_header_mode\": \"header\", \"column_names\": []}}}",
+        "created_at": "2026-10-20T12:56:28.192704+00:00",
+        "updated_at": "2026-10-20T12:56:28.192704+00:00"
+      }
+    ],
+    "metadata": {
+      "projects": [
+        {
+          "id": "project_a8c5865bb94e",
+          "name": "CSV performance",
+          "description": "",
+          "workspace_path": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\csv_performance_20261020_125615_2df1373a\\setup\\projects\\project_a8c5865bb94e",
+          "created_at": "2026-10-20T12:56:15.694417+00:00",
+          "updated_at": "2026-10-20T12:56:15.694417+00:00"
+        }
+      ],
+      "sources": [
+        {
+          "id": "source_470886aa542e",
+          "project_id": "project_a8c5865bb94e",
+          "type": "csv",
+          "uri": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\csv_performance_20261020_125615_2df1373a\\input_0.csv",
+          "checksum": "81fbed270f445e4d1b4bf0a7c81409b92dc25a1f4e2ef3ad25382cfa3c36a2e3",
+          "size_bytes": 94672760,
+          "status": "inspected",
+          "metadata_json": "{\"columns\": [\"timestamp\", \"position_x\", \"position_y\", \"position_z\", \"velocity_x\", \"velocity_y\", \"velocity_z\", \"temperature\", \"battery\", \"current\", \"voltage\", \"scalar_000\", \"scalar_001\", \"scalar_002\", \"scalar_003\", \"scalar_004\", \"scalar_005\", \"scalar_006\", \"scalar_007\", \"scalar_008\", \"scalar_009\", \"scalar_010\", \"scalar_011\", \"scalar_012\", \"scalar_013\", \"scalar_014\", \"scalar_015\", \"scalar_016\", \"scalar_017\", \"scalar_018\", \"scalar_019\", \"robot_state\", \"error_code\"], \"dtypes\": {\"timestamp\": \"float64\", \"position_x\": \"float64\", \"position_y\": \"float64\", \"position_z\": \"float64\", \"velocity_x\": \"float64\", \"velocity_y\": \"float64\", \"velocity_z\": \"float64\", \"temperature\": \"float64\", \"battery\": \"float64\", \"current\": \"float64\", \"voltage\": \"float64\", \"scalar_000\": \"float64\", \"scalar_001\": \"float64\", \"scalar_002\": \"float64\", \"scalar_003\": \"float64\", \"scalar_004\": \"float64\", \"scalar_005\": \"float64\", \"scalar_006\": \"float64\", \"scalar_007\": \"float64\", \"scalar_008\": \"float64\", \"scalar_009\": \"float64\", \"scalar_010\": \"float64\", \"scalar_011\": \"float64\", \"scalar_012\": \"float64\", \"scalar_013\": \"float64\", \"scalar_014\": \"float64\", \"scalar_015\": \"float64\", \"scalar_016\": \"float64\", \"scalar_017\": \"float64\", \"scalar_018\": \"float64\", \"scalar_019\": \"float64\", \"robot_state\": \"object\", \"error_code\": \"int64\"}, \"rows\": 300000, \"sample_rows\": 1000, \"size_bytes\": 94672760, \"import_options\": {\"csv\": {\"header_mode\": \"auto\", \"resolved_header_mode\": \"header\", \"column_names\": []}}, \"csv\": {\"header_mode\": \"auto\", \"resolved_header_mode\": \"header\", \"column_names\": []}}",
+          "storage_mode": "reference",
+          "original_uri": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\csv_performance_20261020_125615_2df1373a\\input_0.csv",
+          "created_at": "2026-10-20T12:56:19.523102+00:00",
+          "updated_at": "2026-10-20T12:56:20.171480+00:00"
+        },
+        {
+          "id": "source_18f9b9767f73",
+          "project_id": "project_a8c5865bb94e",
+          "type": "csv",
+          "uri": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\csv_performance_20261020_125615_2df1373a\\input_1.csv",
+          "checksum": "7523123003e2a021a286139b409020b11c224076b7395343112f0c30eee60da6",
+          "size_bytes": 94672760,
+          "status": "inspected",
+          "metadata_json": "{\"columns\": [\"timestamp\", \"position_x\", \"position_y\", \"position_z\", \"velocity_x\", \"velocity_y\", \"velocity_z\", \"temperature\", \"battery\", \"current\", \"voltage\", \"scalar_000\", \"scalar_001\", \"scalar_002\", \"scalar_003\", \"scalar_004\", \"scalar_005\", \"scalar_006\", \"scalar_007\", \"scalar_008\", \"scalar_009\", \"scalar_010\", \"scalar_011\", \"scalar_012\", \"scalar_013\", \"scalar_014\", \"scalar_015\", \"scalar_016\", \"scalar_017\", \"scalar_018\", \"scalar_019\", \"robot_state\", \"error_code\"], \"dtypes\": {\"timestamp\": \"float64\", \"position_x\": \"float64\", \"position_y\": \"float64\", \"position_z\": \"float64\", \"velocity_x\": \"float64\", \"velocity_y\": \"float64\", \"velocity_z\": \"float64\", \"temperature\": \"float64\", \"battery\": \"float64\", \"current\": \"float64\", \"voltage\": \"float64\", \"scalar_000\": \"float64\", \"scalar_001\": \"float64\", \"scalar_002\": \"float64\", \"scalar_003\": \"float64\", \"scalar_004\": \"float64\", \"scalar_005\": \"float64\", \"scalar_006\": \"float64\", \"scalar_007\": \"float64\", \"scalar_008\": \"float64\", \"scalar_009\": \"float64\", \"scalar_010\": \"float64\", \"scalar_011\": \"float64\", \"scalar_012\": \"float64\", \"scalar_013\": \"float64\", \"scalar_014\": \"float64\", \"scalar_015\": \"float64\", \"scalar_016\": \"float64\", \"scalar_017\": \"float64\", \"scalar_018\": \"float64\", \"scalar_019\": \"float64\", \"robot_state\": \"object\", \"error_code\": \"int64\"}, \"rows\": 300000, \"sample_rows\": 1000, \"size_bytes\": 94672760, \"import_options\": {\"csv\": {\"header_mode\": \"auto\", \"resolved_header_mode\": \"header\", \"column_names\": []}}, \"csv\": {\"header_mode\": \"auto\", \"resolved_header_mode\": \"header\", \"column_names\": []}}",
+          "storage_mode": "reference",
+          "original_uri": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\csv_performance_20261020_125615_2df1373a\\input_1.csv",
+          "created_at": "2026-10-20T12:56:27.558506+00:00",
+          "updated_at": "2026-10-20T12:56:28.192704+00:00"
+        }
+      ],
+      "recordings": [
+        {
+          "id": "recording_0",
+          "project_id": "project_a8c5865bb94e",
+          "source_id": "source_470886aa542e",
+          "app_id": "benchmark",
+          "path": "",
+          "blueprint_id": null,
+          "blueprint_path": null,
+          "run_name": "benchmark",
+          "tags_json": "[]",
+          "params_json": "{}",
+          "created_at": "index-only"
+        },
+        {
+          "id": "recording_1",
+          "project_id": "project_a8c5865bb94e",
+          "source_id": "source_18f9b9767f73",
+          "app_id": "benchmark",
+          "path": "",
+          "blueprint_id": null,
+          "blueprint_path": null,
+          "run_name": "benchmark",
+          "tags_json": "[]",
+          "params_json": "{}",
+          "created_at": "index-only"
+        }
+      ]
+    },
+    "config": {
+      "rows": 300000,
+      "frequency_hz": 200.0,
+      "scalar_fields": 30,
+      "state_fields": 1,
+      "seed": 20261006
+    },
+    "work": "D:\\Programme\\DataScope-Studio\\benchmarks\\results\\.work\\csv_performance_20261020_134433_e0300f84",
+    "build_runs": 3,
+    "query_runs": 5
+  },
+  "control_commit": "ab8473317b904388448bb3b5c83cc01bede35e30",
+  "acceptance": {
+    "queries_p95_le_1s": true,
+    "diagnostics_exact_parity": true,
+    "diagnostics_p95": true,
+    "index_le_180s": true,
+    "medium_index_speedup_ge_3": null,
+    "workspace_le_300s": true,
+    "storage_le_2x": true,
+    "build_rss_le_1gib": true,
+    "query_rss_le_512mib": true,
+    "all_32_fields": true,
+    "no_eav_fallback": true
+  },
+  "index_speedup": 3.150365105496967,
+  "index_median_ms": 5728.6456000001635,
+  "workspace_median_ms": 15647.081149999394,
+  "comparison_scope": "Three paired primary index builds; both equal-sized sources built by new writer/full Workspace in every trial"
+}

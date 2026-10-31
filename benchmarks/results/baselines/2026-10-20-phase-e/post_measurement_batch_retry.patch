@@ -1,0 +1,18 @@
+--- measured/packages/core/src/datascope_core/workspace.py
++++ delivered/packages/core/src/datascope_core/workspace.py
+@@ -932,6 +932,15 @@
+         paths = _resolve_patterns(patterns)
+         if not paths:
+             raise ValueError("Batch import did not match any source paths")
++        if _job_id is None and _resume_batch_id is None and query_storage != 'legacy':
++            # Direct Core callers need the same durable policy/ownership as API
++            # and CLI jobs, including when an item fails before any Recording.
++            job = self.enqueue_batch_import(project_id, patterns, template_id=template_id,
++                output_prefix=output_prefix, storage_mode=storage_mode, query_storage=query_storage)
++            token = uuid4().hex
++            if not self.claim_job(job['id'], token):
++                raise RuntimeError(f"Batch job was claimed by another worker: {job['id']}")
++            return self.execute_job(job['id'], token)
+ 
+         if _resume_batch_id:
+             batch_id = _resume_batch_id

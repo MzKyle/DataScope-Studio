@@ -25,7 +25,7 @@ from datascope_core.query_sql import (
     register_custom_query_functions,
 )
 from datascope_core.query_typed import (
-    build_typed_index, clear_query_index, normalize_query_storage, preflight,
+    DEFAULT_QUERY_STORAGE, build_typed_index, clear_query_index, resolve_query_storage, preflight,
 )
 from datascope_core.workspace_utils import row_to_dict, source_info_from_row, utc_now
 
@@ -47,6 +47,9 @@ class WorkspaceQueryMixin:
         limit: int = 1000,
     ) -> dict[str, Any]:
         self.get_project(project_id)
+        if template_id == 'state_duration' and type(limit) is int and limit > 0:
+            from datascope_core.query_aggregate import state_duration
+            return state_duration(self, project_id, recording_ids, limit)
         if template_id in STREAMABLE_QUERY_TEMPLATES:
             with closing(self._iter_query_rows(
                     project_id,
@@ -115,6 +118,26 @@ class WorkspaceQueryMixin:
         limit: int = 1000,
     ) -> dict[str, Any]:
         self.get_project(project_id)
+        if type(limit) is int and limit > 0:
+            if mode == 'summary':
+                from datascope_core.query_aggregate import compare_summary
+                return compare_summary(self, project_id, recording_ids, metric_keys, limit)
+            if mode == 'series':
+                from datascope_core.query import QUERY_COLUMNS, _db_value, _result_row
+                result = []
+                tokens = [item.lower() for item in metric_keys or [] if item]
+                with closing(self._iter_query_rows(project_id, recording_ids=recording_ids,
+                    semantic_types=['scalar', 'scalar_group', 'state'], search_tokens=metric_keys)) as rows:
+                    for row in rows:
+                        value = _db_value(row)
+                        if row['semantic_type'] != 'state' and not isinstance(value, (int, float)):
+                            continue
+                        if tokens and not any(t in f"{row['key']} {row['entity_path']}".lower() for t in tokens):
+                            continue
+                        result.append(_result_row(row, value))
+                        if len(result) >= limit:
+                            break
+                return {'columns': QUERY_COLUMNS, 'rows': result}
         rows = self._query_rows(
             project_id,
             recording_ids=recording_ids,
@@ -150,17 +173,20 @@ class WorkspaceQueryMixin:
         source_row: dict[str, Any],
         spec: MappingSpec,
         *,
-        query_storage: str = "legacy",
+        query_storage: str = DEFAULT_QUERY_STORAGE,
         cancel_check=None,
         cancel_signal=None,
+        cache_dir=None,
     ) -> dict[str, Any] | None:
-        normalize_query_storage(query_storage)
+        query_storage = resolve_query_storage(query_storage, source_row['type'])
         cancel = cancel_check or (lambda: None)
         cancel()
         source = source_info_from_row(source_row)
         typed_plan = preflight(source, spec, cancel) if (
             query_storage == "typed_sqlite" and source.source_type == "csv"
         ) else None
+        if typed_plan is not None:
+            typed_plan['temporary_directory'] = cache_dir
         with closing(self._connect()) as conn, conn:
             if typed_plan is not None and cancel_signal is not None:
                 conn.set_progress_handler(lambda: int(cancel_signal()), 10_000)

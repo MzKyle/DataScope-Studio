@@ -14,7 +14,7 @@ from tests.api_helpers import wait_for_job
 from tests.unit.test_rerun_artifacts import _install_fake_artifact_writers, _mapped_csv_workspace
 
 
-@pytest.mark.parametrize("storage", ["legacy", "typed_sqlite"])
+@pytest.mark.parametrize("storage", ["legacy", "typed_sqlite", "auto"])
 def test_core_build_default_and_opt_in(tmp_path, monkeypatch, storage):
     workspace, project, source, mapping = _mapped_csv_workspace(tmp_path)
     _install_fake_artifact_writers(monkeypatch, recording_payload=b"rrd", blueprint_payload=b"rbl")
@@ -22,7 +22,7 @@ def test_core_build_default_and_opt_in(tmp_path, monkeypatch, storage):
     result = workspace.build_recording(project["id"], source["id"], mapping["id"], **kwargs)
     with workspace._connect() as conn:
         count = conn.execute("SELECT count(*) FROM typed_indexes").fetchone()[0]
-    assert count == (storage == "typed_sqlite")
+    assert count == (storage != "legacy")
     assert len(workspace.custom_query(project["id"])["rows"]) == 2
     assert Path(result["recording_path"]).exists()
 
@@ -44,18 +44,23 @@ def test_failed_build_cleans_committed_typed_index(tmp_path, monkeypatch):
             assert conn.execute(f"SELECT count(*) FROM {table}").fetchone()[0] == 0
 
 
-def test_api_typed_build_and_invalid_option(tmp_path, monkeypatch):
+@pytest.mark.parametrize('storage', ['typed_sqlite', 'auto'])
+def test_api_typed_build_and_invalid_option(tmp_path, monkeypatch, storage):
     root = tmp_path / "workspace"
     monkeypatch.setenv("DATASCOPE_WORKSPACE", str(root))
     path = tmp_path / "values.csv"
     path.write_text("time,battery,state\n0,0.9,idle\n1,0.1,error\n", encoding="utf-8")
     with TestClient(api_app) as client:
         project = client.post("/api/projects", json={"name": "Typed API"}).json()
+        estimate = client.post(f"/api/projects/{project['id']}/estimates/batch-import", json={
+            'patterns': [str(path)], 'storage_mode': 'reference', 'query_storage': storage})
+        assert estimate.status_code == 200
+        assert estimate.json()['components']['query_index_and_journal'] == path.stat().st_size * 5
         source = client.post(f"/api/projects/{project['id']}/sources", json={"path": str(path)}).json()
         client.post(f"/api/sources/{source['id']}/inspect")
         request = {"project_id": project["id"], "source_id": source["id"], "query_storage": "unknown"}
         assert client.post("/api/recordings/build", json=request).status_code == 422
-        request["query_storage"] = "typed_sqlite"
+        request["query_storage"] = storage
         response = client.post("/api/recordings/build", json=request)
         assert response.status_code == 202
         job = wait_for_job(client, response.json()["id"])
@@ -75,13 +80,14 @@ def test_api_typed_build_and_invalid_option(tmp_path, monkeypatch):
         assert conn.execute("SELECT count(*) FROM typed_indexes").fetchone()[0] == 1
 
 
-def test_cli_typed_import(tmp_path, monkeypatch):
+@pytest.mark.parametrize('storage', ['typed_sqlite', 'auto'])
+def test_cli_typed_import(tmp_path, monkeypatch, storage):
     root = tmp_path / "workspace"
     monkeypatch.setenv("DATASCOPE_WORKSPACE", str(root))
     path = tmp_path / "values.csv"
     path.write_text("time,battery,state\n0,0.9,idle\n1,0.1,error\n", encoding="utf-8")
     result = CliRunner().invoke(cli_app, ["import", str(path), "--project", "Typed CLI",
-                                        "--query-storage", "typed_sqlite", "--json"])
+                                        "--query-storage", storage, "--json"])
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output)
     assert payload["job"]["payload"]["query_storage"] == "typed_sqlite"

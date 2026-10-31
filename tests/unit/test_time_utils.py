@@ -1,6 +1,7 @@
 from datetime import timezone
 
 import pandas as pd
+import pytest
 
 from datascope_core.models import MappingSpec, SourceInfo
 from datascope_core.query import build_query_rows
@@ -120,3 +121,15 @@ class FakeRecording:
 
     def disable_timeline(self, timeline: str) -> None:
         self.calls.append((timeline, {"disabled": True}))
+
+
+@pytest.mark.parametrize('unit', ['auto', 'seconds', 'relative_s', 'unix_s', 'unix_ms', 'unix_us', 'unix_ns', 'datetime'])
+@pytest.mark.parametrize('values', [[0., -0., 1.5, float('nan'), float('inf')],
+    [0, 2**53 + 1, 2**63 - 1], ['0', 'bad', '2026-01-01T00:00:00Z', None], [True, False]])
+def test_batch_query_time_matches_scalar(unit, values):
+    import pandas as pd
+    from datascope_core.time_utils import query_time_batch, time_seconds_or_none
+    from tests.unit.test_custom_query_pushdown import assert_same
+    series = pd.Series(values)
+    assert_same(query_time_batch(series, unit),
+                [time_seconds_or_none(value, unit) for value in series.tolist()])

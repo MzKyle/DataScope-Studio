@@ -1,0 +1,60 @@
+{
+  "smoke.json": {
+    "sha256": "6472039fee0ef04b71d79c00322a9aa482f3e22fcc4b8e10e837dd4c4cfaf95a",
+    "source": "benchmarks\\results\\csv_performance_20261020_134351_f47f81bf.json",
+    "status": "succeeded"
+  },
+  "small.json": {
+    "sha256": "45cd56261a0cba569e353f5adb6c21d0803974a93d79e3383a1ce939b7405912",
+    "source": "benchmarks\\results\\csv_performance_20261020_134433_e0300f84.json",
+    "status": "succeeded"
+  },
+  "medium.json": {
+    "sha256": "4a1d27441b546096d60f11628200e13cc88a5b6d55bc76126182f32561c76cf4",
+    "source": "benchmarks\\results\\csv_performance_20261020_134814_1640a543.json",
+    "status": "succeeded"
+  },
+  "large.json": {
+    "sha256": "a38a531d8a6b347b68fa473a66deadd3c4dd55b59504ea0729c9542886c47215",
+    "source": "benchmarks\\results\\csv_performance_large_20261020_142115_fc48041a.json",
+    "status": "succeeded"
+  },
+  "phase_d_small.json": {
+    "sha256": "885ccb6287f16fb2f1581dcfe980af606d1bb5c5c3e496be35eb0c9382b33b14",
+    "source": "benchmarks\\results\\phase-e-d-validation\\rerun_build_20261020_122200_2d2c85af.json",
+    "status": "succeeded"
+  },
+  "phase_d_medium.json": {
+    "sha256": "7fd543802ccdc608b456e0fa2eea8a0fba2349675bde4b2ab82f76fe3bee8447",
+    "source": "benchmarks\\results\\phase-e-d-validation\\rerun_build_20261020_123810_40f7c08e.json",
+    "status": "succeeded"
+  },
+  "initial_smoke_excluded.json": {
+    "sha256": "9a6be562aef3bc956f13a02991fbdb87aae955d89a3a8f43b14304441944462a",
+    "source": "benchmarks\\results\\csv_performance_20261020_124117_9678f00e.json",
+    "status": "excluded; Medium-only speedup gate was incorrectly applied to Smoke; followed by independent final runs"
+  },
+  "full_build_outlier_excluded.json": {
+    "sha256": "0a0f09d8cb8e19a64defad942fe38eed4d46ecf859fee02f4d9464189f1b9823",
+    "source": "benchmarks\\results\\csv_performance_20261020_130027_ed483895.json",
+    "status": "aborted after 466-second full build; not final acceptance"
+  },
+  "full_build_outlier_note.json": {
+    "sha256": "94898b54058962e1998e64507e839f2525c5fc2321cf1997b8f965ab4ec46213"
+  },
+  "README.md": {
+    "sha256": "0f67490b878a794519b25aafe1996650c1f983870cd2f88fa8b3d397f0a7a651"
+  },
+  "post_measurement_batch_retry.patch": {
+    "sha256": "2bb7ef228e2e1d3802b28b6c6160846cc0aa461fd91ec888dd5fae8b4e9e9349"
+  },
+  "verification.json": {
+    "sha256": "433ff164bf7b9aa62758b6133921b54cd7549563ce99729fbcb5d31b556877af"
+  },
+  "post_measurement_batch_estimate.patch": {
+    "sha256": "25dc9db907e2613fd3e1073697423f2fa06f68fed67646ae2a21c72761eca82c"
+  },
+  "post_measurement_disk_budget.patch": {
+    "sha256": "51f7ee1a0a4bec9a6b1481f17ffd21e545dbced1b0d48b03201623031684ab53"
+  }
+}

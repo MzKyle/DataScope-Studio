@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import sqlite3
 import threading
 import traceback
 from pathlib import Path
@@ -44,7 +45,16 @@ def _heartbeat_loop(
     stop: threading.Event,
 ) -> None:
     while not stop.wait(1):
-        workspace.heartbeat_job(job_id, token)
+        try:
+            workspace.heartbeat_job(job_id, token)
+        except sqlite3.OperationalError as error:
+            code = getattr(error, 'sqlite_errorcode', -1) & 0xff
+            if code not in {5, 6} and not str(error).startswith(  # SQLITE_BUSY / SQLITE_LOCKED
+                ('database is locked', 'database table is locked', 'database schema is locked')
+            ):
+                raise
+            # The typed writer owns one publication transaction. Retry after it
+            # commits instead of silently losing this thread for the whole job.
 
 
 if __name__ == "__main__":

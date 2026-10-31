@@ -193,6 +193,7 @@ export type BuildResult = {
   recording_path: string;
   blueprint_path: string;
   artifact_info?: RerunArtifactInfo;
+  query_index?: { storage: string; fallback_streams?: Record<string, string>; [key: string]: unknown };
 };
 
 export type CatalogRegistrationInfo = {

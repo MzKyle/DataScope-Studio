@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import gc
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -43,6 +44,20 @@ CODE = tuple('packages/core/src/datascope_core/'+p+'.py' for p in
              'benchmarks/rerun_profile.py','benchmarks/rrd_contract.py')
 
 
+def cache_bytes(root, *, sort_only=False):
+    """os.walk tolerates directories disappearing during worker cleanup."""
+    total = 0
+    for directory, _, names in os.walk(root):
+        for name in names:
+            if sort_only and not name.startswith('tabular-sort.sqlite'):
+                continue
+            try:
+                total += (Path(directory) / name).stat().st_size
+            except FileNotFoundError:
+                pass
+    return total
+
+
 class TemporaryUsage:
     """Sample only the task's sort cache during the separate instrumented pass."""
     def __init__(self, root):
@@ -53,13 +68,7 @@ class TemporaryUsage:
 
     def _watch(self):
         while not self.stop.is_set():
-            total = 0
-            for path in self.root.rglob('*'):
-                try:
-                    if path.is_file():
-                        total += path.stat().st_size
-                except FileNotFoundError:
-                    pass
+            total = cache_bytes(self.root)
             self.peak = max(self.peak, total)
             self.stop.wait(.02)
 
@@ -252,6 +261,7 @@ def run(args):
     report={'format_version':1,'run_id':run_id,'preset':args.preset,'status':'running',
             'environment':environment(REPO),'schemes':{},
             'source_files_sha256':{p:sha256(REPO/p) for p in CODE if (REPO/p).exists()}}
+    process = None
     try:
         config=DatasetConfig(rows=args.rows or PRESETS[args.preset])
         if args.rows:
@@ -296,13 +306,7 @@ def run(args):
                             break
                 except psutil.NoSuchProcess:
                     pass
-                cache_bytes = 0
-                for path in work.rglob('tabular-sort.sqlite*'):
-                    try:
-                        cache_bytes += path.stat().st_size
-                    except FileNotFoundError:
-                        pass
-                cache_peak = max(cache_peak, cache_bytes)
+                cache_peak = max(cache_peak, cache_bytes(work, sort_only=True))
                 time.sleep(.1)
             process.wait()
             value=json.loads(target.read_text(encoding='utf-8')) if target.exists() else {}
@@ -341,6 +345,15 @@ def run(args):
         report.update(status='failed',error=str(error))
         raise
     finally:
+        if process is not None and process.poll() is None:
+            try:
+                children = psutil.Process(process.pid).children(recursive=True)
+                for child in reversed(children):
+                    child.kill()
+                process.kill()
+            except psutil.NoSuchProcess:
+                pass
+            process.wait()
         if not args.keep_artifacts:
             assert work.resolve().parent==args.output_dir.resolve()/'.work'
             assert json.loads((work/'owner.json').read_text())['run_id']==run_id
