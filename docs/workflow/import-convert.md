@@ -2,30 +2,16 @@
 
 ## 桌面端流程
 
-1. 创建或选择项目。
-2. 点击“选择数据源”，选择文件或文件夹。
-3. 点击“导入并自动 Mapping”。
-4. 查看 schema profile、字段映射和数据预览。
-5. 编辑时间字段/单位、source fields、semantic type 和 entity path。
-6. 运行 Mapping 校验；修复 error，按需接受 warning。
-7. 确认 Mapping 后构建 recording。
-8. 点击“在 Rerun 中打开”。
+1. 在“快速查看”选择或拖入本地数据，无需项目。
+2. 查看自动预览、字段映射及 Ready / Review / Blocked 状态。
+3. 必要时展开高级 Mapping，修复时间、单位、字段或实体路径并重新校验。
+4. 生成可视化，然后在 Rerun 打开。桌面快速查看不建立查询索引。
+5. 选择“转入项目”以保留当前映射：选择或创建项目，重新导入原数据并校验，之后在项目内重新生成记录。
 
-对于没有表头的 CSV，在导入前把“CSV 表头”设为“无表头”，并按原始列顺序填写
-列名。Mapping 编辑器中的 `source_fields` 只引用已经存在的源字段，不会重命名
-CSV 列。
+项目导入、批量导入和 CLI 继续建立查询索引。转入项目不搬迁临时 RRD/RBL；失败保留临时会话，后续重试复用已经导入的目标数据源。
 
-转换任务中的“Rerun 产物目录”用于指定 `.rrd` 与 `.rbl` 的共同输出目录。留空时
-保持默认项目结构：`recordings/<name>.rrd` 与 `blueprints/<name>.rbl`。
+无表头 CSV 的列名在导入前配置；Mapping 仅引用源字段。高级构建选项保留输出目录、校验、decoder、优化和 Catalog 配置。构建结果包含 artifact_info；正式项目记录还包含 query_index。任何映射编辑都撤销确认状态。
 
-构建成功表示 `.rrd` recording 和 `.rbl` blueprint 都已经写入并通过所选 artifact
-校验。默认只做非空校验；启用高级选项后可增加 `rerun rrd verify/stats`、
-headless 截图校验、`rrd optimize` 或 Rerun Catalog 注册。任务结果会包含
-`artifact_info`，用于查看产物大小、Rerun app id、模板、转换链路、Rerun 版本和
-高级构建选项；同一份信息也会保存到 recording 的 `params.rerun_artifact`。
-
-自动 Mapping 首次保存为 draft。任何编辑都会撤销 confirmed 状态，必须重新
-校验和确认。Mapping 模板可以跨项目复用，并可通过 YAML 导入/导出。
 
 ## CLI 流程
 

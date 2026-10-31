@@ -73,44 +73,17 @@ npm run tauri:dev:safe
 ```
 
 ## 5. 前端（桌面）交互详解
-下面以 UI 功能模块的角度，详细说明如何在桌面应用中完成常用工作流：
 
-- **主界面（Dashboard / Local Catalog）**
-  - 左侧侧栏用于在模块之间切换（Dashboard、Import、Recordings、Jobs、Templates、Settings 等）。
-  - 右上角有刷新按钮与状态指示，遇到接口错误会在顶部显示错误状态与消息。
-- **3D 点云导入**
-  - 支持 `.ply`、`.pcd`、`.npy`、`.npz`、`.xyz`、`.xyzn`、`.xyzrgb`、`.pts`、`.asc` 单文件或目录。
-  - 目录导入时每个点云文件会作为一帧，默认映射到 `/sensors/lidar/points`，推荐模板为 `robotics_debug`。
-  - 如果输入框出现类似 `/home/kyle/sany/scan_point_cloud/home/kyle/sany/scan_point_cloud` 的重复路径，前端会在检查数据源前自动归一化为后半段真实路径。
+主导航为快速查看、项目、设置，默认进入快速查看。产品边界以根目录《产品设计.md》为准。
 
-- **项目（Projects）**
-  - 启动应用后会自动加载已有项目列表（请求 `/api/projects`）；可在输入框创建新项目。
-  - 选择项目后会刷新该项目下的 `recordings` 与 `jobs`。
+1. 在快速查看选择或拖入数据；无需先创建项目。
+2. 查看自动预览和 Mapping 就绪状态；仅在需要时展开高级映射修复。
+3. 生成可视化并在 Rerun 打开。桌面快速查看跳过查询索引。
+4. 需要保存时选择“转入项目”：保留当前 Mapping，重新导入并校验，在项目内重新生成记录。
+5. 项目工具提供导入、批量导入、任务和项目包；记录详情提供概览、检查、筛选。
+6. 自定义查询、对比和插件等在对应高级区域；设置管理预设与插件，不单独展示 Recipe。
 
-- **导入数据（Import / Inspect）**
-  - 支持的数据源：CSV、TSV/TXT/LOG、JSONL、图片文件或目录（可配合 annotations.json）、点云、MCAP、ROS2 包等。支持拖拽（将文件或文件夹拖入主窗口即可填入路径）。
-  - 步骤：
-    1. 选择目标项目。输入或拖入 `sourcePath`（本地路径，例如 `/path/to/data.csv` 或 `/path/to/dataset/`）。
-    2. 点击 `Inspect`（或界面相应按钮）会调用 `/api/sources/{id}/inspect`，返回流（streams）信息。
-    3. 应用会调用模板建议与映射建议：`/api/sources/{id}/templates/suggest` 与 `/api/sources/{id}/mapping/suggest`，自动填充 `mapping` 以便把原始列/流与 DataScope 的实体/流对应。
-    4. 在界面中可以预览首个流的若干行数据（`/api/sources/{id}/preview`），并在需要时修改 `mapping`（例如选择时间列、实体 ID、坐标列等）。
-    5. 保存映射：点击 `Save mapping`（POST `/api/sources/{id}/mapping`）。保存后会得到 `mapping_id`。
-
-- **构建 Recording（Build）与打开 Viewer**
-  - 保存映射后，点击 `Build recording` 会调用 `/api/recordings/build`（必须指定 `project_id`、`source_id`、`mapping_id`、`template_id`、`output_name`）。
-  - 构建完成后，界面会列出新生成的 recording，并允许点击 `Open in Rerun`（或类似按钮）调用 `/api/viewer/open`，在本机启动 Rerun viewer 或打开可视化窗口。
-  - Viewer 中可以选择时间轴、流（streams）和图层，查看图像、bounding boxes、keypoints、时序曲线等（Rerun 原生功能）。
-
-- **Recordings / Jobs / Tags**
-  - `Recordings` 面板列出项目下所有记录，可为某条记录添加标签（tags），也可导出或删除。
-  - `Jobs` 列表显示后台任务（例如构建任务、批量导入），点击可查看日志与状态。
-
-- **查询（Query Templates）**
-  - 系统提供 query templates（例如 `low_battery`、`detection_failure` 等），界面允许选择模板、设置阈值和目标 recording，然后执行查询（POST `/api/projects/{project_id}/query`）。
-  - 查询结果会在界面表格/可导出 CSV 中显示；也支持导出（`/api/projects/{project_id}/query/export`）。
-
-- **插件与模板管理**
-  - 可在 `Plugins`、`Templates` 面板安装/移除扩展：上传本地插件路径或模板文件，点击 `Install` 即可（分别调用 `/api/plugins/install` 与 `/api/templates/install`）。
+规则检查得分只反映现有规则输出；未命中不代表全面健康。Topic 时间范围差异不等于逐消息同步验证。
 
 ## 6. 一键可视化多元数据（使用场景与具体步骤）
 “多元数据” 指同一次运行中包含多种时序/异构流，例如：电池电压、温度、IMU、相机帧、检测框等。以下示例展示如何从一份 CSV（或 Image+annotations）做到“一键可视化”：

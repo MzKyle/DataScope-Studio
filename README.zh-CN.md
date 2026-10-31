@@ -4,9 +4,10 @@
 
 ![DataScope Studio](docs/assets/cover.png)
 
-DataScope Studio 用于把机器人、工业设备和传感器数据转换成可交互的
-[Rerun](https://rerun.io/) 可视化。选择本地数据，检查自动生成的 Mapping，构建
-Recording，然后直接在 Rerun 中查看，无需为每种数据编写单独的可视化脚本。
+DataScope Studio 面向机器人与传感器工程师，把本地离线数据快速变成可回放、可检查、
+可复用的 [Rerun](https://rerun.io/) 记录。打开数据、自动预览与映射、修正必要问题、
+生成可视化并在 Rerun 打开，按需转入项目。
+[产品边界与支持矩阵](产品设计.md)是功能承诺的统一依据。
 
 [下载 DataScope Studio](https://github.com/MzKyle/DataScope-Studio/releases) |
 [阅读完整文档](docs/README.md)
@@ -17,7 +18,7 @@ Recording，然后直接在 Rerun 中查看，无需为每种数据编写单独�
    对应平台的安装包。
 2. 启动 **DataScope Studio**。安装版会自动启动本地 API、Python runtime 和
    Rerun 集成。
-3. 在 **仪表盘** 使用 **Quick Inspect**：拖入文件或文件夹，或通过系统选择器
+3. 在 **快速查看** 使用 **Quick Inspect**：拖入文件或文件夹，或通过系统选择器
    选择数据源。首次检查不需要先创建项目。
 4. DataScope 会检查数据源、推荐可视化模板、生成草稿 Mapping、完成校验，并显示
    **Ready**、**Review** 或 **Blocked** 的 Mapping 就绪状态。
@@ -37,7 +38,7 @@ Recording，然后直接在 Rerun 中查看，无需为每种数据编写单独�
 - 不创建正式项目也能快速检查一个本地文件或文件夹。
 - 生成可复用的 Rerun `.rrd` Recording 和 `.rbl` Blueprint。
 - 在本地管理项目、数据源、Mapping、Recording、任务、标签、参数和查询导出。
-- 查询错误日志、低电量、检测失败、topic 摘要、时间同步问题和状态持续时间等常见问题。
+- 查询错误日志、低电量、低置信度或无检测结果样本、topic 摘要、Topic 时间范围差异和状态持续时间等常见问题。
 - 生成离线机器人诊断报告，并导出 JSON、CSV 或 HTML。
 - 导出完整项目包，并在其他机器上重新打开。
 
@@ -103,19 +104,15 @@ sudo apt install ./DataScope-Studio-v0.3.1-linux-amd64.deb
 
 ## 桌面端使用流程
 
-- **仪表盘：** 优先快速检查文件或文件夹；进入项目工作时可打开项目包、查看最近
-  生成的 Recording。
-- **导入流程：** 查看 Mapping 就绪状态，只在需要时展开高级 Mapping，生成 Rerun
-  产物，并在 Rerun 中打开。
-- **Recordings 与查询：** 重新打开 Recording、添加标签、运行查询模板、导出查询
-  结果、对比 scalar 指标，并查看后台任务。
-- **诊断：** 对全部或指定 Recording 运行离线机器人健康报告，调整阈值，并导出报告。
-- **扩展与设置：** 安装插件/模板，执行批量导入，导出项目包，设置默认导出目录和
-  Rerun 产物目录，并查看应用日志。
+- **快速查看：** 无需项目即可选择或拖入数据，查看预览和映射就绪状态，生成 RRD/RBL 并在 Rerun 打开。桌面快速查看不构建查询索引。
+- **项目：** 选择/创建项目、导入数据、浏览记录、管理批量任务、打开/导出项目包；高级项目工具提供多记录对比和项目级检查。
+- **记录详情：** 概览、检查、筛选默认处理当前记录；自定义查询放在高级筛选面板。
+- **设置：** 语言和目录；高级区保留可视化/Mapping 预设、插件与运行配置。
+- **转入项目：** 重新导入原数据并保留编辑后的 Mapping；使用新标识重新校验，需在项目内重新生成记录，不迁移临时 RRD/RBL。
 
-无表头 CSV 可选择“无表头”，并按顺序填写列名，例如
-`timestamp,x,y,z,rx,ry,rz`。TXT/LOG/DAT/LST 这类文本源会尽量自动识别分隔符；
-如果不是结构化表格，则会按 `line_number + message` 的日志形式导入。
+规则检查得分仅反映现有规则输出。未发现规则命中不代表全面健康；`time_sync` 比较 Topic 起止范围，不代表逐消息同步验证；检测检查只筛选低置信度或无检测结果样本。API/CLI 的规则 ID 保持兼容。
+
+无表头 CSV 可配置列名；TXT/LOG 等非结构化文本按日志导入。
 
 ## 文件与导出
 

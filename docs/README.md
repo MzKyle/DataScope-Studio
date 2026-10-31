@@ -2,7 +2,7 @@
 
 ![DataScope Studio](assets/cover.png)
 
-DataScope Studio 是一个本地优先的数据可视化工作台，用来把 CSV/TSV/TXT 日志、JSONL、图像检测数据、点云、MCAP 和 ROS2 DB3 bag 转换成 Rerun `.rrd` recording 与 `.rbl` blueprint，并在本地 SQLite catalog 中管理项目、recording、mapping、查询结果和导出包。
+DataScope Studio 面向机器人与传感器工程师，把本地离线数据变成可回放、可检查、可复用的 Rerun 记录。默认从快速查看开始，按需进入项目。产品边界和各类数据的接入/预览/回放/查询/检查范围以[产品设计](../产品设计.md)为准。
 
 [下载桌面安装包](https://github.com/MzKyle/DataScope-Studio/releases)
 
@@ -21,7 +21,7 @@ DataScope Studio 是一个本地优先的数据可视化工作台，用来把 CS
 | 映射 | 自动识别时间列、标量、状态、日志、图像、检测框、点云 |
 | 输出 | Rerun `.rrd` 与 `.rbl` |
 | Catalog | projects、sources、streams、mappings、recordings、jobs、query exports |
-| 查询 | 低电量、错误日志、检测失败、topic summary、状态持续时间、时间同步 |
+| 查询 | 低电量、错误日志、低置信度或无检测结果样本、topic summary、状态持续时间、Topic 时间范围差异 |
 | 扩展 | 本地插件、模板 registry、批量导入、项目包导出/导入 |
 
 ## 快速导航

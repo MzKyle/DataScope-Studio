@@ -4,10 +4,11 @@
 
 ![DataScope Studio](docs/assets/cover.png)
 
-DataScope Studio turns robotics, industrial, and sensor datasets into interactive
-[Rerun](https://rerun.io/) visualizations. Import local data, review the automatically
-generated mapping, build a recording, and open it in Rerun without writing a custom
-visualization script.
+DataScope Studio helps robotics and sensor engineers turn local offline data into
+replayable, inspectable, reusable [Rerun](https://rerun.io/) recordings.
+Open data, preview and repair its mapping, generate a visualization, and open it in Rerun.
+Projects are optional until you need to save and reuse your work.
+[Product boundaries and support matrix](产品设计.md) define the supported scope.
 
 [Download DataScope Studio](https://github.com/MzKyle/DataScope-Studio/releases) |
 [Read the documentation](docs/README.md)
@@ -18,7 +19,7 @@ visualization script.
    [GitHub Releases](https://github.com/MzKyle/DataScope-Studio/releases).
 2. Launch **DataScope Studio**. The installed app starts the local API, Python runtime,
    and Rerun integration automatically.
-3. On **Dashboard**, use **Quick Inspect**: drop a file or folder, or choose one from
+3. In **Quick Inspect**: drop a file or folder, or choose one from
    the system picker. No project setup is required for this first pass.
 4. DataScope inspects the source, recommends a visual template, creates a draft mapping,
    validates it, and shows **Ready**, **Review**, or **Blocked** mapping readiness.
@@ -41,8 +42,8 @@ separately for normal desktop use.
 - Generate reusable Rerun `.rrd` recordings and `.rbl` blueprints.
 - Organize projects, sources, mappings, recordings, jobs, tags, parameters, and query
   exports locally.
-- Search common conditions such as errors, low battery, detection failures, topic
-  summaries, time sync issues, and state duration.
+- Search common conditions such as errors, low battery, low-confidence or missing predictions, topic
+  summaries, topic time-range differences, and state duration.
 - Run offline robot diagnostics and export JSON, CSV, or HTML reports.
 - Export and reopen complete DataScope project packages.
 
@@ -113,21 +114,19 @@ sudo apt install ./DataScope-Studio-v0.3.1-linux-amd64.deb
 
 ## Desktop Workflow
 
-- **Dashboard:** quick-inspect a file or folder first, then open project packages or
-  review recent recordings when working in a project.
-- **Import Workflow:** review mapping readiness, expand advanced mapping only when
-  needed, generate Rerun artifacts, and open them in Rerun.
-- **Recordings & Queries:** reopen recordings, add tags, run query templates, export
-  query results, compare scalar metrics, and inspect background jobs.
-- **Diagnostics:** run offline robot health reports across all recordings or selected
-  recordings, tune thresholds, and export reports.
-- **Extensions & Settings:** install plugins/templates, run batch imports, export project
-  packages, set default export and artifact folders, and inspect application logs.
+- **Quick Inspect:** choose or drop local data, review the preview and mapping readiness,
+  generate RRD/RBL without a query index, and open the result in Rerun.
+- **Projects:** select/create a project, import data, browse recordings, manage batch jobs,
+  and open/export project packages. Advanced project tools offer comparison and project checks.
+- **Recording details:** Overview, Checks, and Filter operate on the selected recording.
+  Custom queries are in the advanced filter panel.
+- **Settings:** directories and language; advanced settings retain presets, plugins, and runtime options.
+- **Move to project:** reimport the original data with your edited mapping. New identifiers
+  and validation are required; generate a new recording in the project. Temporary artifacts are not moved.
 
-For a headerless CSV, select **No header** and enter ordered column names such as
-`timestamp,x,y,z,rx,ry,rz`. For TXT/LOG/DAT/LST sources, DataScope auto-detects table
-delimiters when possible and falls back to a line-number plus message log view when the
-file is unstructured.
+Checks report existing rule matches, not comprehensive data health. `time_sync` compares
+topic start/end ranges, not per-message clock synchronization. Detection checks identify
+low-confidence or missing predictions, not model accuracy. Existing API and CLI identifiers remain stable.
 
 ## Files and Exports
 

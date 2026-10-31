@@ -1,21 +1,14 @@
 # 桌面端
 
-桌面端位于 `apps/desktop`，技术栈是 Tauri 2、React、TypeScript、Vite 和 lucide-react。
+桌面端使用 Tauri 2、React、TypeScript 和 Vite。核心定位与边界见根目录《产品设计.md》。
 
-## UI 模块
-
-| 区域 | 说明 |
+| 入口 | 任务 |
 | --- | --- |
-| Dashboard | 当前项目、导入入口、快速操作、最近 runs |
-| Import | source inspect、mapping、preview、build recording |
-| Recordings | recording 列表、标签、打开 Rerun |
-| Query | 查询模板、结果表、导出 |
-| Templates / Plugins | 本地模板和插件 registry |
-| Settings | 语言切换、默认导出目录 |
+| 快速查看 | 无项目检查、预览、修复映射、生成可视化、在 Rerun 打开、转入项目 |
+| 项目 | 项目和记录管理、导入、批量任务、项目包、高级对比与项目级检查 |
+| 记录详情 | 概览、检查、筛选；默认只处理当前记录 |
+| 设置 | 语言、目录；高级运行配置、可视化/Mapping 预设及插件 |
 
-## 性能原则
+快速查看与项目导入分别保存草稿。切换上下文不自动导入或清理会话，不显示其他记录的异步结果。快速查看跳过查询索引；正式项目构建维持原有行为。
 
-- 主内容区独立滚动，减少 WebKitGTK 重绘。
-- 大列表默认截断显示，详细页再加载更多。
-- 转换和查询由后端处理，前端只显示状态。
-- 默认使用性能图形模式，`tauri:dev:safe` 只作为 WebKit 崩溃兜底。
+转换和查询在后端执行；大列表限制渲染数量，主内容区独立滚动。真实 Tauri 启动冒烟是交付检查的一部分。
