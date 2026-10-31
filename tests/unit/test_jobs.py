@@ -6,12 +6,14 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
 from datascope_core.job_supervisor import JobSupervisor, _terminate_process_tree
 from datascope_core.models import ConvertRequest
 from datascope_core.workspace import Workspace
+import datascope_core.job_supervisor as supervisor_module
 
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
@@ -295,6 +297,49 @@ def test_terminate_process_tree_kills_sigterm_ignoring_child(tmp_path: Path) -> 
     finally:
         if process.poll() is None:
             os.killpg(process.pid, signal.SIGKILL)
+
+
+@pytest.mark.parametrize("exited", [False, True])
+def test_group_permission_race_falls_back_to_owned_pid(monkeypatch, exited):
+    signals = []
+
+    def denied_group(pid, sig):
+        raise PermissionError("Darwin process group exited")
+
+    def signal_pid(pid, sig):
+        signals.append((pid, sig))
+        if exited:
+            raise ProcessLookupError("Worker already exited")
+
+    monkeypatch.setattr(supervisor_module, "os", SimpleNamespace(killpg=denied_group, kill=signal_pid))
+    assert supervisor_module._signal_process_group(12345, signal.SIGTERM) is not exited
+    assert signals == [(12345, signal.SIGTERM)]
+
+
+def test_group_cleanup_does_not_hide_a_real_permission_failure(monkeypatch):
+    def denied(pid, sig):
+        raise PermissionError("Worker is inaccessible")
+
+    monkeypatch.setattr(supervisor_module, "os", SimpleNamespace(killpg=denied, kill=denied))
+    with pytest.raises(PermissionError, match="inaccessible"):
+        supervisor_module._signal_process_group(12345, signal.SIGTERM)
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX process group behavior")
+def test_terminate_worker_when_group_signal_returns_permission_error(monkeypatch):
+    process = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"], start_new_session=True)
+
+    def denied_group(pid, sig):
+        raise PermissionError("Darwin group cleanup race")
+
+    monkeypatch.setattr(os, "killpg", denied_group)
+    try:
+        _terminate_process_tree(process)
+        assert process.poll() is not None
+    finally:
+        if process.poll() is None:
+            process.kill()
+        process.wait(timeout=5)
 
 
 def _wait_for_job(workspace: Workspace, job_id: str, timeout: float = 10.0):

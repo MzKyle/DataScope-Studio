@@ -208,22 +208,15 @@ def _terminate_process_tree(process: subprocess.Popen[bytes]) -> None:
             check=False,
         )
     else:
-        try:
-            os.killpg(process.pid, signal.SIGTERM)
-        except ProcessLookupError:
+        if not _signal_process_group(process.pid, signal.SIGTERM):
             return
         try:
             process.wait(timeout=1)
         except subprocess.TimeoutExpired:
             pass
-        try:
-            os.killpg(process.pid, 0)
-        except ProcessLookupError:
+        if not _signal_process_group(process.pid, 0):
             return
-        try:
-            os.killpg(process.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
+        _signal_process_group(process.pid, signal.SIGKILL)
     try:
         process.wait(timeout=2)
     except subprocess.TimeoutExpired:
@@ -239,15 +232,26 @@ def _terminate_pid_tree(pid: int) -> None:
             check=False,
         )
         return
-    try:
-        os.killpg(pid, signal.SIGTERM)
-    except ProcessLookupError:
+    if not _signal_process_group(pid, signal.SIGTERM):
         return
     time.sleep(0.1)
+    _signal_process_group(pid, signal.SIGKILL)
+
+
+def _signal_process_group(pid: int, sig: int) -> bool:
+    """Signal a worker group, falling back to its owned PID on macOS EPERM."""
     try:
-        os.killpg(pid, signal.SIGKILL)
+        os.killpg(pid, sig)
     except ProcessLookupError:
-        pass
+        return False
+    except PermissionError:
+        # Darwin can return EPERM when a session leader exits during cleanup.
+        # Do not hide a real permission failure: the PID fallback may raise it.
+        try:
+            os.kill(pid, sig)
+        except ProcessLookupError:
+            return False
+    return True
 
 
 def _worker_is_live(job: dict[str, object], stale_seconds: float = 5.0) -> bool:
