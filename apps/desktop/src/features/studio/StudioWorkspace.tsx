@@ -1121,6 +1121,7 @@ export function StudioWorkspace() {
           selectedTemplateId,
           normalizeSourcePathInput(defaultArtifactDir) || undefined,
           {
+            build_query_index: false,
             mcap_decoders:
               source.type === "mcap" || source.type === "ros2_db3"
                 ? parseListInput(mcapDecoders)

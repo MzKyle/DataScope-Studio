@@ -633,7 +633,8 @@ export function ImportWorkflowSection({
       </div>
 
       {mode === "project" && (
-      <section className="card">
+      <details className="card advanced-panel">
+        <summary>{t("mappingDiff")}</summary>
         <CardHeader
           icon={<Activity size={18} />}
           title={t("mappingDiff")}
@@ -700,7 +701,7 @@ export function ImportWorkflowSection({
         ) : (
           <EmptyState text={t("mappingDiffEmpty")} />
         )}
-      </section>
+      </details>
       )}
 
       <div className="two-column balanced">
@@ -773,14 +774,14 @@ export function ImportWorkflowSection({
               <span>{t("advancedBuildOptions")}</span>
             </summary>
             <div className="advanced-build-options">
-              <label className="field">
+              {!isQuickInspect && <label className="field">
                 <span>{t("queryStorage")}</span>
                 <select value={queryStorage} disabled={buildControlsLocked}
                   onChange={(event) => onQueryStorageChange?.(event.target.value as QueryStorage)}>
                   <option value="auto">{t("automaticQueryStorage")}</option>
                   <option value="legacy">{t("legacyQueryStorage")}</option>
                 </select>
-              </label>
+              </label>}
               {isQuickInspect && (
                 <>
                   <label>

@@ -139,3 +139,11 @@ BuildResult 的 `query_index` 及 Recording 参数中的同名字段记录实际
 与各索引阶段统计。构建磁盘估算接受同名 query 参数，跨设备时返回分别校验的 `volumes`。
 批量导入磁盘估算的 JSON body 同样接受 `query_storage`，桌面端与构建请求传递相同选择；
 Catalog/WAL、项目暂存与输出分别按实际设备校验，批量复制源文件的空间另行计入。
+
+## 快速查看的索引策略
+
+`POST /api/quick-inspect/{session_id}/build` 新增可选字段 `build_query_index`，默认 `true`，省略字段的旧客户端行为不变。
+桌面快速查看传入 `false`：仍生成并校验 RRD/RBL，返回 `query_index: {"storage": "none", "status": "skipped"}`；`query_storage` 不用于创建索引，磁盘预估也排除索引与摘要暂存。
+正式项目、批量导入和 CLI 的索引行为及 legacy 默认值不变。转入项目复用现有导入和 Mapping 接口，重新生成项目记录，不增加迁移接口。
+
+诊断的 `health_score`、`time_sync`、`detection_failure` 等公开字段与 ID 保持不变。人类可读界面使用“规则检查得分”“Topic 时间范围差异”“低置信度或无检测结果样本”，不代表全面数据健康或逐消息同步验证。

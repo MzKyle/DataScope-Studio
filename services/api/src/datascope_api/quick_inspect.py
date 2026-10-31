@@ -168,6 +168,7 @@ class QuickInspectSessionManager:
         artifact_validation: str = "basic",
         catalog_registration: dict[str, Any] | None = None,
         query_storage: str = DEFAULT_QUERY_STORAGE,
+        build_query_index: bool = True,
     ) -> dict[str, Any]:
         with self._lock:
             session = self._session_locked(session_id)
@@ -184,6 +185,7 @@ class QuickInspectSessionManager:
                 catalog_registration=catalog_registration,
                 query_storage=query_storage,
                 _manage_job=False,
+                _build_query_index=build_query_index,
             )
 
     def clear(self, session_id: str) -> dict[str, str]:

@@ -220,12 +220,25 @@ class WorkspaceStorageMixin:
         output_dir: str | None = None,
         *,
         query_storage: str = DEFAULT_QUERY_STORAGE,
+        _build_query_index: bool = True,
     ) -> dict[str, Any]:
         project = self.get_project(project_id)
         source = self.get_source(source_id)
         self._assert_source_available(source)
         source_bytes = int(source.get("size_bytes") or 0)
         storage = resolve_query_storage(query_storage, source['type'])
+        if not _build_query_index:
+            workspace_path = Path(project['workspace_path'])
+            output_path = Path(output_dir).expanduser() if output_dir else workspace_path
+            # Conversion can use the workspace for sorting even with external output.
+            # No query samples, journal amplification, or summary spool is required.
+            result = _volume_budget('build', [
+                ('recording_metadata', self.db_path.parent, 1024 * 1024),
+                ('conversion_temporary', workspace_path, source_bytes * 2),
+                ('rerun_artifacts', output_path, max(source_bytes * 2, 64 * 1024 * 1024)),
+            ], [])
+            result['query_storage'] = 'none'
+            return result
         if storage == 'typed_sqlite' and source['type'] == 'csv':
             # A custom project path, Catalog and output can occupy three disks.
             workspace_path = Path(project['workspace_path'])

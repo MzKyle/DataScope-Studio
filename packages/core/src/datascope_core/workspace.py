@@ -494,6 +494,7 @@ class Workspace(
         _cancel_check: Callable[[], None] | None = None,
         _cancel_signal: Callable[[], bool] | None = None,
         _background_job: bool = False,
+        _build_query_index: bool = True,
     ) -> dict[str, Any]:
         query_storage = normalize_query_storage(query_storage)
         query_storage = resolve_query_storage(query_storage, self.get_source(source_id)['type'])
@@ -514,7 +515,8 @@ class Workspace(
         source_row = self.get_source(source_id)
         self._assert_source_available(source_row)
         self._ensure_disk(self.estimate_build(project_id, source_id, output_dir=output_dir,
-                                              query_storage=query_storage))
+                                              query_storage=query_storage,
+                                              _build_query_index=_build_query_index))
         requested_output_name = output_name.strip() if output_name else ""
         output_base = (
             _safe_output_name(requested_output_name or _source_output_name(source_row["uri"]))
@@ -733,7 +735,9 @@ class Workspace(
                                   cancel_signal=(lambda: bool(
                                       (cancel_marker and cancel_marker.exists())
                                       or (_cancel_signal and _cancel_signal())))
-                                      if cancel_marker or _cancel_signal else None)
+                                      if cancel_marker or _cancel_signal else None) if _build_query_index else {
+                                          "storage": "none", "status": "skipped"
+                                      }
             check_cancel(force_db=True)
             with self._connect() as conn:
                 params = json.loads(conn.execute('SELECT params_json FROM recordings WHERE id=?',

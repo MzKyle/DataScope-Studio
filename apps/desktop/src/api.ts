@@ -344,6 +344,7 @@ export const api = {
     templateId: string,
     outputDir?: string,
     options?: {
+      build_query_index?: boolean;
       mcap_decoders?: string[] | null;
       rrd_optimize_profile?: string;
       artifact_validation?: string;
@@ -354,6 +355,7 @@ export const api = {
     request<BuildResult>(`/api/quick-inspect/${sessionId}/build`, {
       method: "POST",
       body: JSON.stringify({
+        ...(options?.build_query_index !== undefined ? { build_query_index: options.build_query_index } : {}),
         template_id: templateId,
         output_name: outputName,
         output_dir: outputDir || null,

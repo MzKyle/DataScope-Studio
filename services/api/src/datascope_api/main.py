@@ -103,6 +103,7 @@ class BuildRecordingRequest(BaseModel):
 
 
 class QuickInspectBuildRequest(BaseModel):
+    build_query_index: bool = True
     template_id: str = "sensor_monitor"
     output_name: str | None = None
     output_dir: str | None = None
@@ -418,6 +419,7 @@ def create_app() -> FastAPI:
                 artifact_validation=payload.artifact_validation,
                 catalog_registration=catalog_registration or payload.catalog_registration,
                 query_storage=payload.query_storage,
+                build_query_index=payload.build_query_index,
             )
 
         return _guard(build)
