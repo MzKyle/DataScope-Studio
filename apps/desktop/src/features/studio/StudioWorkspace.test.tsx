@@ -55,7 +55,7 @@ describe("StudioWorkspace job polling", () => {
     vi.useFakeTimers();
     vi.clearAllMocks();
     window.scrollTo = vi.fn();
-    useUiStore.setState({ activeSection: "recordings", busy: "", sourcePickerOpen: false });
+    useUiStore.setState({ activeSection: "projects", busy: "", sourcePickerOpen: false });
     useImportDraftStore.setState({
       sourcePath: "",
       sourceStorageMode: "copy",
@@ -112,7 +112,7 @@ describe("StudioWorkspace job polling", () => {
   });
 
   it("starts quick inspect from the dashboard without creating a project", async () => {
-    useUiStore.setState({ activeSection: "dashboard", busy: "", sourcePickerOpen: false });
+    useUiStore.setState({ activeSection: "inspect", busy: "", sourcePickerOpen: false });
     useImportDraftStore.setState({ sourcePath: "/tmp/run.csv" });
     apiMocks.projects.mockResolvedValue([]);
 
@@ -132,7 +132,7 @@ describe("StudioWorkspace job polling", () => {
       { csv: { header_mode: "auto", column_names: [] } }
     );
     expect(api.createProject).not.toHaveBeenCalled();
-    expect(screen.getByText("Quick Inspect")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Quick Inspect" })).toBeInTheDocument();
     expect(screen.queryByText("Quick Inspect Project")).not.toBeInTheDocument();
   });
 });

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   Activity,
   Download,
@@ -30,9 +29,11 @@ import type {
 } from "./types";
 
 type Translate = (key: TranslationKey) => string;
-type RecordingsPanel = "recordings" | "query" | "custom" | "compare" | "jobs";
+export type RecordingsPanel = "recordings" | "query" | "custom" | "compare" | "jobs";
 
 type RecordingsQueriesSectionProps = {
+  panel?: RecordingsPanel;
+  onInspectRecording?: (recording: Recording) => void;
   recordings: Recording[];
   visibleRecordings: Recording[];
   tagInput: string;
@@ -88,6 +89,8 @@ type RecordingsQueriesSectionProps = {
 };
 
 export function RecordingsQueriesSection({
+  panel = "recordings",
+  onInspectRecording,
   recordings,
   visibleRecordings,
   tagInput,
@@ -141,44 +144,9 @@ export function RecordingsQueriesSection({
   onCancelJob,
   onRetryJob
 }: RecordingsQueriesSectionProps) {
-  const [activePanel, setActivePanel] = useState<RecordingsPanel>("recordings");
-  const panelOptions: { value: RecordingsPanel; label: string; count?: number }[] = [
-    { value: "recordings" as const, label: t("tabRecordings"), count: recordings.length },
-    { value: "query" as const, label: t("tabQuery"), count: queryResult?.rows.length ?? 0 },
-    { value: "custom" as const, label: t("tabCustomQuery") },
-    { value: "compare" as const, label: t("tabCompare"), count: compareResult?.rows.length ?? 0 },
-    { value: "jobs" as const, label: t("tabJobs"), count: jobs.length }
-  ];
-
+  const activePanel = panel;
   return (
     <section className="section-stack" id="recordings">
-      <SectionTitle
-        eyebrow={t("workspace")}
-        title={t("recordingsQueries")}
-        subtitle={t("recordingsQueriesSubtitle")}
-      />
-
-      <Tabs
-        aria-label={t("recordingsQuerySections")}
-        value={activePanel}
-        onValueChange={(value) => setActivePanel(value as RecordingsPanel)}
-      >
-        <TabsList>
-          {panelOptions.map((option) => (
-            <TabsTrigger
-              key={option.value}
-              value={option.value}
-              onClick={() => setActivePanel(option.value)}
-            >
-              {option.label}
-              {typeof option.count === "number" && (
-                <span className="tab-count">{option.count}</span>
-              )}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
-
       {activePanel === "recordings" && (
         <section className="card">
           <CardHeader icon={<ListChecks size={18} />} title={t("recordingBrowser")} />
@@ -217,7 +185,7 @@ export function RecordingsQueriesSection({
                       return (
                         <tr key={recording.id}>
                           <td data-label={t("run")}>
-                            <strong>{recording.run_name}</strong>
+                            <button className="recording-link" onClick={() => onInspectRecording?.(recording)}>{recording.run_name}</button>
                             <span className="subline">{recording.id}</span>
                           </td>
                           <td data-label={t("template")}>{recording.blueprint_id}</td>
@@ -297,22 +265,6 @@ export function RecordingsQueriesSection({
                 <option value="low_battery">{t("lowBattery")}</option>
               )}
             </select>
-            <select
-              value={selectedQueryRecording}
-              onChange={(event) => onQueryRecordingChange(event.target.value)}
-            >
-              <option value="">{t("allRecordings")}</option>
-              {queryRecordingOptions.map((recording) => (
-                <option key={recording.id} value={recording.id}>
-                  {recording.run_name}
-                </option>
-              ))}
-            </select>
-            {queryRecordingOptions.length < recordings.length && (
-              <span className="field-hint">
-                {renderLimitText(language, queryRecordingOptions.length, recordings.length)}
-              </span>
-            )}
             {thresholdTemplates.has(selectedQueryTemplate) && (
               <input
                 aria-label={t("queryThreshold")}
@@ -339,8 +291,9 @@ export function RecordingsQueriesSection({
         </section>
       )}
 
-      {activePanel === "custom" && (
-        <section className="card">
+      {(activePanel === "query" || activePanel === "custom") && (
+        <details className="card advanced-panel">
+          <summary>{t("customQueryBuilder")}</summary>
           <CardHeader icon={<Search size={18} />} title={t("customQueryBuilder")} />
           <div className="custom-query-grid">
             <input
@@ -415,18 +368,24 @@ export function RecordingsQueriesSection({
           </div>
           <InlineError error={errors.query} t={t} />
           <ResultTable result={queryResult} emptyText={t("queryEmpty")} />
-        </section>
+        </details>
       )}
 
       {activePanel === "compare" && (
         <section className="card">
           <CardHeader icon={<Search size={18} />} title={t("runCompare")} />
           <div className="query-controls">
-            <input
-              placeholder={t("recordingIdsPlaceholder")}
-              value={compareRecordingIds}
-              onChange={(event) => onCompareRecordingIdsChange(event.target.value)}
-            />
+            <fieldset className="compare-selection">
+              <legend>{t("selectCompareRecordings")}</legend>
+              {recordings.map((recording) => <label key={recording.id}>
+                <input type="checkbox" checked={compareRecordingIds.split(",").includes(recording.id)}
+                  onChange={(event) => {
+                    const ids = new Set(compareRecordingIds.split(",").filter(Boolean));
+                    if (event.target.checked) ids.add(recording.id); else ids.delete(recording.id);
+                    onCompareRecordingIdsChange([...ids].join(","));
+                  }} />{recording.run_name}
+              </label>)}
+            </fieldset>
             <input
               placeholder={t("metricPlaceholder")}
               value={compareMetric}
@@ -435,7 +394,7 @@ export function RecordingsQueriesSection({
             <button
               className="button-primary"
               onClick={onRunCompare}
-              disabled={!selectedProjectId || isBusy}
+              disabled={!selectedProjectId || compareRecordingIds.split(",").filter(Boolean).length < 2 || isBusy}
             >
               <Search size={16} />
               {t("compare")}

@@ -98,21 +98,13 @@ type ExtensionsSectionsProps = {
 };
 
 export function ExtensionsSections(props: ExtensionsSectionsProps) {
-  if (props.activeSection === "templates") return <TemplatesSection {...props} />;
+  if (props.activeSection === "batch") return <BatchSection {...props} />;
   if (props.activeSection === "settings") return <SettingsSection {...props} />;
   return null;
 }
 
-function TemplatesSection(props: ExtensionsSectionsProps) {
-  return (
-    <section className="section-stack" id="templates">
-      <SectionTitle
-        eyebrow={props.t("workspace")}
-        title={props.t("templatesExtensions")}
-        subtitle={props.t("templatesExtensionsSubtitle")}
-      />
-      <div className="two-column balanced">
-        <section className="card">
+function BatchSection(props: ExtensionsSectionsProps) {
+  return <section className="section-stack"><section className="card">
           <CardHeader icon={<FolderOpen size={18} />} title={props.t("batchImport")} />
           <textarea
             placeholder={props.t("batchPlaceholder")}
@@ -161,39 +153,7 @@ function TemplatesSection(props: ExtensionsSectionsProps) {
               {props.batchResult.id}: {props.batchResult.succeeded}/{props.batchResult.total} {props.t("succeeded")}
             </p>
           )}
-        </section>
-
-        <section className="card">
-          <CardHeader
-            icon={<Save size={18} />}
-            title={props.t("extensionRegistry")}
-            subtitle={props.t("extensionRegistrySubtitle")}
-          />
-          <div className="extension-form">
-            <input
-              placeholder={props.t("pluginPathPlaceholder")}
-              value={props.pluginPath}
-              onChange={(event) => props.onPluginPathChange(event.target.value)}
-            />
-            <button onClick={props.onInstallPlugin} disabled={props.isBusy}>
-              <Save size={16} />
-              {props.t("installPlugin")}
-            </button>
-            <input
-              placeholder={props.t("templatePathPlaceholder")}
-              value={props.templatePath}
-              onChange={(event) => props.onTemplatePathChange(event.target.value)}
-            />
-            <button onClick={props.onInstallTemplate} disabled={props.isBusy}>
-              <Save size={16} />
-              {props.t("installTemplate")}
-            </button>
-          </div>
-          <InlineError error={props.extensionsError} t={props.t} />
-        </section>
-      </div>
-
-      <section className="card">
+        </section>      <section className="card">
         <CardHeader
           icon={<ListChecks size={18} />}
           title={props.t("batchManagement")}
@@ -289,7 +249,38 @@ function TemplatesSection(props: ExtensionsSectionsProps) {
         )}
       </section>
 
-      <section className="card mapping-template-manager">
+</section>;
+}
+
+function PresetsSection(props: ExtensionsSectionsProps) {
+  return <section className="section-stack">        <section className="card">
+          <CardHeader
+            icon={<Save size={18} />}
+            title={props.t("extensionRegistry")}
+            subtitle={props.t("extensionRegistrySubtitle")}
+          />
+          <div className="extension-form">
+            <input
+              placeholder={props.t("pluginPathPlaceholder")}
+              value={props.pluginPath}
+              onChange={(event) => props.onPluginPathChange(event.target.value)}
+            />
+            <button onClick={props.onInstallPlugin} disabled={props.isBusy}>
+              <Save size={16} />
+              {props.t("installPlugin")}
+            </button>
+            <input
+              placeholder={props.t("templatePathPlaceholder")}
+              value={props.templatePath}
+              onChange={(event) => props.onTemplatePathChange(event.target.value)}
+            />
+            <button onClick={props.onInstallTemplate} disabled={props.isBusy}>
+              <Save size={16} />
+              {props.t("installTemplate")}
+            </button>
+          </div>
+          <InlineError error={props.extensionsError} t={props.t} />
+        </section>      <section className="card mapping-template-manager">
         <CardHeader
           icon={<ListChecks size={18} />}
           title={props.t("mappingTemplateRegistry")}
@@ -432,39 +423,7 @@ function TemplatesSection(props: ExtensionsSectionsProps) {
         )}
       </section>
 
-      <section className="card">
-        <CardHeader
-          icon={<ListChecks size={18} />}
-          title={props.t("recipeRegistry")}
-          subtitle={`${props.recipes.length} ${props.t("recipes")}`}
-        />
-        {props.recipes.length ? (
-          <div className="recipe-grid">
-            {props.recipes.map((recipe) => (
-              <article className="recipe-card" key={recipe.id}>
-                <div>
-                  <strong>{recipe.name}</strong>
-                  <span>{recipe.source_family} / {recipe.visual_template_id}</span>
-                </div>
-                <p>{recipe.description}</p>
-                <div className="chip-row">
-                  <span className="chip">{recipe.diagnostic_preset}</span>
-                  {recipe.recommended_queries.map((query) => (
-                    <span className="chip" key={query}>{query}</span>
-                  ))}
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <EmptyState
-            title={props.t("recipeRegistryEmptyTitle")}
-            text={props.t("recipeRegistryEmpty")}
-          />
-        )}
-      </section>
-    </section>
-  );
+</section>;
 }
 
 function SettingsSection(props: ExtensionsSectionsProps) {
@@ -568,6 +527,10 @@ function SettingsSection(props: ExtensionsSectionsProps) {
           </div>
         </div>
       </section>
+      <details className="card advanced-panel">
+        <summary>{props.t("advancedSettings")}</summary>
+        <PresetsSection {...props} />
+      </details>
       <DiagnosticLogPaths
         logDir={props.diagnosticLogDir}
         desktopLogPath={props.desktopLogPath}

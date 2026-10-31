@@ -1,11 +1,8 @@
 import { create } from "zustand";
 
 export type SectionId =
-  | "dashboard"
-  | "import"
-  | "recordings"
-  | "diagnostics"
-  | "templates"
+  | "inspect"
+  | "projects"
   | "settings";
 
 type UiStore = {
@@ -18,11 +15,8 @@ type UiStore = {
 };
 
 const sectionIds = new Set<SectionId>([
-  "dashboard",
-  "import",
-  "recordings",
-  "diagnostics",
-  "templates",
+  "inspect",
+  "projects",
   "settings"
 ]);
 
@@ -31,7 +25,7 @@ export function isSectionId(value: string): value is SectionId {
 }
 
 export const useUiStore = create<UiStore>((set) => ({
-  activeSection: "dashboard",
+  activeSection: "inspect",
   busy: "",
   sourcePickerOpen: false,
   setActiveSection: (section) => {

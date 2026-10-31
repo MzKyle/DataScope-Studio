@@ -11,21 +11,19 @@ afterEach(() => cleanup());
 const t = createTranslator("en");
 
 describe("RecordingsQueriesSection", () => {
-  it("switches between recording, query, compare, and jobs panels", () => {
+  it("opens the selected recording context instead of independent module tabs", () => {
     const recording = makeRecording();
-
-    renderSection({ recordings: [recording], visibleRecordings: [recording] });
-
-    expect(screen.getByText("Recording Browser")).toBeInTheDocument();
-    fireEvent.click(screen.getByText("Query").closest("button")!);
-    expect(screen.getByText("Query Console")).toBeInTheDocument();
+    const onInspectRecording = vi.fn();
+    renderSection({ recordings: [recording], visibleRecordings: [recording], onInspectRecording });
+    fireEvent.click(screen.getByRole("button", { name: recording.run_name }));
+    expect(onInspectRecording).toHaveBeenCalledWith(recording);
+    expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+  });
+  it("keeps custom query controls inside an advanced disclosure", () => {
+    const { container } = renderSection({ panel: "query", selectedQueryRecording: "recording" });
+    expect(screen.queryByText("All Recordings")).not.toBeInTheDocument();
+    expect(container.querySelector("details")).not.toHaveAttribute("open");
     expect(screen.getByRole("button", { name: "Run Query" })).toBeEnabled();
-
-    fireEvent.click(screen.getByText("Compare").closest("button")!);
-    expect(screen.getByText("Run Compare")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByText("Jobs").closest("button")!);
-    expect(screen.getByText("Conversion and query jobs will appear here.")).toBeInTheDocument();
   });
 
   it("shows persisted Rerun artifact metadata in the recording list", () => {

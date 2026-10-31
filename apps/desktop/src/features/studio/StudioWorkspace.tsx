@@ -12,6 +12,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, asApiError, type ApiStatus } from "../../api";
 import { DEFAULT_QUERY_STORAGE, type QueryStorage } from "../../query-storage";
 import {
+  InlineError as InlineProjectImportError,
   ErrorDialog,
   GlobalErrorToast,
   clearErrorAreaState,
@@ -37,6 +38,8 @@ import { ExtensionsSections } from "../../ExtensionsSections";
 import { isActiveBuildJob } from "../../BuildJobStatus";
 import { ImportWorkflowSection } from "../../ImportWorkflowSection";
 import { RecordingsQueriesSection } from "../../RecordingsQueriesSection";
+import { ProjectWorkspace, RecordingDetails, type ProjectView, type RecordingTab } from "./ProjectWorkspace";
+import { useContextDrafts } from "./use-context-drafts";
 import { AppSidebar, AppTopbar } from "../../AppNavigation";
 import {
   emptyQuickInspectSession,
@@ -144,9 +147,13 @@ function mergeJobRows(current: Job[], updates: Job[]) {
 export function StudioWorkspace() {
   const queryClient = useQueryClient();
   const [projects, setProjects] = useState<Project[]>([]);
+  const [projectView, setProjectView] = useState<ProjectView>("records");
+  const [recordingTab, setRecordingTab] = useState<RecordingTab>("overview");
+  const [selectedRecordingId, setSelectedRecordingId] = useState("");
+  const [quickStep, setQuickStep] = useState<"start" | "workflow">("start");
   const [projectName, setProjectName] = useState("Sensor Run");
   const [selectedProjectId, setSelectedProjectId] = useState("");
-  const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>("project");
+  const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>("quick-inspect");
   const [quickInspectSession, setQuickInspectSession] =
     useState<QuickInspectSessionState>(emptyQuickInspectSession);
   const sourcePath = useImportDraftStore((state) => state.sourcePath);
@@ -294,6 +301,76 @@ export function StudioWorkspace() {
   const isQuickInspectMode =
     workspaceMode === "quick-inspect" && hasQuickInspectSession(quickInspectSession);
 
+  const currentContext = `${activeSection}:${selectedProjectId}:${selectedRecordingId}:${projectView}`;
+  const contextRef = useRef(currentContext);
+  contextRef.current = currentContext;
+  const projectRef = useRef(selectedProjectId);
+  projectRef.current = selectedProjectId;
+  const modeRef = useRef(workspaceMode);
+  modeRef.current = workspaceMode;
+  const buildJobRef = useRef(activeBuildJobId);
+  buildJobRef.current = activeBuildJobId;
+  const selectedRecording = recordings.find((item) => item.id === selectedRecordingId) ?? null;
+
+  function captureDraft() {
+    return { sourcePath, sourceStorageMode, csvHeaderMode, csvColumnNames, outputName,
+      source, streams, mapping, schemaProfile, mappingValidation, mappingConfirmed,
+      savedMappingId, previewRows, templates, selectedTemplateId, buildResult,
+      activeBuildJobId, selectedMappingTemplateId, mappingDiff,
+      mcapDecoders, rrdOptimizeProfile, artifactValidation, queryStorage,
+      catalogEnabled, catalogDataset, catalogManagedLocal, catalogServerUrl,
+      errors: { import: areaErrors.import, build: areaErrors.build, mapping: areaErrors.mapping } };
+  }
+  function restoreDraft(draft: ReturnType<typeof captureDraft> | null) {
+    setSourcePath(draft?.sourcePath ?? "");
+    setSourceStorageMode(draft?.sourceStorageMode ?? "copy");
+    setCsvHeaderMode(draft?.csvHeaderMode ?? "auto");
+    setCsvColumnNames(draft?.csvColumnNames ?? "");
+    setOutputName(draft?.outputName ?? "");
+    setSource(draft?.source ?? null); setStreams(draft?.streams ?? []);
+    setMapping(draft?.mapping ?? null); setSchemaProfile(draft?.schemaProfile ?? null);
+    setMappingValidation(draft?.mappingValidation ?? null);
+    setMappingConfirmed(draft?.mappingConfirmed ?? false);
+    setSavedMappingId(draft?.savedMappingId ?? ""); setPreviewRows(draft?.previewRows ?? []);
+    setTemplates(draft?.templates ?? []); setSelectedTemplateId(draft?.selectedTemplateId ?? "sensor_monitor");
+    setBuildResult(draft?.buildResult ?? null); setActiveBuildJobId(draft?.activeBuildJobId ?? "");
+    setSelectedMappingTemplateId(draft?.selectedMappingTemplateId ?? ""); setMappingDiff(draft?.mappingDiff ?? null);
+    setMcapDecoders(draft?.mcapDecoders ?? ""); setRrdOptimizeProfile(draft?.rrdOptimizeProfile ?? "none");
+    setArtifactValidation(draft?.artifactValidation ?? "basic"); setQueryStorage(draft?.queryStorage ?? DEFAULT_QUERY_STORAGE);
+    setCatalogEnabled(draft?.catalogEnabled ?? false); setCatalogDataset(draft?.catalogDataset ?? "datascope");
+    setCatalogManagedLocal(draft?.catalogManagedLocal ?? true); setCatalogServerUrl(draft?.catalogServerUrl ?? "");
+    setAreaErrors((errors) => ({ ...errors, import: draft?.errors.import, build: draft?.errors.build, mapping: draft?.errors.mapping }));
+    setIsBuildSubmitting(false);
+  }
+  const drafts = useContextDrafts(captureDraft, restoreDraft);
+
+  function selectProject(projectId: string) {
+    if (isBuildSubmitting || busy) return;
+    drafts.switchTo(`project:${projectId}`);
+    setSelectedProjectId(projectId); setWorkspaceMode("project");
+    setSelectedRecordingId(""); setProjectView("records"); setActiveSection("projects");
+  }
+  function showImport() {
+    if (workspaceMode === "quick-inspect") {
+      setQuickStep("workflow"); setActiveSection("inspect");
+    } else {
+      setProjectView("import"); setActiveSection("projects");
+    }
+  }
+  function selectRecording(recording: Recording) {
+    setSelectedRecordingId(recording.id); setSelectedQueryRecording(recording.id);
+    setRecordingTab("overview"); setProjectView("detail");
+  }
+  function changeProjectView(view: ProjectView) {
+    setSelectedRecordingId(""); setProjectView(view);
+  }
+  useEffect(() => {
+    setQueryResult(null); setCompareResult(null); setExportPath("");
+    setDiagnosticReport(null); setDiagnosticExportResult(null); setDiagnosticExports([]);
+    setProjectExport(null); setCompareRecordingIds("");
+    setAreaErrors((errors) => ({ ...errors, query: undefined, diagnostics: undefined, compare: undefined }));
+  }, [activeSection, selectedProjectId, selectedRecordingId, projectView]);
+
   useEffect(() => {
     window.scrollTo(0, 0);
     refreshProjects();
@@ -311,34 +388,32 @@ export function StudioWorkspace() {
 
   useEffect(() => {
     if (selectedProjectId) {
-      void refreshProjectData(selectedProjectId, activeSection === "recordings", {
+      void refreshProjectData(selectedProjectId, activeSection === "projects", {
         blockUi: false
       });
-      if (activeSection === "diagnostics") {
+      if ((activeSection === "projects" && (projectView === "checks" || recordingTab === "checks"))) {
         refreshDiagnosticData(selectedProjectId);
       }
     }
   }, [selectedProjectId]);
 
   useEffect(() => {
-    setActiveBuildJobId("");
-    setIsBuildSubmitting(false);
     setSelectedBatch(null);
     processedJobIds.current.clear();
     trackedActiveJobIds.current.clear();
   }, [selectedProjectId]);
 
   useEffect(() => {
-    if (selectedProjectId && ["recordings", "diagnostics"].includes(activeSection)) {
+    if (selectedProjectId && activeSection === "projects") {
       void refreshProjectData(selectedProjectId, true, { blockUi: false });
     }
-    if (selectedProjectId && activeSection === "diagnostics") {
+    if (selectedProjectId && (activeSection === "projects" && (projectView === "checks" || recordingTab === "checks"))) {
       refreshDiagnosticData(selectedProjectId);
     }
-    if (activeSection === "templates") {
+    if (activeSection === "settings") {
       refreshExtensionData();
     }
-  }, [activeSection]);
+  }, [activeSection, projectView, recordingTab]);
 
   useEffect(() => {
     const selected = mappingTemplates.find((item) => item.id === selectedMappingTemplateId);
@@ -367,7 +442,11 @@ export function StudioWorkspace() {
       completed.forEach((job) => {
         processedJobIds.current.add(job.id);
         if (job.status !== "succeeded" || !job.result) return;
-        if (isBuildResult(job.result)) setBuildResult(job.result);
+        if (isBuildResult(job.result)) {
+          const result = job.result;
+          drafts.update(`project:${selectedProjectId}`, (draft) => draft.activeBuildJobId === job.id ? { ...draft, buildResult: result } : draft);
+          if (modeRef.current === "project" && buildJobRef.current === job.id) setBuildResult(result);
+        }
         if (isBatchResult(job.result)) setBatchResult(job.result);
       });
       return completed.length > 0;
@@ -376,7 +455,7 @@ export function StudioWorkspace() {
     const refreshCompletedProjectData = async () => {
       const selectedBatchId = selectedBatch?.id ?? "";
       const [, selectedBatchRow] = await Promise.all([
-        refreshProjectData(selectedProjectId, activeSection === "recordings", {
+        refreshProjectData(selectedProjectId, activeSection === "projects", {
           blockUi: false
         }),
         selectedBatchId ? api.batch(selectedBatchId) : Promise.resolve(null)
@@ -525,6 +604,7 @@ export function StudioWorkspace() {
     task: () => Promise<T>,
     options: RunOptions = {}
   ): Promise<T | null> {
+    const context = contextRef.current;
     const area = options.area ?? "global";
     const blockUi = options.blockUi ?? true;
     if (blockUi) setBusy(label);
@@ -534,8 +614,10 @@ export function StudioWorkspace() {
       clearAreaError(area);
     }
     try {
-      return await task();
+      const value = await task();
+      return contextRef.current === context ? value : null;
     } catch (err) {
+      if (contextRef.current !== context) return null;
       const apiError = asApiError(err);
       logDiagnosticError("frontend.operation", apiError, {
         area,
@@ -606,7 +688,7 @@ export function StudioWorkspace() {
         retry: () => void refreshProjectData(projectId, includeQueryTemplates, options)
       }
     );
-    if (result) {
+    if (result && projectRef.current === projectId) {
       setRecordings(result.recordingRows);
       setJobs(result.jobRows);
       trackActiveJobsFromRows(result.jobRows);
@@ -654,7 +736,7 @@ export function StudioWorkspace() {
         retry: () => void refreshDiagnosticData(projectId)
       }
     );
-    if (result) {
+    if (result && projectRef.current === projectId) {
       setDiagnosticPresets(result.presetRows);
       setDiagnosticExports(result.exportRows);
     }
@@ -746,9 +828,9 @@ export function StudioWorkspace() {
   async function refreshAll() {
     if (!(await refreshProjects())) return;
     if (selectedProjectId && !(await refreshProjectData(selectedProjectId))) return;
-    if (activeSection === "templates") {
+    if (activeSection === "settings") {
       await refreshExtensionData();
-    } else if (activeSection !== "settings") {
+    } else {
       await refreshTemplateRegistry();
     }
   }
@@ -759,8 +841,10 @@ export function StudioWorkspace() {
     });
     if (result) {
       setProjects((current) => [result, ...current]);
+      drafts.switchTo(`project:${result.id}`);
       setSelectedProjectId(result.id);
       setWorkspaceMode("project");
+      setProjectView("records"); setActiveSection("projects");
     }
   }
 
@@ -808,7 +892,7 @@ export function StudioWorkspace() {
     setActiveBuildJobId("");
     setIsBuildSubmitting(false);
     clearAreaError("build");
-    setActiveSection("import");
+    showImport();
   }
 
   async function startQuickInspect(path = sourcePath, defaultNameKind?: "file" | "folder") {
@@ -839,8 +923,8 @@ export function StudioWorkspace() {
     }
   }
 
-  async function importAndInspect() {
-    const nextSourcePath = normalizeSourcePathInput(sourcePath);
+  async function importAndInspect(path = sourcePath) {
+    const nextSourcePath = normalizeSourcePathInput(path);
     if (!nextSourcePath) {
       showAreaError("import", t("errorMissingSourcePath"));
       return;
@@ -890,7 +974,6 @@ export function StudioWorkspace() {
     );
     if (result) {
       setWorkspaceMode("project");
-      setQuickInspectSession(emptyQuickInspectSession);
       setProjects(result.projectRows);
       if (result.project) {
         setSelectedProjectId(result.project.id);
@@ -1170,13 +1253,13 @@ export function StudioWorkspace() {
     const blueprintPath = buildResult?.blueprint_path ?? latestRecording?.blueprint_path ?? undefined;
     const recordingId = buildResult?.recording_id ?? latestRecording?.id ?? "";
     if (!recordingPath) {
-      showAreaError(activeSection === "import" ? "build" : "dashboard", t("errorNoRecordingToOpen"));
+      showAreaError(source ? "build" : "dashboard", t("errorNoRecordingToOpen"));
       return;
     }
     setRecordingOpening(recordingId, true);
     try {
       await run(t("busyOpeningRerun"), () => api.open(recordingPath, blueprintPath), {
-        area: activeSection === "import" ? "build" : "dashboard",
+        area: source ? "build" : "dashboard",
         blockUi: false
       });
     } finally {
@@ -1191,7 +1274,7 @@ export function StudioWorkspace() {
         t("busyOpeningRerun"),
         () => api.open(recording.path, recording.blueprint_path ?? undefined),
         {
-          area: activeSection === "dashboard" ? "dashboard" : "recordings",
+          area: activeSection === "inspect" ? "dashboard" : "recordings",
           blockUi: false
         }
       );
@@ -1514,7 +1597,7 @@ export function StudioWorkspace() {
         api.query(
           selectedProjectId,
           selectedQueryTemplate,
-          selectedQueryRecording ? [selectedQueryRecording] : [],
+          selectedRecordingId ? [selectedRecordingId] : [],
           params
         ),
       { area: "query" }
@@ -1533,7 +1616,7 @@ export function StudioWorkspace() {
         api.exportQuery(
           selectedProjectId,
           selectedQueryTemplate,
-          selectedQueryRecording ? [selectedQueryRecording] : [],
+          selectedRecordingId ? [selectedRecordingId] : [],
           params,
           "csv"
         ),
@@ -1562,7 +1645,7 @@ export function StudioWorkspace() {
       () =>
         api.customQuery(
           selectedProjectId,
-          selectedQueryRecording ? [selectedQueryRecording] : [],
+          selectedRecordingId ? [selectedRecordingId] : [],
           semanticTypes,
           filters
         ),
@@ -1579,7 +1662,7 @@ export function StudioWorkspace() {
     if (!selectedProjectId) return;
     const result = await run(
       t("busyRunningDiagnostics"),
-      () => api.diagnostics(selectedProjectId, recordingIds, thresholds, preset),
+      () => api.diagnostics(selectedProjectId, projectView === "detail" ? [selectedRecordingId] : recordingIds, thresholds, preset),
       { area: "diagnostics" }
     );
     if (result) setDiagnosticReport(result);
@@ -1594,7 +1677,7 @@ export function StudioWorkspace() {
     if (!selectedProjectId) return;
     const result = await run(
       t("busyExportingDiagnostics"),
-      () => api.exportDiagnostics(selectedProjectId, recordingIds, thresholds, preset, format),
+      () => api.exportDiagnostics(selectedProjectId, projectView === "detail" ? [selectedRecordingId] : recordingIds, thresholds, preset, format),
       { area: "diagnostics" }
     );
     if (result) {
@@ -1852,13 +1935,19 @@ export function StudioWorkspace() {
       setMappingDiff(null);
       setOpenedPackagePath(result.package_path);
       clearAreaError("dashboard");
-      setActiveSection("dashboard");
+      setActiveSection("projects"); setProjectView("records");
     }
   }
 
   function goToSection(sectionId: string) {
+    if (isBuildSubmitting || busy) return;
+    if (sectionId === "inspect") {
+      drafts.switchTo("inspect"); setWorkspaceMode("quick-inspect");
+    } else if (sectionId === "projects") {
+      drafts.switchTo(`project:${selectedProjectId}`); setWorkspaceMode("project");
+    }
     setActiveSection(sectionId);
-    document.querySelector(".workspace")?.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    document.querySelector(".workspace")?.scrollTo?.({ top: 0, left: 0, behavior: "auto" });
   }
 
   function handleDragOver(event: DragEvent<HTMLDivElement>) {
@@ -1888,7 +1977,7 @@ export function StudioWorkspace() {
       setSourcePath(normalizedPath);
       setOutputName(defaultOutputName(normalizedPath));
       clearAreaError("import");
-      void startQuickInspect(normalizedPath);
+      void (workspaceMode === "project" ? importAndInspect(normalizedPath) : startQuickInspect(normalizedPath));
     }
   }
 
@@ -1919,7 +2008,8 @@ export function StudioWorkspace() {
       setSourcePath(normalizedPath);
       setOutputName(defaultOutputName(normalizedPath, kind));
       clearAreaError("import");
-      await startQuickInspect(normalizedPath, kind);
+      if (workspaceMode === "project") await importAndInspect(normalizedPath);
+      else await startQuickInspect(normalizedPath, kind);
     }
   }
 
@@ -1943,10 +2033,7 @@ export function StudioWorkspace() {
     onRefreshAll: () => void refreshAll(),
     onSectionChange: goToSection,
     onRefreshProjects: () => void refreshProjects(),
-    onSelectedProjectChange: (projectId: string) => {
-      setSelectedProjectId(projectId);
-      setWorkspaceMode("project");
-    },
+    onSelectedProjectChange: selectProject,
     onProjectNameChange: (name: string) => {
       setProjectName(name);
       clearAreaError("project");
@@ -1962,7 +2049,28 @@ export function StudioWorkspace() {
         <AppSidebar {...navigationProps} />
 
         <section className="workspace">
-          {activeSection === "dashboard" && (
+          {activeSection === "projects" && <>
+            <ProjectWorkspace {...navigationProps} view={projectView} onView={changeProjectView}
+              onImport={() => setProjectView("import")} onExport={() => void exportProject()}
+              onOpenPackage={() => void openProjectPackage()} packagePath={openedPackagePath} exportPath={projectExport?.path ?? ""} />
+            {selectedProject && projectView === "import" && <div className="card inline-actions">
+              <button onClick={() => void chooseSource("file")} disabled={isBusy}>{t("chooseFile")}</button>
+              <button onClick={() => void chooseSource("folder")} disabled={isBusy}>{t("chooseFolder")}</button>
+              <input aria-label={t("sourcePathPlaceholder")} value={sourcePath} onChange={(event) => setSourcePath(event.target.value)} />
+              <select aria-label={t("storageMode")} value={sourceStorageMode} onChange={(event) => setSourceStorageMode(event.target.value as "copy" | "reference")}>
+                <option value="copy">{t("storageCopy")}</option><option value="reference">{t("storageReference")}</option>
+              </select>
+              <button onClick={() => void importAndInspect()} disabled={isBusy || !sourcePath.trim()}>{t("inspectSource")}</button>
+              <InlineProjectImportError error={areaErrors.import} t={t} />
+            </div>}
+            {selectedRecording && projectView === "detail" && <>
+              <RecordingDetails recording={selectedRecording} tab={recordingTab} onTab={setRecordingTab} t={t} />
+              {recordingTab === "overview" && <button onClick={() => void openRecording(selectedRecording)}
+                disabled={openingRecordingIds.has(selectedRecording.id) || (selectedRecording.artifact_status && selectedRecording.artifact_status.status !== "ready")}>{t("openInRerun")}</button>}
+            </>}
+          </>}
+
+          {activeSection === "inspect" && (quickStep === "start" || !source) && (
             <DashboardSection
               selectedProject={selectedProject}
               latestRecording={latestRecording}
@@ -2009,7 +2117,7 @@ export function StudioWorkspace() {
             />
           )}
 
-          {activeSection === "import" && (
+          {((activeSection === "inspect" && quickStep === "workflow" && source) || (activeSection === "projects" && projectView === "import" && source)) && (
             <ImportWorkflowSection
               mode={workspaceMode}
               selectedTemplateId={selectedTemplateId}
@@ -2121,8 +2229,10 @@ export function StudioWorkspace() {
             />
           )}
 
-          {activeSection === "recordings" && (
+          {activeSection === "projects" && selectedProject && (projectView === "records" || projectView === "compare" || projectView === "jobs" || (projectView === "detail" && recordingTab === "filter")) && (
             <RecordingsQueriesSection
+              panel={projectView === "detail" ? "query" : projectView === "records" ? "recordings" : projectView === "compare" ? "compare" : "jobs"}
+              onInspectRecording={selectRecording}
               recordings={recordings}
               visibleRecordings={visibleRecordings}
               tagInput={tagInput}
@@ -2220,8 +2330,10 @@ export function StudioWorkspace() {
             />
           )}
 
-          {activeSection === "diagnostics" && (
+          {activeSection === "projects" && selectedProject && (projectView === "checks" || (projectView === "detail" && recordingTab === "checks" && selectedRecording)) && (
             <DiagnosticsSection
+              key={`${selectedProjectId}:${projectView}:${selectedRecordingId}`}
+              scopeRecordingId={projectView === "detail" ? selectedRecordingId : undefined}
               selectedProjectId={selectedProjectId}
               recordings={recordings}
               report={diagnosticReport}
@@ -2241,7 +2353,7 @@ export function StudioWorkspace() {
           )}
 
           <ExtensionsSections
-            activeSection={activeSection}
+            activeSection={activeSection === "projects" && selectedProject && projectView === "batch" ? "batch" : activeSection === "settings" ? "settings" : ""}
             selectedProjectId={selectedProjectId}
             batchPattern={batchPattern}
             batchOutputPrefix={batchOutputPrefix}

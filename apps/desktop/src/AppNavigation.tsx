@@ -31,11 +31,8 @@ const navigationItems: {
   id: SectionId;
   labelKey: TranslationKey;
 }[] = [
-  { id: "dashboard", icon: LayoutDashboard, labelKey: "dashboard" },
-  { id: "import", icon: Upload, labelKey: "import" },
-  { id: "recordings", icon: ListChecks, labelKey: "recordings", badge: "recordingCount" },
-  { id: "diagnostics", icon: Activity, labelKey: "diagnostics" },
-  { id: "templates", icon: Image, labelKey: "templates", badge: "templateCount" },
+  { id: "inspect", icon: Upload, labelKey: "quickInspect" },
+  { id: "projects", icon: ListChecks, labelKey: "projects", badge: "recordingCount" },
   { id: "settings", icon: Settings, labelKey: "settings" }
 ];
 
@@ -61,7 +58,7 @@ type AppNavigationProps = {
 
 export function AppTopbar(props: AppNavigationProps) {
   const currentSection =
-    navigationItems.find((item) => item.id === props.activeSection)?.labelKey ?? "dashboard";
+    navigationItems.find((item) => item.id === props.activeSection)?.labelKey ?? "quickInspect";
   const toggleWindowMaximize = () => {
     if (!isTauriRuntime()) return;
     void getCurrentWindow().toggleMaximize();
@@ -87,7 +84,7 @@ export function AppTopbar(props: AppNavigationProps) {
           title={props.selectedProject?.workspace_path}
         >
           <span>{props.t(currentSection)}</span>
-          <strong>{props.selectedProject?.name ?? props.t("selectProject")}</strong>
+          <strong>{props.activeSection === "projects" ? props.selectedProject?.name ?? props.t("selectProject") : props.t(currentSection)}</strong>
         </div>
       </div>
       <div className="topbar-actions">
@@ -182,67 +179,6 @@ export function AppSidebar(props: AppNavigationProps) {
         })}
       </nav>
 
-      <section className="sidebar-card">
-        <div className="sidebar-card-title">
-          <span>{props.t("workspace")}</span>
-          <Button
-            aria-label={props.t("busyRefreshingProjects")}
-            className="mini-button"
-            onClick={props.onRefreshProjects}
-            size="icon"
-            title={props.t("busyRefreshingProjects")}
-            variant="ghost"
-          >
-            <RefreshCcw size={14} />
-          </Button>
-        </div>
-        <label className="field-label" htmlFor="project-select">
-          {props.t("currentProject")}
-        </label>
-        <select
-          id="project-select"
-          value={props.selectedProjectId}
-          onChange={(event) => props.onSelectedProjectChange(event.target.value)}
-        >
-          <option value="">{props.t("selectProject")}</option>
-          {props.projects.map((project) => (
-            <option key={project.id} value={project.id}>{project.name}</option>
-          ))}
-        </select>
-        <div className="compact-form">
-          <input
-            aria-label={props.t("createProject")}
-            value={props.projectName}
-            onChange={(event) => props.onProjectNameChange(event.target.value)}
-          />
-          <Button
-            aria-label={props.t("createProject")}
-            className="icon-button"
-            onClick={props.onCreateProject}
-            size="icon"
-            title={props.t("createProject")}
-            variant="secondary"
-          >
-            <FolderPlus size={16} />
-          </Button>
-        </div>
-        <InlineError error={props.projectError} t={props.t} />
-        {props.selectedProject && (
-          <p className="path-line">{props.selectedProject.workspace_path}</p>
-        )}
-      </section>
-
-      <section className="sidebar-card subtle">
-        <div className="mini-stat">
-          <span>{props.t("recordings")}</span><strong>{props.recordingCount}</strong>
-        </div>
-        <div className="mini-stat">
-          <span>{props.t("jobs")}</span><strong>{props.jobCount}</strong>
-        </div>
-        <div className="mini-stat">
-          <span>{props.t("templates")}</span><strong>{props.templateCount}</strong>
-        </div>
-      </section>
     </aside>
   );
 }

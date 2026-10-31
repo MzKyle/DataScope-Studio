@@ -3213,3 +3213,22 @@ tbody tr:last-child td {
     animation: none;
   }
 }
+
+/* Task-oriented project and recording context. */
+.project-workspace { margin-bottom: 1rem; }
+.project-workspace label, .compare-selection label { display: flex; gap: .6rem; align-items: center; }
+.project-workspace .inline-actions { flex-wrap: wrap; }
+.project-workspace h2 { margin-bottom: .8rem; }
+.advanced-panel { margin-top: .8rem; }
+.advanced-panel > summary { cursor: pointer; padding: .65rem; font-weight: 600; }
+.advanced-panel > .section-stack { margin-top: .8rem; }
+.compare-selection { display: grid; gap: .5rem; min-width: 16rem; }
+.compare-selection input[type="checkbox"] { width: auto; }
+.recording-link { text-align: left; font-weight: 600; }
+.scope-note { padding: .8rem 1rem; border-left: 3px solid var(--accent, #28a6a1); }
+.artifact-details { overflow-wrap: anywhere; }
+
+.quick-inspect-intro h2 { margin: .5rem 0; font-size: 24px; font-weight: 700; }
+.quick-inspect-intro p { margin: 0; color: var(--muted, #64748b); }
+.quick-inspect-intro,
+.dashboard > .import-card { grid-column: 1 / -1; }

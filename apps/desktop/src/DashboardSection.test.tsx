@@ -10,84 +10,18 @@ afterEach(() => cleanup());
 
 const t = createTranslator("en");
 
-describe("DashboardSection", () => {
-  it("shows quick inspect as the primary entry when no project is active", () => {
+describe("Quick Inspect entry", () => {
+  it("offers data selection without requiring or exposing project setup", () => {
     renderSection();
-
-    expect(screen.getByText("Inspect robot data")).toBeInTheDocument();
-    expect(screen.getByText("Quick inspect robot data")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Choose File" }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("button", { name: "Choose Folder" }).length).toBeGreaterThan(0);
     expect(screen.getByText("Drop a file or folder here")).toBeInTheDocument();
-    expect(screen.getByText("Recent Runs")).toBeInTheDocument();
-    expect(screen.getByText("No latest run")).toBeInTheDocument();
-    expect(screen.getByText("Recordings created from imports will appear here.")).toBeInTheDocument();
-    screen
-      .getAllByRole("button", { name: "Open in Rerun" })
-      .forEach((button) => expect(button).toBeDisabled());
+    expect(screen.queryByRole("button", { name: "Import into Project" })).not.toBeInTheDocument();
   });
-
-  it("enables quick inspect actions when a source path is ready", () => {
-    renderSection({
-      selectedProject: project,
-      sourcePath: "/tmp/run.csv"
-    });
-
-    expect(screen.getByText("Quick inspect robot data")).toBeInTheDocument();
-    expect(
-      screen
-        .getAllByRole("button", { name: "Inspect" })
-        .some((button) => !button.hasAttribute("disabled"))
-    ).toBe(true);
-  });
-
-  it("enables Rerun actions when a latest recording exists", () => {
-    renderSection({
-      selectedProject: project,
-      latestRecording: recording,
-      recordings: [recording]
-    });
-
-    expect(screen.getByText("Review the latest recording")).toBeInTheDocument();
-    expect(
-      screen
-        .getAllByRole("button", { name: "Open in Rerun" })
-        .some((button) => !button.hasAttribute("disabled"))
-    ).toBe(true);
-  });
-
-  it("renders project summary, import entry, and recent runs for an active project", () => {
-    renderSection({
-      selectedProject: project,
-      latestRecording: recording,
-      recordings: [recording],
-      sourcePath: "/tmp/run.csv",
-      streamCount: 4,
-      jobCount: 2
-    });
-
-    expect(screen.getByText("Current Project: Robot Run")).toBeInTheDocument();
-    expect(screen.getByText("Latest Run: run")).toBeInTheDocument();
-    expect(screen.getByText("Drop a file or folder here")).toBeInTheDocument();
-    expect(screen.getByText("Recent Runs")).toBeInTheDocument();
+  it("enables inspection for a path even when another project exists", () => {
+    renderSection({ selectedProject: project, sourcePath: "/tmp/run.csv", latestRecording: recording, recordings: [recording] });
     expect(screen.getAllByRole("button", { name: "Inspect" })[0]).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Import into Project" })).toBeEnabled();
-  });
-
-  it("uses row-level opening state for recent recording actions", () => {
-    const idleRecording = { ...recording, id: "recording_2", run_name: "idle" };
-
-    renderSection({
-      selectedProject: project,
-      latestRecording: recording,
-      recordings: [recording, idleRecording],
-      isBusy: true,
-      openingRecordingIds: new Set([recording.id])
-    });
-
-    const recentRunButtons = screen.getAllByTitle("Open in Rerun");
-    expect(recentRunButtons[0]).toBeDisabled();
-    expect(recentRunButtons[1]).toBeEnabled();
+    expect(screen.queryByText("Current Project: Robot Run")).not.toBeInTheDocument();
+    expect(screen.queryByText("Recent Runs")).not.toBeInTheDocument();
   });
 });
 

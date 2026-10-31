@@ -20,13 +20,13 @@ describe("frontend app state boundaries", () => {
   });
 
   it("guards section navigation state", () => {
-    useUiStore.setState({ activeSection: "dashboard", busy: "", sourcePickerOpen: false });
+    useUiStore.setState({ activeSection: "inspect", busy: "", sourcePickerOpen: false });
 
-    useUiStore.getState().setActiveSection("diagnostics");
-    expect(useUiStore.getState().activeSection).toBe("diagnostics");
+    useUiStore.getState().setActiveSection("projects");
+    expect(useUiStore.getState().activeSection).toBe("projects");
 
     useUiStore.getState().setActiveSection("unknown");
-    expect(useUiStore.getState().activeSection).toBe("diagnostics");
+    expect(useUiStore.getState().activeSection).toBe("projects");
   });
 
   it("stores import draft controls independently from workspace data", () => {

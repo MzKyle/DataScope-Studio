@@ -23,18 +23,17 @@ describe("AppNavigation", () => {
     render(<AppSidebar {...baseProps()} />);
 
     expect(screen.getByRole("navigation", { name: "Primary sections" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Dashboard" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Import & Mapping" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Recordings & Query/ })).toHaveTextContent("2");
-    expect(screen.getByRole("button", { name: "Diagnostics" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Recipes & Extensions/ })).toHaveTextContent("3");
+    expect(screen.getByRole("button", { name: "Quick Inspect" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Projects/ })).toHaveTextContent("2");
     expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Diagnostics" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
 });
 
 function baseProps() {
   return {
-    activeSection: "dashboard",
+    activeSection: "projects",
     busy: "",
     projects: [project],
     selectedProject: project,

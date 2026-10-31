@@ -30,6 +30,7 @@ import type {
 type Translate = (key: TranslationKey) => string;
 
 type DiagnosticsSectionProps = {
+  scopeRecordingId?: string;
   selectedProjectId: string;
   recordings: Recording[];
   report: DiagnosticReport | null;
@@ -61,6 +62,7 @@ const defaultThresholds = {
 };
 
 export function DiagnosticsSection({
+  scopeRecordingId,
   selectedProjectId,
   recordings,
   report,
@@ -73,7 +75,8 @@ export function DiagnosticsSection({
   onRun,
   onExport = () => undefined
 }: DiagnosticsSectionProps) {
-  const [selectedRecordingIds, setSelectedRecordingIds] = useState<string[]>([]);
+  const [selectedRecordingIds, setSelectedRecordingIds] = useState<string[]>(scopeRecordingId ? [scopeRecordingId] : []);
+  recordings = scopeRecordingId ? recordings.filter((recording) => recording.id === scopeRecordingId) : recordings;
   const [thresholds, setThresholds] = useState(defaultThresholds);
   const [selectedPreset, setSelectedPreset] = useState("balanced");
   const [exportFormat, setExportFormat] = useState<"json" | "csv" | "html">("json");
