@@ -72,18 +72,19 @@ DataScope 采用本地优先设计。源数据、Mapping、Recording 和 SQLite 
 
 从 [GitHub Releases](https://github.com/MzKyle/DataScope-Studio/releases) 下载对应安装包：
 
-当前源码树是 `0.4.0` 开发线；当前公开可下载的安装包版本是 `v0.3.1`。在
-`v0.4.0` Release 资产正式发布前，不要使用 `v0.4.0` 安装包文件名。
+源码与待发布元数据统一为 `v0.5.0`。下表为本轮候选安装包，完成验收并发布后可下载；
+当前已公开版本仍为 [v0.3.1](https://github.com/MzKyle/DataScope-Studio/releases/tag/v0.3.1)。
+本轮变更及验收状态见 [v0.5.0 发布说明](docs/releases/v0.5.0.md)。
 
 | 系统 | 安装包 |
 | --- | --- |
-| Windows 10/11 x64 | `DataScope-Studio-v0.3.1-windows-x86_64-setup.exe` |
-| macOS Apple Silicon | `DataScope-Studio-v0.3.1-macos-aarch64.dmg` |
-| macOS Intel | `DataScope-Studio-v0.3.1-macos-x86_64.dmg` |
-| Debian/Ubuntu x64 | `DataScope-Studio-v0.3.1-linux-amd64.deb` |
-| 其他 Linux x64 | `DataScope-Studio-v0.3.1-linux-x86_64.AppImage` |
+| Windows 10/11 x64 | `DataScope-Studio-v0.5.0-windows-x86_64-setup.exe` |
+| macOS Apple Silicon | `DataScope-Studio-v0.5.0-macos-aarch64.dmg` |
+| macOS Intel | `DataScope-Studio-v0.5.0-macos-x86_64.dmg` |
+| Debian/Ubuntu x64 | `DataScope-Studio-v0.5.0-linux-amd64.deb` |
+| 其他 Linux x64 | `DataScope-Studio-v0.5.0-linux-x86_64.AppImage` |
 
-`v0.3.1` 是未签名的预发布版本：
+`v0.5.0` 候选包采用未签名的预发布方式：
 
 - **Windows：** 如果出现 SmartScreen，确认文件来自本仓库后，点击“更多信息”与
   “仍要运行”。
@@ -92,14 +93,14 @@ DataScope 采用本地优先设计。源数据、Mapping、Recording 和 SQLite 
 - **Linux AppImage：** 首次启动前添加执行权限：
 
 ```bash
-chmod +x DataScope-Studio-v0.3.1-linux-x86_64.AppImage
-./DataScope-Studio-v0.3.1-linux-x86_64.AppImage
+chmod +x DataScope-Studio-v0.5.0-linux-x86_64.AppImage
+./DataScope-Studio-v0.5.0-linux-x86_64.AppImage
 ```
 
 Debian 安装包使用：
 
 ```bash
-sudo apt install ./DataScope-Studio-v0.3.1-linux-amd64.deb
+sudo apt install ./DataScope-Studio-v0.5.0-linux-amd64.deb
 ```
 
 ## 桌面端使用流程

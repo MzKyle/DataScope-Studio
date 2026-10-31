@@ -167,15 +167,16 @@ npm run tauri:dev:safe
 
 手动验收必须覆盖：
 
-- Dashboard：创建项目、选择项目、刷新 workspace、最近 Recording 与任务数量正确。
-- Import：选择 `tests/fixtures/sample_sensor.csv`，执行导入并自动 Mapping，预览、Schema、Mapping、校验结果可读。
+- 快速查看：无项目时选择 `tests/fixtures/sample_sensor.csv`，执行检查并自动 Mapping，预览、Schema、Mapping、校验结果可读。
+- 项目：创建或选择项目，查看记录列表；项目工具中的导入、批量任务和项目包入口可用。
 - Build：确认 Mapping 后生成 `.rrd + .rbl`，构建中按钮禁用、进度可见，成功后允许打开 Rerun。
-- Recordings/Queries：Recording 列表刷新，标签/参数更新，内置查询和自定义查询可运行，导出按钮状态合理。
-- Diagnostics：无报告空状态可读，运行诊断后 summary、findings、evidence、导出记录可查看。
-- Templates/Extensions：内置模板、插件/模板安装校验入口、批量导入入口状态清晰。
+- 记录详情：概览、检查、筛选可切换，查询和检查限定当前记录，高级自定义查询和导出可用。
+- 转入项目：修改 Mapping 后转入项目，新标识重新校验、不自动构建；部分失败重试不重复创建 source，清理失败保留保存结果。
+- 检查：空状态显示未发现规则命中，得分及 Topic 时间范围差异措辞符合规则范围。
+- 高级工具：项目对比通过勾选记录选择对象；设置中的预设和插件默认折叠，保留安装校验入口。
 - Settings：默认导出目录、Rerun 产物目录、日志路径、API 状态和语言切换可用。
 - 错误交互：缺失项目、无效路径、重复输出名、API 错误都显示局部错误或全局 toast，不出现无反馈失败。
-- 生命周期：关闭桌面窗口后，本地 API 子进程同步退出；重复启动不会残留旧端口占用。
+- 生命周期：关闭窗口后可从托盘恢复；明确退出应用后，本地 API 子进程退出，重复启动不会残留旧端口占用。
 
 窗口尺寸至少检查：
 

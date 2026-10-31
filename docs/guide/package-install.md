@@ -6,23 +6,24 @@
 的安装包。正式安装包已包含 Tauri 桌面端、FastAPI、本地 Python runtime、
 DataScope Python 包和 Rerun，用户无需提前安装开发环境。
 
-当前源码树是 `0.4.0` 开发线；当前公开可下载的安装包版本是 `v0.3.1`。在
-`v0.4.0` Release 资产正式发布前，不要使用 `v0.4.0` 安装包文件名。
+源码与待发布元数据统一为 `v0.5.0`。下表为本轮候选安装包，完成验收并发布后可下载；
+当前已公开版本仍为 [v0.3.1](https://github.com/MzKyle/DataScope-Studio/releases/tag/v0.3.1)。
+本轮变更及验收状态见 [v0.5.0 发布说明](../releases/v0.5.0.md)。
 
 | 平台 | 发布产物 |
 | --- | --- |
-| Windows 10/11 x64 | `DataScope-Studio-v0.3.1-windows-x86_64-setup.exe` |
-| macOS Apple Silicon | `DataScope-Studio-v0.3.1-macos-aarch64.dmg` |
-| macOS Intel | `DataScope-Studio-v0.3.1-macos-x86_64.dmg` |
-| Debian / Ubuntu x64 | `DataScope-Studio-v0.3.1-linux-amd64.deb` |
-| 其他 Linux x64 | `DataScope-Studio-v0.3.1-linux-x86_64.AppImage` |
+| Windows 10/11 x64 | `DataScope-Studio-v0.5.0-windows-x86_64-setup.exe` |
+| macOS Apple Silicon | `DataScope-Studio-v0.5.0-macos-aarch64.dmg` |
+| macOS Intel | `DataScope-Studio-v0.5.0-macos-x86_64.dmg` |
+| Debian / Ubuntu x64 | `DataScope-Studio-v0.5.0-linux-amd64.deb` |
+| 其他 Linux x64 | `DataScope-Studio-v0.5.0-linux-x86_64.AppImage` |
 
 安装后从系统应用列表启动 **DataScope Studio**。桌面进程会选择空闲的 localhost
 端口并启动内置 API。
 
 ## 未签名预发布包
 
-`v0.3.1` 是未签名的 Prerelease。仅从本仓库 Release 页面下载，并可使用同一
+`v0.5.0` 候选包是未签名的 Prerelease。仅从本仓库 Release 页面下载，并可使用同一
 Release 中的 `SHA256SUMS.txt` 校验文件。
 
 ### Windows
@@ -43,14 +44,14 @@ Apple Silicon 使用 `aarch64` 包，Intel Mac 使用 `x86_64` 包。
 Debian / Ubuntu：
 
 ```bash
-sudo apt install ./DataScope-Studio-v0.3.1-linux-amd64.deb
+sudo apt install ./DataScope-Studio-v0.5.0-linux-amd64.deb
 ```
 
 AppImage：
 
 ```bash
-chmod +x DataScope-Studio-v0.3.1-linux-x86_64.AppImage
-./DataScope-Studio-v0.3.1-linux-x86_64.AppImage
+chmod +x DataScope-Studio-v0.5.0-linux-x86_64.AppImage
+./DataScope-Studio-v0.5.0-linux-x86_64.AppImage
 ```
 
 ## 本地构建安装包
@@ -89,7 +90,7 @@ apps/desktop/src-tauri/target/release/bundle/appimage/
 本机安装刚生成的 Debian 包可以执行：
 
 ```bash
-sudo apt install "./src-tauri/target/release/bundle/deb/DataScope Studio_0.4.0_amd64.deb"
+sudo apt install "./src-tauri/target/release/bundle/deb/DataScope Studio_0.5.0_amd64.deb"
 ```
 
 安装后可通过系统应用列表启动 **DataScope Studio**，也可以用 `dpkg -L
@@ -125,7 +126,7 @@ README、安装文档同步到准备发布的 tag；如果仍然只有旧版本�
 创建版本标签前执行：
 
 ```bash
-python packaging/release/check_version.py --tag v0.4.0
+python packaging/release/check_version.py --tag v0.5.0
 ```
 
 推送 `v*` 标签后，GitHub Actions 会先运行测试，再构建 Linux x64、Windows x64、

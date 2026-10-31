@@ -19,7 +19,7 @@ def test_repository_product_versions_match() -> None:
     expected = (REPO_ROOT / "VERSION").read_text(encoding="utf-8").strip()
 
     assert check_version.validate_versions(versions, f"v{expected}") == expected
-    assert check_version.validate_public_release_docs(REPO_ROOT) == "0.3.1"
+    assert check_version.validate_public_release_docs(REPO_ROOT, tag=f"v{expected}") == expected
 
 
 def test_version_validation_rejects_mismatch() -> None:
