@@ -7,7 +7,7 @@ import { createAppQueryClient } from "../../app/query-client";
 import { useImportDraftStore } from "../../stores/import-draft-store";
 import { useUiStore } from "../../stores/ui-store";
 import { StudioWorkspace } from "./StudioWorkspace";
-import { api } from "../../api";
+import { api, ApiError } from "../../api";
 import type { Project } from "../../types";
 
 const apiMocks = vi.hoisted(() => ({
@@ -23,7 +23,14 @@ const apiMocks = vi.hoisted(() => ({
   updateJobSettings: vi.fn(),
   templates: vi.fn(),
   mappingTemplates: vi.fn(),
-  recipes: vi.fn()
+  recipes: vi.fn(),
+  query: vi.fn(),
+  diagnosticPresets: vi.fn(),
+  diagnosticExports: vi.fn(),
+  diagnostics: vi.fn(),
+  confirmQuickInspectMapping: vi.fn(),
+  buildQuickInspect: vi.fn(),
+  clearQuickInspect: vi.fn()
 }));
 
 vi.mock("@tauri-apps/plugin-dialog", () => ({
@@ -76,11 +83,18 @@ describe("StudioWorkspace job polling", () => {
     apiMocks.templates.mockResolvedValue([]);
     apiMocks.mappingTemplates.mockResolvedValue([]);
     apiMocks.recipes.mockResolvedValue([]);
+    apiMocks.query.mockResolvedValue({ columns: [], rows: [] });
+    apiMocks.diagnosticPresets.mockResolvedValue([]);
+    apiMocks.diagnosticExports.mockResolvedValue([]);
+    apiMocks.diagnostics.mockResolvedValue(null);
+    apiMocks.confirmQuickInspectMapping.mockResolvedValue({ mapping: { id: "mapping_1" }, validation: quickInspectResult().validation });
+    apiMocks.buildQuickInspect.mockResolvedValue({ job_id: "", recording_id: "recording_1", status: "succeeded", recording_path: "/quick/run.rrd", blueprint_path: "/quick/run.rbl", query_index: { storage: "none", status: "skipped" } });
   });
 
   afterEach(() => {
     cleanup();
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it("keeps one idle job poll loop under React StrictMode", async () => {
@@ -134,6 +148,80 @@ describe("StudioWorkspace job polling", () => {
     expect(api.createProject).not.toHaveBeenCalled();
     expect(screen.getByRole("heading", { name: "Quick Inspect" })).toBeInTheDocument();
     expect(screen.queryByText("Quick Inspect Project")).not.toBeInTheDocument();
+  });
+
+  it("skips the query index in desktop quick inspect and preserves its draft across navigation", async () => {
+    useUiStore.setState({ activeSection: "inspect" });
+    useImportDraftStore.setState({ sourcePath: "/tmp/run.csv" });
+    render(<QueryClientProvider client={createAppQueryClient()}><StudioWorkspace /></QueryClientProvider>);
+    await flushEffects();
+    fireEvent.click(screen.getAllByRole("button", { name: "Inspect" })[0]);
+    await flushEffects();
+    fireEvent.click(screen.getAllByRole("button", { name: "Generate Visualization" })[0]);
+    await flushEffects();
+    expect(api.buildQuickInspect).toHaveBeenCalledWith("session_1", expect.any(String), "sensor_monitor", undefined,
+      expect.objectContaining({ build_query_index: false }));
+    fireEvent.click(screen.getByRole("button", { name: /Projects/ }));
+    await flushEffects();
+    fireEvent.click(screen.getByRole("button", { name: "Quick Inspect" }));
+    await flushEffects();
+    expect(screen.getByRole("heading", { name: "Quick Inspect" })).toBeInTheDocument();
+    expect(api.quickInspect).toHaveBeenCalledTimes(1);
+    expect(api.clearQuickInspect).not.toHaveBeenCalled();
+  });
+
+  it("discards a delayed query response after another recording is selected", async () => {
+    const rows = ["first", "second"].map((name) => ({ id: name, project_id: project.id, source_id: `source_${name}`,
+      app_id: "test", path: `/tmp/${name}.rrd`, blueprint_id: "sensor_monitor", blueprint_path: `/tmp/${name}.rbl`,
+      run_name: name, tags: [], params: {}, created_at: project.created_at }));
+    apiMocks.recordings.mockResolvedValue(rows);
+    let resolveQuery!: (value: unknown) => void;
+    apiMocks.query.mockImplementation(() => new Promise((resolve) => { resolveQuery = resolve; }));
+    render(<QueryClientProvider client={createAppQueryClient()}><StudioWorkspace /></QueryClientProvider>);
+    await flushEffects();
+    fireEvent.click(screen.getByRole("button", { name: "first" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Filter" }));
+    await flushEffects();
+    fireEvent.click(screen.getByRole("button", { name: "Run Query" }));
+    await flushEffects();
+    expect(api.query).toHaveBeenCalledWith(project.id, expect.any(String), ["first"], expect.any(Object));
+    fireEvent.click(screen.getByRole("button", { name: "Recordings" }));
+    fireEvent.click(screen.getByRole("button", { name: "second" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Filter" }));
+    await act(async () => { resolveQuery({ columns: ["value"], rows: [{ value: "stale-first-result" }] }); });
+    await flushEffects();
+    expect(screen.queryByText("stale-first-result")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "second" })).toBeInTheDocument();
+  });
+
+  it("keeps the saved project when temporary cleanup fails and treats an expired session as cleaned", async () => {
+    useUiStore.setState({ activeSection: "inspect" });
+    useImportDraftStore.setState({ sourcePath: "/tmp/run.csv" });
+    const imported = quickInspectResult();
+    imported.source.id = "source_target"; imported.source.project_id = project.id;
+    imported.mapping.mapping.id = "mapping_target";
+    imported.mapping.mapping.source = "source_target";
+    imported.mapping.mapping.recording_id = "recording_target";
+    imported.saved_mapping.id = "mapping_target";
+    vi.spyOn(api, "importWorkflow").mockResolvedValue(imported);
+    vi.spyOn(api, "saveMapping").mockResolvedValue(imported.saved_mapping);
+    vi.spyOn(api, "previewMapping").mockResolvedValue({ ...imported, mapping: imported.mapping.mapping });
+    apiMocks.clearQuickInspect.mockRejectedValueOnce(new ApiError("cleanup failed", 500, "cleanup_failed"));
+    render(<QueryClientProvider client={createAppQueryClient()}><StudioWorkspace /></QueryClientProvider>);
+    await flushEffects();
+    fireEvent.click(screen.getAllByRole("button", { name: "Inspect" })[0]);
+    await flushEffects();
+    fireEvent.click(screen.getByText("Move to project", { selector: "summary" }));
+    fireEvent.click(screen.getByRole("button", { name: "Move to project" }));
+    await flushEffects();
+    expect(screen.getByRole("heading", { name: "Projects" })).toBeInTheDocument();
+    expect(screen.getByText("Saved to project; temporary cleanup failed. Retry cleanup.")).toBeInTheDocument();
+    expect(api.buildQuickInspect).not.toHaveBeenCalled();
+    apiMocks.clearQuickInspect.mockRejectedValueOnce(new ApiError("already expired", 404, "not_found"));
+    fireEvent.click(screen.getByRole("button", { name: "Retry cleanup" }));
+    await flushEffects();
+    expect(screen.queryByText("Saved to project; temporary cleanup failed. Retry cleanup.")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Projects" })).toBeInTheDocument();
   });
 });
 

@@ -19,7 +19,6 @@ import type {
   JobSettings,
   MappingTemplateItem,
   Plugin,
-  Recipe,
   TemplateRegistryItem
 } from "./types";
 import { DiagnosticLogPaths } from "./DiagnosticLogPaths";
@@ -54,7 +53,6 @@ type ExtensionsSectionsProps = {
   mappingTemplateJson: string;
   plugins: Plugin[];
   templateRegistry: TemplateRegistryItem[];
-  recipes: Recipe[];
   visiblePlugins: Plugin[];
   visibleTemplateRegistry: TemplateRegistryItem[];
   language: Language;
@@ -458,23 +456,6 @@ function SettingsSection(props: ExtensionsSectionsProps) {
             ))}
           </div>
         </div>
-        <div className="settings-block">
-          <div>
-            <strong>{props.t("jobConcurrency")}</strong>
-            <span>{props.t("jobConcurrencySubtitle")}</span>
-          </div>
-          <select
-            aria-label={props.t("maxWorkers")}
-            value={props.jobSettings.max_workers}
-            onChange={(event) => props.onJobSettingsChange(Number(event.target.value))}
-          >
-            {[1, 2, 3, 4].map((value) => (
-              <option key={value} value={value}>
-                {value}
-              </option>
-            ))}
-          </select>
-        </div>
         <div className="settings-block vertical">
           <div>
             <strong>{props.t("defaultExportPath")}</strong>
@@ -529,6 +510,23 @@ function SettingsSection(props: ExtensionsSectionsProps) {
       </section>
       <details className="card advanced-panel">
         <summary>{props.t("advancedSettings")}</summary>
+        <div className="settings-block">
+          <div>
+            <strong>{props.t("jobConcurrency")}</strong>
+            <span>{props.t("jobConcurrencySubtitle")}</span>
+          </div>
+          <select
+            aria-label={props.t("maxWorkers")}
+            value={props.jobSettings.max_workers}
+            onChange={(event) => props.onJobSettingsChange(Number(event.target.value))}
+          >
+            {[1, 2, 3, 4].map((value) => (
+              <option key={value} value={value}>
+                {value}
+              </option>
+            ))}
+          </select>
+        </div>
         <PresetsSection {...props} />
       </details>
       <DiagnosticLogPaths

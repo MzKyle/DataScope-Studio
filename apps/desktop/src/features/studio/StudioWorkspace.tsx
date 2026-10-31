@@ -39,6 +39,8 @@ import { isActiveBuildJob } from "../../BuildJobStatus";
 import { ImportWorkflowSection } from "../../ImportWorkflowSection";
 import { RecordingsQueriesSection } from "../../RecordingsQueriesSection";
 import { ProjectWorkspace, RecordingDetails, type ProjectView, type RecordingTab } from "./ProjectWorkspace";
+import { MoveToProject } from "../quick-inspect/MoveToProject";
+import { createProjectTransfer } from "../quick-inspect/project-transfer";
 import { useContextDrafts } from "./use-context-drafts";
 import { AppSidebar, AppTopbar } from "../../AppNavigation";
 import {
@@ -80,7 +82,6 @@ import type {
   ProjectExportResult,
   QueryResult,
   QueryTemplate,
-  Recipe,
   Recording,
   Source,
   SchemaProfile,
@@ -151,6 +152,9 @@ export function StudioWorkspace() {
   const [recordingTab, setRecordingTab] = useState<RecordingTab>("overview");
   const [selectedRecordingId, setSelectedRecordingId] = useState("");
   const [quickStep, setQuickStep] = useState<"start" | "workflow">("start");
+  const transfer = useRef(createProjectTransfer());
+  const transferLock = useRef(false);
+  const [cleanupSessionId, setCleanupSessionId] = useState("");
   const [projectName, setProjectName] = useState("Sensor Run");
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>("quick-inspect");
@@ -193,7 +197,6 @@ export function StudioWorkspace() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [plugins, setPlugins] = useState<Plugin[]>([]);
   const [templateRegistry, setTemplateRegistry] = useState<TemplateRegistryItem[]>([]);
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [queryTemplates, setQueryTemplates] = useState<QueryTemplate[]>([]);
   const [selectedQueryTemplate, setSelectedQueryTemplate] = useState("low_battery");
   const [selectedQueryRecording, setSelectedQueryRecording] = useState("");
@@ -302,8 +305,12 @@ export function StudioWorkspace() {
     workspaceMode === "quick-inspect" && hasQuickInspectSession(quickInspectSession);
 
   const currentContext = `${activeSection}:${selectedProjectId}:${selectedRecordingId}:${projectView}`;
-  const contextRef = useRef(currentContext);
-  contextRef.current = currentContext;
+  const contextState = useRef({ key: currentContext, version: 0 });
+  if (contextState.current.key !== currentContext) {
+    contextState.current = { key: currentContext, version: contextState.current.version + 1 };
+  }
+  const contextRef = useRef(contextState.current.version);
+  contextRef.current = contextState.current.version;
   const projectRef = useRef(selectedProjectId);
   projectRef.current = selectedProjectId;
   const modeRef = useRef(workspaceMode);
@@ -606,6 +613,7 @@ export function StudioWorkspace() {
   ): Promise<T | null> {
     const context = contextRef.current;
     const area = options.area ?? "global";
+    const contextBound = ["query", "diagnostics", "compare", "import", "build", "dashboard"].includes(area);
     const blockUi = options.blockUi ?? true;
     if (blockUi) setBusy(label);
     if (area === "global") {
@@ -615,9 +623,9 @@ export function StudioWorkspace() {
     }
     try {
       const value = await task();
-      return contextRef.current === context ? value : null;
+      return !contextBound || contextRef.current === context ? value : null;
     } catch (err) {
-      if (contextRef.current !== context) return null;
+      if (contextBound && contextRef.current !== context) return null;
       const apiError = asApiError(err);
       logDiagnosticError("frontend.operation", apiError, {
         area,
@@ -773,12 +781,11 @@ export function StudioWorkspace() {
       () =>
         queryClient.fetchQuery({
           queryFn: async () => {
-            const [templateRows, mappingTemplateRows, recipeRows] = await Promise.all([
+            const [templateRows, mappingTemplateRows] = await Promise.all([
               api.templates(),
-              api.mappingTemplates(),
-              api.recipes()
+              api.mappingTemplates()
             ]);
-            return { templateRows, mappingTemplateRows, recipeRows };
+            return { templateRows, mappingTemplateRows };
           },
           queryKey: queryKeys.templateRegistry()
         }),
@@ -789,7 +796,6 @@ export function StudioWorkspace() {
     if (result) {
       setTemplateRegistry(result.templateRows);
       setMappingTemplates(result.mappingTemplateRows);
-      setRecipes(result.recipeRows);
       setSelectedMappingTemplateId((current) => current || result.mappingTemplateRows[0]?.id || "");
     }
     return result !== null;
@@ -801,13 +807,12 @@ export function StudioWorkspace() {
       () =>
         queryClient.fetchQuery({
           queryFn: async () => {
-            const [pluginRows, templateRows, mappingTemplateRows, recipeRows] = await Promise.all([
+            const [pluginRows, templateRows, mappingTemplateRows] = await Promise.all([
               api.plugins(),
               api.templates(),
-              api.mappingTemplates(),
-              api.recipes()
+              api.mappingTemplates()
             ]);
-            return { pluginRows, templateRows, mappingTemplateRows, recipeRows };
+            return { pluginRows, templateRows, mappingTemplateRows };
           },
           queryKey: queryKeys.extensionRegistry()
         }),
@@ -819,7 +824,6 @@ export function StudioWorkspace() {
       setPlugins(result.pluginRows);
       setTemplateRegistry(result.templateRows);
       setMappingTemplates(result.mappingTemplateRows);
-      setRecipes(result.recipeRows);
       setSelectedMappingTemplateId((current) => current || result.mappingTemplateRows[0]?.id || "");
     }
     return result !== null;
@@ -916,7 +920,8 @@ export function StudioWorkspace() {
     );
     if (result) {
       setWorkspaceMode("quick-inspect");
-      setQuickInspectSession({ id: result.session_id, sourcePath: nextSourcePath });
+      setQuickInspectSession({ id: result.session_id, sourcePath: nextSourcePath,
+        importOptions: importOptionsForPath(nextSourcePath), storageMode: sourceStorageMode });
       setProjectSources([]);
       setMappingDiff(null);
       applyInspectionResult(result, nextSourcePath, defaultNameKind);
@@ -992,6 +997,48 @@ export function StudioWorkspace() {
         },
         nextSourcePath
       );
+    }
+  }
+
+  async function cleanupTransferredSession(sessionId: string) {
+    try {
+      await api.clearQuickInspect(sessionId);
+      setCleanupSessionId("");
+    } catch (error) {
+      const apiError = asApiError(error);
+      if (apiError.status === 404) {
+        setCleanupSessionId("");
+        return;
+      }
+      logDiagnosticError("frontend.transfer_cleanup", apiError);
+      setCleanupSessionId(sessionId);
+    }
+  }
+
+  async function moveToProject(projectId: string, name: string, storageMode: "copy" | "reference") {
+    if (transferLock.current || !mapping || !quickInspectSession.id) return;
+    transferLock.current = true;
+    const session = quickInspectSession;
+    try {
+      const result = await run(t("moveToProject"), () => transfer.current.run({
+        sessionId: session.id, sourcePath: session.sourcePath,
+        importOptions: session.importOptions ?? {}, storageMode,
+        projectId, projectName: name, mapping, templateId: selectedTemplateId
+      }), { area: "import" });
+      if (!result) return;
+      drafts.switchTo(`project:${result.projectId}`);
+      drafts.forget("inspect");
+      if (result.project) setProjects((rows) => upsertProject(rows, result.project!));
+      setSelectedProjectId(result.projectId); setWorkspaceMode("project");
+      setSourcePath(session.sourcePath); setSourceStorageMode(storageMode);
+      const csv = session.importOptions?.csv as { header_mode?: CsvHeaderMode; column_names?: string[] } | undefined;
+      setCsvHeaderMode(csv?.header_mode ?? "auto"); setCsvColumnNames(csv?.column_names?.join(",") ?? "");
+      applyInspectionResult(result.inspection, session.sourcePath);
+      setProjectView("import"); setActiveSection("projects");
+      setQuickInspectSession(emptyQuickInspectSession); setQuickStep("start");
+      await cleanupTransferredSession(session.id);
+    } finally {
+      transferLock.current = false;
     }
   }
 
@@ -2050,6 +2097,16 @@ export function StudioWorkspace() {
         <AppSidebar {...navigationProps} />
 
         <section className="workspace">
+          {cleanupSessionId && <div className="card" role="status">
+            <p>{t("cleanupPending")}</p><button onClick={() => void cleanupTransferredSession(cleanupSessionId)}>{t("retryCleanup")}</button>
+          </div>}
+          {activeSection === "inspect" && quickStep === "workflow" && source && <>
+            <button disabled={isBusy || isBuildSubmitting} onClick={() => setQuickStep("start")}>{t("chooseSource")}</button>
+            <MoveToProject key={quickInspectSession.id} projects={projects}
+              storageMode={quickInspectSession.storageMode ?? "copy"} busy={isBusy || isBuildSubmitting}
+              onMove={(projectId, name, storage) => void moveToProject(projectId, name, storage)} t={t} />
+            <InlineProjectImportError error={areaErrors.import} t={t} />
+          </>}
           {activeSection === "projects" && <>
             <ProjectWorkspace {...navigationProps} view={projectView} onView={changeProjectView}
               onImport={() => setProjectView("import")} onExport={() => void exportProject()}
@@ -2061,6 +2118,12 @@ export function StudioWorkspace() {
               <select aria-label={t("storageMode")} value={sourceStorageMode} onChange={(event) => setSourceStorageMode(event.target.value as "copy" | "reference")}>
                 <option value="copy">{t("storageCopy")}</option><option value="reference">{t("storageReference")}</option>
               </select>
+              {sourcePath.toLowerCase().endsWith(".csv") && <>
+                <select aria-label={t("csvHeaderMode")} value={csvHeaderMode} onChange={(event) => setCsvHeaderMode(event.target.value as CsvHeaderMode)}>
+                  <option value="auto">{t("csvHeaderAuto")}</option><option value="header">{t("csvHasHeader")}</option><option value="no_header">{t("csvNoHeader")}</option>
+                </select>
+                <input aria-label={t("csvColumnNames")} placeholder={t("csvColumnNamesPlaceholder")} value={csvColumnNames} onChange={(event) => setCsvColumnNames(event.target.value)} />
+              </>}
               <button onClick={() => void importAndInspect()} disabled={isBusy || !sourcePath.trim()}>{t("inspectSource")}</button>
               <InlineProjectImportError error={areaErrors.import} t={t} />
             </div>}
@@ -2339,7 +2402,7 @@ export function StudioWorkspace() {
               recordings={recordings}
               report={diagnosticReport}
               presets={diagnosticPresets}
-              exports={diagnosticExports}
+              exports={projectView === "detail" ? diagnosticExports.filter((item) => item.recording_ids.length === 1 && item.recording_ids[0] === selectedRecordingId) : diagnosticExports}
               exportResult={diagnosticExportResult}
               isBusy={isBusy}
               errors={areaErrors}
@@ -2373,7 +2436,6 @@ export function StudioWorkspace() {
             mappingTemplateJson={mappingTemplateJson}
             plugins={plugins}
             templateRegistry={templateRegistry}
-            recipes={recipes}
             visiblePlugins={visiblePlugins}
             visibleTemplateRegistry={visibleTemplateRegistry}
             language={language}
