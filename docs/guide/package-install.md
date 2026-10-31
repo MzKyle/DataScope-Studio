@@ -120,8 +120,8 @@ npm run runtime:build:dev
 
 根目录 `VERSION` 是产品版本基准。公开发布安装包前，先把
 `packaging/release/public_release.json` 的 `download_version` / `release_tag` 与
-README、安装文档同步到准备发布的 tag；如果仍然只有旧版本公开可下载，则不要把用户
-安装文档改到新 tag。
+README、安装文档同步到准备发布的 tag。候选说明须明确标注待发布，并保留上一公开版本
+的下载链接；候选资产验收和公开发布完成后，才能标记为当前公开可下载版本。
 
 创建版本标签前执行：
 
