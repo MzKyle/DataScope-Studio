@@ -133,3 +133,18 @@ def test_batch_query_time_matches_scalar(unit, values):
     series = pd.Series(values)
     assert_same(query_time_batch(series, unit),
                 [time_seconds_or_none(value, unit) for value in series.tolist()])
+
+
+@pytest.mark.parametrize("unit", ["auto", "seconds", "relative_s", "unix_s", "unix_ms", "unix_us", "unix_ns", "datetime"])
+@pytest.mark.parametrize("value", [float("inf"), float("-inf"), "Infinity", "-Infinity"])
+def test_nonfinite_times_never_enter_datetime_parser(monkeypatch, unit, value):
+    from datascope_core.time_utils import query_time_batch, time_seconds_or_none
+
+    def reject_datetime_conversion(*args, **kwargs):
+        pytest.fail("Nonfinite time reached the platform-dependent datetime parser")
+
+    monkeypatch.setattr(pd, "to_datetime", reject_datetime_conversion)
+    assert normalize_time_value(value, unit) is None
+    assert time_seconds_or_none(value, unit) is None
+    assert query_time_seconds(value, 7, unit) == 7.0
+    assert query_time_batch(pd.Series([value]), unit) == [None]

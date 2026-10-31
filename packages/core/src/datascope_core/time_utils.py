@@ -111,6 +111,13 @@ def prepare_tabular_frame(
 
 
 def _parse_datetime(value: Any) -> NormalizedTime | None:
+    # Some pandas/platform combinations saturate infinity at Timestamp.max
+    # instead of coercing it to NaT. Invalid numeric times must stay invalid.
+    try:
+        if not math.isfinite(float(value)):
+            return None
+    except (TypeError, ValueError, OverflowError):
+        pass
     parsed = pd.to_datetime(value, errors="coerce", utc=True)
     if pd.notna(parsed):
         timestamp = parsed.to_pydatetime()
